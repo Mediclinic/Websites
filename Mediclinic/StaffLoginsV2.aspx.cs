@@ -1,0 +1,582 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Configuration;
+using System.Text.RegularExpressions;
+using System.Collections;
+
+public partial class StaffLoginsV2 : System.Web.UI.Page
+{
+
+    #region Page_Load
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        try
+        {
+
+            if (!IsPostBack)
+                Utilities.SetNoCache(Response);
+            HideErrorMessage();
+
+            if (!IsPostBack)
+            {
+                PagePermissions.EnforcePermissions_RequireAll(Session, Response, false, false, true, false, false, true);
+                Session.Remove("userlogin_sortexpression");
+                Session.Remove("userlogin_data");
+
+
+                // only allow support staff3 to do this
+                string s = Session["StaffID"].ToString();
+                string s2 = Request.QueryString["del"];
+                if (Session["StaffID"].ToString() == "-4" && Request.QueryString["del"] != null && Regex.IsMatch(Request.QueryString["del"], @"^\-?\d+$"))
+                {
+                    UserLoginDB.DeleteByStaffID(Convert.ToInt32(Request.QueryString["del"]));
+                    Response.Redirect(UrlParamModifier.Remove(Request.RawUrl, "del"));  // redirect so that my 'last page accessed' should not show this
+                }
+
+
+                txtStartDate.Text = IsValidFormStartDate() ? GetFormStartDate(false).ToString("dd-MM-yyyy") : DateTime.Now.AddMonths(-1).ToString("dd-MM-yyyy");
+                txtEndDate.Text = IsValidFormEndDate() ? GetFormEndDate(false).ToString("dd-MM-yyyy") : DateTime.Now.ToString("dd-MM-yyyy");
+
+                FillGrid();
+
+                txtStartDate_Picker.OnClientClick = "displayDatePicker('txtStartDate', this, 'dmy', '-'); return false;";
+                txtEndDate_Picker.OnClientClick = "displayDatePicker('txtEndDate', this, 'dmy', '-'); return false;";
+            }
+
+            this.GrdUserLogin.EnableViewState = true;
+
+        }
+        catch (CustomMessageException ex)
+        {
+            if (IsPostBack) SetErrorMessage(ex.Message);
+            else HideTableAndSetErrorMessage(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            if (IsPostBack) SetErrorMessage("", ex.ToString());
+            else HideTableAndSetErrorMessage("", ex.ToString());
+        }
+    }
+
+    #endregion
+
+    #region IsValidDate/GetDate
+
+
+    protected bool IsValidDate(string strDate)
+    {
+        try
+        {
+            if (!System.Text.RegularExpressions.Regex.IsMatch(strDate, @"^\d{2}\-\d{2}\-\d{4}$"))
+                return false;
+
+            string[] parts = strDate.Split('-');
+            DateTime d = new DateTime(Convert.ToInt32(parts[2]), Convert.ToInt32(parts[1]), Convert.ToInt32(parts[0]));
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+    protected DateTime GetDate(string strDate)
+    {
+        string[] parts = strDate.Split('-');
+        return new DateTime(Convert.ToInt32(parts[2]), Convert.ToInt32(parts[1]), Convert.ToInt32(parts[0]));
+    }
+
+    private bool IsValidFormStaffID()
+    {
+        string id = Request.QueryString["staff"];
+        return id != null && Regex.IsMatch(id, @"^\d+$");
+    }
+    private int GetFormStaffID()
+    {
+        if (!IsValidFormStaffID())
+            throw new Exception("Invalid url patient id");
+
+        string id = Request.QueryString["staff"];
+        return Convert.ToInt32(id);
+    }
+
+    private bool GetFormIncStaffLogins()
+    {
+        return Request.QueryString["inc_staff"] == null || Request.QueryString["inc_staff"] != "0";
+    }
+    private bool GetFormIncPatientLogins()
+    {
+        return Request.QueryString["inc_patients"] == null || Request.QueryString["inc_patients"] != "0";
+    }
+
+
+
+    protected bool IsValidFormStartDate()
+    {
+        string start_date = Request.QueryString["start_date"];
+        return start_date != null && Regex.IsMatch(start_date, @"^\d{4}_\d{2}_\d{2}$");
+    }
+    protected DateTime GetFormStartDate(bool checkIsValid = true)
+    {
+        if (checkIsValid && !IsValidFormStartDate())
+            throw new Exception("Invalid url 'start date'");
+        return GetDateFromString(Request.QueryString["start_date"], "yyyy_mm_dd");
+    }
+    protected bool IsValidFormEndDate()
+    {
+        string end_date = Request.QueryString["end_date"];
+        return end_date != null && Regex.IsMatch(end_date, @"^\d{4}_\d{2}_\d{2}$");
+    }
+    protected DateTime GetFormEndDate(bool checkIsValid = true)
+    {
+        if (checkIsValid && !IsValidFormEndDate())
+            throw new Exception("Invalid url 'end date'");
+        return GetDateFromString(Request.QueryString["end_date"], "yyyy_mm_dd");
+    }
+
+    protected DateTime GetDateFromString(string sDate, string format)
+    {
+        if (format == "yyyy_mm_dd")
+        {
+            string[] dateparts = sDate.Split('_');
+            return new DateTime(Convert.ToInt32(dateparts[0]), Convert.ToInt32(dateparts[1]), Convert.ToInt32(dateparts[2]));
+        }
+        else if (format == "dd_mm_yyyy")
+        {
+            string[] dateparts = sDate.Split('_');
+            return new DateTime(Convert.ToInt32(dateparts[2]), Convert.ToInt32(dateparts[1]), Convert.ToInt32(dateparts[0]));
+        }
+        if (format == "yyyy-mm-dd")
+        {
+            string[] dateparts = sDate.Split('-');
+            return new DateTime(Convert.ToInt32(dateparts[0]), Convert.ToInt32(dateparts[1]), Convert.ToInt32(dateparts[2]));
+        }
+        else if (format == "dd-mm-yyyy")
+        {
+            string[] dateparts = sDate.Split('-');
+            return new DateTime(Convert.ToInt32(dateparts[2]), Convert.ToInt32(dateparts[1]), Convert.ToInt32(dateparts[0]));
+        }
+        else
+            throw new ArgumentOutOfRangeException("Unknown date format");
+    }
+
+
+    #endregion
+
+    #region GrdUserLogin
+
+    protected void FillCountries()
+    {
+        // fill IP only for showing rows
+
+        ArrayList ips = new ArrayList();
+        for (int i = 0; i < GrdUserLogin.Rows.Count; i++)
+        {
+            GridViewRow gdRow = GrdUserLogin.Rows[i];
+            if (gdRow.RowType == DataControlRowType.DataRow)
+            {
+                for (int j = 0; j < GrdUserLogin.Columns.Count; j++)
+                    if (GrdUserLogin.Columns[j].SortExpression == "userlogin_ipaddress")
+                        for (int k = 0; k < gdRow.Cells[j].Controls.Count; k++)
+                            if (gdRow.Cells[j].Controls[k].ID == "lblIPAddress")
+                                ips.Add(((Label)gdRow.Cells[j].Controls[k]).Text);
+            }
+        }
+
+        Hashtable ipHash = GetIpHash((string[])ips.ToArray(typeof(string)));
+
+        for (int i = 0; i < GrdUserLogin.Rows.Count; i++)
+        {
+            GridViewRow gdRow = GrdUserLogin.Rows[i];
+            if (gdRow.RowType == DataControlRowType.DataRow)
+            {
+                string ip = null;
+                string country = null;
+
+                for (int j = 0; j < GrdUserLogin.Columns.Count; j++)
+                {
+                    if (GrdUserLogin.Columns[j].SortExpression == "userlogin_ipaddress")
+                        for (int k = 0; k < gdRow.Cells[j].Controls.Count; k++)
+                            if (gdRow.Cells[j].Controls[k].ID == "lblIPAddress")
+                            {
+                                ip = ((Label)gdRow.Cells[j].Controls[k]).Text;
+                                country = ipHash[ip] == null ? "" : ipHash[ip].ToString();
+                            }
+
+                    if (GrdUserLogin.Columns[j].HeaderText == "Country")
+                        for (int k = 0; k < gdRow.Cells[j].Controls.Count; k++)
+                            if (gdRow.Cells[j].Controls[k].ID == "lblCountry")
+                                ((Label)gdRow.Cells[j].Controls[k]).Text = country == null ? "" : country; ;
+                }
+            }
+        }
+    }
+    public static Hashtable GetIpHash(string[] ips)
+    {
+        string sql = string.Empty;
+        ArrayList uniqueIPs = new ArrayList();
+        Hashtable seenIPs = new Hashtable();
+        foreach (string ip in ips)
+        {
+            if (seenIPs[ip] != null) continue;
+            if (!Regex.IsMatch(ip, @"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$")) continue;
+
+            uint ipNum = ip.Split('.').Select(uint.Parse).Aggregate((a, b) => a * 256 + b);
+            sql += @" SELECT TOP 1 c.country FROM  ip2nationCountries c LEFT JOIN ip2nation i ON c.code = i.country  WHERE  i.ip < " + ipNum + @" ORDER BY  i.ip DESC " + Environment.NewLine;
+
+            uniqueIPs.Add(ip);
+            seenIPs[ip] = 1;
+        }
+        ips = (string[])uniqueIPs.ToArray(typeof(string));
+
+        Hashtable ipHash = new Hashtable();
+        if (sql.Length > 0)
+        {
+            DataSet ds = DBBase.ExecuteQuery(sql);
+            for (int i = 0; i < ips.Length; i++)
+                ipHash[ips[i]] = ds.Tables[i].Rows[0][0].ToString();
+        }
+        return ipHash;
+    }
+
+    protected void FillGrid()
+    {
+        if (GetFormIncStaffLogins() && GetFormIncPatientLogins())
+            ddlDisplayUserType.SelectedValue = "All";
+        else if (!GetFormIncStaffLogins() && GetFormIncPatientLogins())
+            ddlDisplayUserType.SelectedValue = "Patients Only";
+        else if (GetFormIncStaffLogins() && !GetFormIncPatientLogins())
+            ddlDisplayUserType.SelectedValue = "Staff Only";
+
+
+        DateTime fromDate = IsValidDate(txtStartDate.Text) ? GetDate(txtStartDate.Text) : DateTime.Now.Date.AddDays(-7);
+        DateTime toDate   = IsValidDate(txtEndDate.Text) ? GetDate(txtEndDate.Text).AddDays(1) : DateTime.Now.Date.AddDays(1);
+
+        UserView userView = UserView.GetInstance();
+
+        int numCurrentlyLoggedIn = 0;
+        Hashtable distinctLoggedInToday = new Hashtable();
+        DataTable dt = UserLoginDB.GetDataTable(userView.IsStakeholder, fromDate, toDate, GetFormIncStaffLogins(), GetFormIncPatientLogins(), IsValidFormStaffID() ? GetFormStaffID() : -1);
+
+        dt.Columns.Add("user_to_display", typeof(string));
+        dt.Columns.Add("user_type", typeof(string));
+        for (int i = 0; i < dt.Rows.Count; i++)
+        {
+            UserLogin userLogin = UserLoginDB.LoadAll(dt.Rows[i]);
+
+            if (userLogin.Staff == null && userLogin.Patient == null)
+            {
+                dt.Rows[i]["user_to_display"] = userLogin.Username;
+                dt.Rows[i]["user_type"]       = "";
+            }
+            else if (userLogin.Staff != null)
+            {
+                dt.Rows[i]["user_to_display"] = userLogin.Staff.Person.FullnameWithoutMiddlename;
+                dt.Rows[i]["user_type"]       = "Staff";
+            }
+            else if (userLogin.Patient != null)
+            {
+                dt.Rows[i]["user_to_display"] = userLogin.Patient.Person.FullnameWithoutMiddlename;
+                dt.Rows[i]["user_type"]       = "Patient";
+            }
+
+
+
+            if (userLogin.Staff != null && userLogin.Staff.StaffID > 0 && !userLogin.IsLoggedOff)
+                numCurrentlyLoggedIn++;
+            if (userLogin.Staff != null && userLogin.Staff.StaffID > 0 && userLogin.LastAccessTime >= DateTime.Today)
+                distinctLoggedInToday[userLogin.Staff.StaffID] = 1;
+        }
+
+        Session["userlogin_data"] = dt;
+
+        lblNumCurrentlyLoggedIn.Text = "(current: " + numCurrentlyLoggedIn + ")  " + "<font color=\"#A0A0A0\">(distinct today: " + distinctLoggedInToday.Keys.Count + ") </font>";
+
+
+        if (!userView.IsStakeholder)
+        {
+            img_log_user_off_icon.Visible = false;
+            foreach (DataControlField col in GrdUserLogin.Columns)
+                if (col.HeaderText.ToLower().Trim() == "log off")
+                    col.Visible = false;
+        }
+
+
+        if (dt.Rows.Count > 0)
+        {
+            if (IsPostBack && Session["userlogin_sortexpression"] != null && Session["userlogin_sortexpression"].ToString().Length > 0)
+            {
+                DataView dataView = new DataView(dt);
+                dataView.Sort = Session["userlogin_sortexpression"].ToString();
+                GrdUserLogin.DataSource = dataView;
+            }
+            else
+            {
+                GrdUserLogin.DataSource = dt;
+            }
+
+
+            try
+            {
+                GrdUserLogin.DataBind();
+                GrdUserLogin.PagerSettings.FirstPageText = "1";
+                GrdUserLogin.PagerSettings.LastPageText = GrdUserLogin.PageCount.ToString();
+                GrdUserLogin.DataBind();
+
+                FillCountries();
+            }
+            catch (Exception ex)
+            {
+                SetErrorMessage(ex.ToString());
+            }
+        }
+        else
+        {
+            dt.Rows.Add(dt.NewRow());
+            GrdUserLogin.DataSource = dt;
+            GrdUserLogin.DataBind();
+
+            int TotalColumns = GrdUserLogin.Rows[0].Cells.Count;
+            GrdUserLogin.Rows[0].Cells.Clear();
+            GrdUserLogin.Rows[0].Cells.Add(new TableCell());
+            GrdUserLogin.Rows[0].Cells[0].ColumnSpan = TotalColumns;
+            GrdUserLogin.Rows[0].Cells[0].Text = "No Record Found";
+        }
+    }
+    protected void GrdUserLogin_RowCreated(object sender, GridViewRowEventArgs e)
+    {
+        if (!Utilities.IsDev() && e.Row.RowType != DataControlRowType.Pager)
+            e.Row.Cells[0].CssClass = "hiddencol";
+    }
+    protected void GrdUserLogin_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        DataTable dt = Session["userlogin_data"] as DataTable;
+        bool tblEmpty = (dt.Rows.Count == 1 && dt.Rows[0][0] == DBNull.Value);
+        if (!tblEmpty && e.Row.RowType == DataControlRowType.DataRow)
+        {
+            Label lblId = (Label)e.Row.FindControl("lblId");
+            DataRow[] foundRows = dt.Select("userlogin_userlogin_id=" + lblId.Text);
+            DataRow thisRow = foundRows[0];
+
+
+            ImageButton btnLogOff = (ImageButton)e.Row.FindControl("btnLogOff");
+            if (btnLogOff != null)
+            {
+                bool userlogin_is_logged_off = Convert.ToBoolean(thisRow["userlogin_is_logged_off"]);
+                btnLogOff.Visible = !userlogin_is_logged_off;
+            }
+
+
+            //Utilities.AddConfirmationBox(e, false);
+        }
+    }
+    protected void GrdUserLogin_RowCancelingEdit(object sender, GridViewCancelEditEventArgs e)
+    {
+        GrdUserLogin.EditIndex = -1;
+        FillGrid();
+    }
+    protected void GrdUserLogin_RowUpdating(object sender, GridViewUpdateEventArgs e)
+    {
+        Label lblId = (Label)GrdUserLogin.Rows[e.RowIndex].FindControl("lblId");
+        DropDownList ddlParent = (DropDownList)GrdUserLogin.Rows[e.RowIndex].FindControl("ddlParent");
+        TextBox txtTitle = (TextBox)GrdUserLogin.Rows[e.RowIndex].FindControl("txtTitle");
+
+
+        //UserLogin2DB.Update(Convert.ToInt32(lblId.Text), txtTitle.Text, Convert.ToInt32(ddlParent.SelectedValue));
+
+        GrdUserLogin.EditIndex = -1;
+        FillGrid();
+    }
+
+    protected void GrdUserLogin_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+        Label lblId = (Label)GrdUserLogin.Rows[e.RowIndex].FindControl("lblId");
+
+        try
+        {
+            UserLoginDB.Delete(Convert.ToInt32(lblId.Text));
+        }
+        catch (ForeignKeyConstraintException fkcEx)
+        {
+            if (Utilities.IsDev())
+                SetErrorMessage("Can not delete because other records depend on this : " + fkcEx.Message);
+            else
+                SetErrorMessage("Can not delete because other records depend on this");
+        }
+
+        FillGrid();
+    }
+    protected void GrdUserLogin_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+        if (e.CommandName.Equals("Insert"))
+        {
+            DropDownList ddlParent = (DropDownList)GrdUserLogin.FooterRow.FindControl("ddlNewParent");
+            TextBox txtTitle = (TextBox)GrdUserLogin.FooterRow.FindControl("txtNewTitle");
+
+            //UserLogin2DB.Insert(txtTitle.Text, Convert.ToInt32(ddlParent.SelectedValue));
+
+            FillGrid();
+        }
+
+        if (e.CommandName.Equals("_LogOff"))
+        {
+            int user_login_id = Convert.ToInt32(e.CommandArgument);
+
+            try
+            {
+                UserLoginDB.UpdateLoggedOffByUserLoginID(user_login_id);
+            }
+            catch (ForeignKeyConstraintException fkcEx)
+            {
+                if (Utilities.IsDev())
+                    SetErrorMessage("Can not delete because other records depend on this : " + fkcEx.Message);
+                else
+                    SetErrorMessage("Can not delete because other records depend on this");
+            }
+
+            FillGrid();
+        }
+    }
+    protected void GrdUserLogin_RowEditing(object sender, GridViewEditEventArgs e)
+    {
+        GrdUserLogin.EditIndex = e.NewEditIndex;
+        FillGrid();
+    }
+    protected void GridView_Sorting(object sender, GridViewSortEventArgs e)
+    {
+        // dont allow sorting if in edit mode
+        if (GrdUserLogin.EditIndex >= 0)
+            return;
+
+        Sort(e.SortExpression);
+    }
+    protected void GrdUserLogin_PageIndexChanging(object sender, GridViewPageEventArgs e)
+    {
+        GrdUserLogin.PageIndex = e.NewPageIndex;
+        FillGrid();
+    }
+
+
+    protected void Sort(string sortExpression, params string[] sortExpr)
+    {
+        DataTable dataTable = Session["userlogin_data"] as DataTable;
+
+        if (dataTable != null)
+        {
+            if (Session["userlogin_sortexpression"] == null)
+                Session["userlogin_sortexpression"] = "";
+
+            DataView dataView = new DataView(dataTable);
+            string[] sortData = Session["userlogin_sortexpression"].ToString().Trim().Split(' ');
+
+            string newSortExpr = (sortExpr.Length == 0) ?
+                (sortExpression == sortData[0] && sortData[1] == "ASC") ? "DESC" : "ASC" :
+                sortExpr[0];
+
+            dataView.Sort = sortExpression + " " + newSortExpr;
+            Session["userlogin_sortexpression"] = sortExpression + " " + newSortExpr;
+
+            GrdUserLogin.DataSource = dataView;
+            GrdUserLogin.DataBind();
+        }
+    }
+
+    #endregion
+
+    #region btnSearch_Click
+
+    protected void btnSearch_Click(object sender, EventArgs e)
+    {
+        if (!Regex.IsMatch(txtStartDate.Text, @"^\d{2}\-\d{2}\-\d{4}$"))
+        {
+            SetErrorMessage("Start date must be of the format yyyy-mm-dd");
+            return;
+        }
+        if (!Regex.IsMatch(txtEndDate.Text, @"^\d{2}\-\d{2}\-\d{4}$"))
+        {
+            SetErrorMessage("End date must be of the format yyyy-mm-dd");
+            return;
+        }
+        else
+            HideErrorMessage();
+
+
+        DateTime startDate = GetDateFromString(txtStartDate.Text, "dd-mm-yyyy");
+        DateTime endDate = GetDateFromString(txtEndDate.Text, "dd-mm-yyyy");
+
+
+        string url = ClearSearchesFromUrl(Request.RawUrl);
+        url = UrlParamModifier.AddEdit(url, "start_date", startDate.ToString("yyyy_MM_dd"));
+        url = UrlParamModifier.AddEdit(url, "end_date", endDate.ToString("yyyy_MM_dd"));
+        Response.Redirect(url);
+    }
+
+    protected string ClearSearchesFromUrl(string url)
+    {
+        url = UrlParamModifier.Remove(url, "start_date");
+        url = UrlParamModifier.Remove(url, "end_date");
+
+        return url;
+    }
+
+    protected void ddlDisplayUserType_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        if (ddlDisplayUserType.SelectedValue == "All")
+        {
+            string url = Request.RawUrl;
+            url = UrlParamModifier.Remove(url, "inc_staff");
+            url = UrlParamModifier.Remove(url, "inc_patients");
+            Response.Redirect(url);
+        }
+        if (ddlDisplayUserType.SelectedValue == "Staff Only")
+        {
+            string url = Request.RawUrl;
+            url = UrlParamModifier.Remove(url, "inc_staff");
+            url = UrlParamModifier.AddEdit(url, "inc_patients", "0");
+            Response.Redirect(url);
+        }
+        if (ddlDisplayUserType.SelectedValue == "Patients Only")
+        {
+            string url = Request.RawUrl;
+            url = UrlParamModifier.AddEdit(url, "inc_staff", "0");
+            url = UrlParamModifier.Remove(url, "inc_patients");
+            Response.Redirect(url);
+        }
+    }
+
+    #endregion
+    
+    #region SetErrorMessage, HideErrorMessage
+
+    private void HideTableAndSetErrorMessage(string errMsg = "", string details = "")
+    {
+        SetErrorMessage(errMsg, details);
+    }
+    private void SetErrorMessage(string errMsg = "", string details = "")
+    {
+        if (errMsg.Contains(Environment.NewLine))
+            errMsg = errMsg.Replace(Environment.NewLine, "<br />");
+
+        // double escape so shows up literally on webpage for 'alert' message
+        string detailsToDisplay = (details.Length == 0 ? "" : " <a href=\"#\" onclick=\"alert('" + details.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("'", "\\'").Replace("\"", "\\'") + "'); return false;\">Details</a>");
+
+        lblErrorMessage.Visible = true;
+        if (errMsg != null && errMsg.Length > 0)
+            lblErrorMessage.Text = errMsg + detailsToDisplay + "<br />";
+        else
+            lblErrorMessage.Text = "An error has occurred. Plase contact the system administrator. " + detailsToDisplay + "<br />";
+    }
+    private void HideErrorMessage()
+    {
+        lblErrorMessage.Visible = false;
+        lblErrorMessage.Text = "";
+    }
+
+    #endregion
+
+}

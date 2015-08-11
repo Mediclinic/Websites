@@ -1,0 +1,152 @@
+﻿
+****** change FROM db 0027 !!!!!!!!!!
+
+-------------------------------------------------------------------------------------------
+
+SELECT 
+ AppointmentID   -- BK ID
+,(SELECT TOP 1 AppTime FROM FrontDesk.dbo.AppDetail WHERE FrontDesk.dbo.Appoint.AppointmentID = FrontDesk.dbo.AppDetail.AppointmentID ORDER BY AppTime)
+,(SELECT TOP 1 DATEADD(minute,5,AppTime) FROM FrontDesk.dbo.AppDetail WHERE FrontDesk.dbo.Appoint.AppointmentID = FrontDesk.dbo.AppDetail.AppointmentID ORDER BY AppTime DESC)
+,(SELECT TOP 1 PractitionerID FROM FrontDesk.dbo.AppDetail WHERE FrontDesk.dbo.Appoint.AppointmentID = FrontDesk.dbo.AppDetail.AppointmentID ORDER BY AppTime)
+
+,(SELECT TOP 1 PGroupID 
+		FROM  FrontDesk.dbo.AppDetail
+		LEFT JOIN FrontDesk.dbo.Practice ON FrontDesk.dbo.AppDetail.PractitionerID = FrontDesk.dbo.Practice.PracID
+  WHERE FrontDesk.dbo.Appoint.AppointmentID = FrontDesk.dbo.AppDetail.AppointmentID)
+
+,AppointmentMade -- DATE ADDED
+,ClientID        -- PT ID
+,AppTypeID       -- OFFERING ID
+,AppStatusTypeID -- 3 = COMPLETED, 1/2 = INCOMPLETE
+FROM FrontDesk.dbo.Appoint    -- bookings
+
+SELECT * FROM FrontDesk.dbo.Appoint
+SELECT * FROM FrontDesk.dbo.AppDetail order by AppointmentID -- provider id of apointment (provider-clinic link)
+SELECT * FROM FrontDesk.dbo.PGroups -- clinics!!!
+
+-------------------------------------------------------------------------------------------
+
+	Declare @booking_id       int
+	Declare @date_start       datetime
+	Declare @date_end         datetime
+	Declare @staff_id         int
+	Declare @organisation_id  int
+
+	Declare @date_created     datetime
+	Declare @patient_id       int
+	Declare @offering_id      int
+	Declare @status_id        int  -- 3 = COMPLETED, 1/2 = INCOMPLETE
+	
+	Declare @entity_id  int
+	Declare @booking_status_id        int
+
+
+	DECLARE DatabaseCursor CURSOR FOR 
+
+	SELECT 
+	AppointmentID   -- BK ID
+	,(SELECT TOP 1 AppTime FROM FrontDesk.dbo.AppDetail WHERE FrontDesk.dbo.Appoint.AppointmentID = FrontDesk.dbo.AppDetail.AppointmentID ORDER BY AppTime)
+	,(SELECT TOP 1 DATEADD(minute,5,AppTime) FROM FrontDesk.dbo.AppDetail WHERE FrontDesk.dbo.Appoint.AppointmentID = FrontDesk.dbo.AppDetail.AppointmentID ORDER BY AppTime DESC)
+	,(SELECT TOP 1 PractitionerID FROM FrontDesk.dbo.AppDetail WHERE FrontDesk.dbo.Appoint.AppointmentID = FrontDesk.dbo.AppDetail.AppointmentID ORDER BY AppTime)
+	,(SELECT TOP 1 PGroupID 
+		FROM  FrontDesk.dbo.AppDetail
+		LEFT JOIN FrontDesk.dbo.Practice ON FrontDesk.dbo.AppDetail.PractitionerID = FrontDesk.dbo.Practice.PracID
+	WHERE FrontDesk.dbo.Appoint.AppointmentID = FrontDesk.dbo.AppDetail.AppointmentID)
+
+	,AppointmentMade -- DATE ADDED
+	,ClientID        -- PT ID
+	,AppTypeID       -- OFFERING ID
+	,AppStatusTypeID -- 3 = COMPLETED, 1/2 = INCOMPLETE
+	FROM FrontDesk.dbo.Appoint    -- bookings
+	ORDER BY AppointmentID
+
+	OPEN DatabaseCursor  
+	FETCH NEXT FROM DatabaseCursor INTO @booking_id, @date_start, @date_end, @staff_id, @organisation_id, @date_created, @patient_id, @offering_id, @status_id
+	
+	WHILE @@FETCH_STATUS = 0 
+	BEGIN 
+
+		IF (@status_id = 1 OR @status_id = 2)
+		BEGIN
+			SET @booking_status_id = 0
+		END
+		IF (@status_id = 1 OR @status_id = 3)
+		BEGIN
+			SET @booking_status_id = 187
+		END
+		
+		SET @booking_status_id = 0
+
+
+	    -- add entity
+        INSERT INTO Mediclinic_0027.dbo.Entity DEFAULT VALUES;
+        SET @entity_id = SCOPE_IDENTITY()
+
+		-- add booking
+
+		IF (@date_start IS NOT NULL)
+		BEGIN
+
+			SET IDENTITY_INSERT Mediclinic_0027.dbo.Booking ON
+
+			INSERT INTO Mediclinic_0027.dbo.Booking (booking_id,entity_id,date_start,date_end
+								,organisation_id,provider,patient_id,offering_id,booking_type_id,booking_status_id,booking_unavailability_reason_id
+								,added_by,date_created,booking_confirmed_by_type_id,confirmed_by,date_confirmed,deleted_by,date_deleted
+								,is_patient_missed_appt,is_provider_missed_appt,is_emergency
+								,need_to_generate_first_letter,need_to_generate_last_letter,has_generated_system_letters
+								,arrival_time
+								,is_recurring,recurring_weekday_id,recurring_start_time,recurring_end_time)
+			VALUES
+			(
+				 @booking_id
+				,@entity_id
+				,@date_start
+				,@date_end
+
+				,@organisation_id
+				,@staff_id
+				,@patient_id
+				,@offering_id
+				,34  -- patient booking
+
+				,@booking_status_id
+				,NULL -- @booking_unavailability_reason_id
+
+				,NULL -- added_by
+				,@date_created
+				,NULL -- @booking_confirmed_by_type_id
+				,NULL -- @confirmed_by
+				,NULL -- @date_confirmed
+				,NULL -- @deleted_by    
+				,NULL -- @date_deleted  
+
+				,0 -- @is_patient_missed_appt  
+				,0 -- @is_provider_missed_appt 
+				,0 -- @is_emergency         
+
+				,0 -- @need_to_generate_first_letter
+				,0 -- @need_to_generate_last_letter
+				,1 -- @has_generated_system_letters
+
+				,NULL -- @arrival_time         
+
+				,0 -- @is_recurring         
+				,NULL -- @recurring_weekday_id 
+				,NULL -- @recurring_start_time 
+				,NULL -- @recurring_end_time   
+			)
+ 
+			SET IDENTITY_INSERT Mediclinic_0027.dbo.Booking OFF
+
+		END
+
+
+
+
+		FETCH NEXT FROM DatabaseCursor INTO @booking_id, @date_start, @date_end, @staff_id, @organisation_id, @date_created, @patient_id, @offering_id, @status_id
+	
+	END 
+	CLOSE DatabaseCursor  
+	DEALLOCATE DatabaseCursor
+
+-------------------------------------------------------------------------------------------

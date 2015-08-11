@@ -1,0 +1,15 @@
+﻿<%@ Page Title="Sms And Email Birhtdays" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true"  CodeFile="SmsAndEmailBirthdays.aspx.cs" Inherits="SmsAndEmailBirthdays" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <h2>Sms & Email Birthdays Sending Today</h2>
+
+    <br />
+
+    <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+
+    <asp:Literal ID="htmlOutput" runat="server" />
+
+</asp:Content>

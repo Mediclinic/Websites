@@ -1,0 +1,343 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Configuration;
+using System.Collections;
+using System.Text.RegularExpressions;
+
+public partial class RegisterReferrersToPatient : System.Web.UI.Page
+{
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        try
+        {
+
+            if (!IsPostBack)
+                Utilities.SetNoCache(Response);
+            HideErrorMessage();
+
+            //GrdRegistration.GridLines = GridLines.None;
+            //GrdRegistration.AllowSorting = false;
+
+
+            if (!IsPostBack)
+            {
+                Session.Remove("registerreferrertopatient_sortexpression");
+                Session.Remove("registerreferrertopatient_data");
+                FillGrid();
+            }
+
+            if (!Utilities.IsDev())
+                this.Label1.Visible = false;
+
+            this.GrdRegistration.EnableViewState = true;
+
+        }
+        catch (CustomMessageException ex)
+        {
+            if (IsPostBack) SetErrorMessage(ex.Message);
+            else HideTableAndSetErrorMessage(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            if (IsPostBack) SetErrorMessage("", ex.ToString());
+            else HideTableAndSetErrorMessage("", ex.ToString());
+        }
+    }
+
+
+    private bool IsValidFormID()
+    {
+        string raw_id = Request.QueryString["id"];
+        if (raw_id == null)
+            return false;
+
+        return Regex.IsMatch(raw_id, @"^\d+$");
+    }
+    private int GetFormID()
+    {
+        if (!IsValidFormID())
+            throw new Exception("Invalid ID");
+        return Convert.ToInt32(Request.QueryString["id"]);
+    }
+
+
+    #region GrdRegistration
+
+    private bool hideFotter = false;
+    private bool hideDataRows = false;
+
+    protected void FillGrid()
+    {
+        if (!IsValidFormID())
+        {
+            HideTableAndSetErrorMessage("", "Invalid URL Parameters");
+            return;
+        }
+
+        Patient patient = PatientDB.GetByID(GetFormID());
+        if (patient == null)
+        {
+            HideTableAndSetErrorMessage("", "Invalid URL Parameters");
+            return;
+        }
+        patient.Person = PersonDB.GetByID(patient.Person.PersonID);
+
+        heading.InnerText = "Manage Registrations For :  " + patient.Person.Firstname + " " + patient.Person.Surname;
+        this.lnkThisPatient.NavigateUrl = "~/AddEditPatient.aspx?type=view&id=" + GetFormID().ToString();
+        this.lnkThisPatient.Text = "Back to details for " + patient.Person.Firstname + " " + patient.Person.Surname;
+
+        DataTable dt = PatientReferrerDB.GetDataTable_EPCReferrersOf(patient.PatientID);
+        Session["registerreferrertopatient_data"] = dt;
+
+        if (dt.Rows.Count > 0)
+        {
+            hideDataRows = false;
+
+            if (IsPostBack && Session["registerreferrertopatient_sortexpression"] != null && Session["registerreferrertopatient_sortexpression"].ToString().Length > 0)
+            {
+                DataView dataView = new DataView(dt);
+                dataView.Sort = Session["registerreferrertopatient_sortexpression"].ToString();
+                GrdRegistration.DataSource = dataView;
+            }
+            else
+            {
+                GrdRegistration.DataSource = dt;
+            }
+
+            GrdRegistration.DataBind();
+
+            // dont allow insert if more than one "Active" row in there!
+            hideFotter = true;
+        }
+        else
+        {
+            hideDataRows = true;
+
+            dt.Rows.Add(dt.NewRow());
+            GrdRegistration.DataSource = dt;
+            GrdRegistration.DataBind();
+
+            GrdRegistration.Columns[0].Visible = false;
+            GrdRegistration.Columns[4].Visible = false;
+            GrdRegistration.HeaderRow.Cells[5].Visible = false;
+            GrdRegistration.Columns[6].Visible = false;
+
+            //int TotalColumns = GrdRegistration.Rows[0].Cells.Count;
+            //GrdRegistration.Rows[0].Cells.Clear();
+            //GrdRegistration.Rows[0].Cells.Add(new TableCell());
+            //GrdRegistration.Rows[0].Cells[0].ColumnSpan = TotalColumns;
+            //GrdRegistration.Rows[0].Cells[0].Text = "No Record Found";
+        }
+
+        if (hideFotter)
+            GrdRegistration.FooterRow.Visible = false;
+    }
+    protected void GrdRegistration_RowCreated(object sender, GridViewRowEventArgs e)
+    {
+        if (!Utilities.IsDev() && e.Row.RowType != DataControlRowType.Pager)
+            e.Row.Cells[0].CssClass = "hiddencol";
+    }
+    protected void GrdRegistration_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        Patient patient = PatientDB.GetByID(GetFormID());
+        if (patient == null)
+        {
+            HideTableAndSetErrorMessage("", "Invalid URL Parameters");
+            return;
+        }
+
+        DataTable dt = Session["registerreferrertopatient_data"] as DataTable;
+        bool tblEmpty = (dt.Rows.Count == 1 && dt.Rows[0][0] == DBNull.Value);
+        if (!tblEmpty && e.Row.RowType == DataControlRowType.DataRow)
+        {
+            Label lblId = (Label)e.Row.FindControl("lblId");
+            DataRow[] foundRows = dt.Select("pr_patient_referrer_id=" + lblId.Text);
+            DataRow thisRow = foundRows[0];
+
+
+            if (hideDataRows)
+            {
+                e.Row.Visible = false;
+            }
+            else
+            {
+
+                DropDownList ddlReferrer = (DropDownList)e.Row.FindControl("ddlReferrer");
+                if (ddlReferrer != null)
+                {
+                    RegisterReferrer[] incList_orig = PatientReferrerDB.GetEPCReferrersOf(patient.PatientID);
+                    RegisterReferrer[] incList = RegisterReferrer.RemoveByID(incList_orig, Convert.ToInt32(thisRow["pr_register_referrer_id"]));
+                    DataTable rr = RegisterReferrerDB.GetDataTable_AllNotInc(incList);
+                    //rr.DefaultView.Sort = "p.surname ASC";
+
+                    foreach (DataRowView row in rr.DefaultView)
+                        ddlReferrer.Items.Add(new ListItem(row["surname"].ToString() + ", " + row["firstname"].ToString() + " [" + row["name"].ToString() + "]", row["register_referrer_id"].ToString()));
+                    ddlReferrer.SelectedValue = thisRow["pr_register_referrer_id"].ToString();
+                }
+
+                Utilities.AddConfirmationBox(e);
+                if ((e.Row.RowState & DataControlRowState.Edit) > 0)
+                    Utilities.SetEditRowBackColour(e, System.Drawing.Color.LightGoldenrodYellow);
+            }
+
+        }
+        if (e.Row.RowType == DataControlRowType.Footer)
+        {
+            DropDownList ddlReferrer = (DropDownList)e.Row.FindControl("ddlNewReferrer");
+            if (ddlReferrer != null)
+            {
+                RegisterReferrer[] incList = PatientReferrerDB.GetEPCReferrersOf(patient.PatientID);
+                DataTable rr = RegisterReferrerDB.GetDataTable_AllNotInc(incList);
+                //rr.DefaultView.Sort = "p.surname ASC";
+
+                foreach (DataRowView row in rr.DefaultView)
+                    ddlReferrer.Items.Add(new ListItem(row["surname"].ToString() + ", " + row["firstname"].ToString() + " [" + row["name"].ToString() + "]", row["register_referrer_id"].ToString()));
+
+                if (rr.Rows.Count == 0)
+                    hideFotter = true;
+            }
+        }
+    }
+    protected void GrdRegistration_RowCancelingEdit(object sender, GridViewCancelEditEventArgs e)
+    {
+        GrdRegistration.EditIndex = -1;
+        FillGrid();
+    }
+    protected void GrdRegistration_RowUpdating(object sender, GridViewUpdateEventArgs e)
+    {
+        Label lblId = (Label)GrdRegistration.Rows[e.RowIndex].FindControl("lblId");
+        DropDownList ddlReferrer = (DropDownList)GrdRegistration.Rows[e.RowIndex].FindControl("ddlReferrer");
+        CheckBox chkPatientReferrerIsDebtor = (CheckBox)GrdRegistration.Rows[e.RowIndex].FindControl("chkPatientReferrerIsDebtor");
+
+        Patient patient = PatientDB.GetByID(GetFormID());
+        if (patient == null)
+        {
+            HideTableAndSetErrorMessage("");
+            return;
+        }
+
+        PatientReferrerDB.Update(Convert.ToInt32(lblId.Text), patient.PatientID, Convert.ToInt32(ddlReferrer.SelectedValue), 0, chkPatientReferrerIsDebtor.Checked);
+
+        GrdRegistration.EditIndex = -1;
+        FillGrid();
+    }
+    protected void GrdRegistration_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+        Label lblId = (Label)GrdRegistration.Rows[e.RowIndex].FindControl("lblId");
+
+        try
+        {
+            PatientReferrerDB.UpdateSetInactive(Convert.ToInt32(lblId.Text));
+        }
+        catch (ForeignKeyConstraintException fkcEx)
+        {
+            if (Utilities.IsDev())
+                HideTableAndSetErrorMessage("Can not delete because other records depend on this : " + fkcEx.Message);
+            else
+                HideTableAndSetErrorMessage("Can not delete because other records depend on this");
+        }
+
+        FillGrid();
+    }
+    protected void GrdRegistration_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+        if (e.CommandName.Equals("Insert"))
+        {
+            DropDownList ddlReferrer = (DropDownList)GrdRegistration.FooterRow.FindControl("ddlNewReferrer");
+            CheckBox chkPatientReferrerIsDebtor = (CheckBox)GrdRegistration.FooterRow.FindControl("chkNewPatientReferrerIsDebtor");
+
+
+            Patient patient = PatientDB.GetByID(GetFormID());
+            if (patient == null)
+            {
+                HideTableAndSetErrorMessage("");
+                return;
+            }
+
+            try
+            {
+                PatientReferrerDB.Insert(patient.PatientID, Convert.ToInt32(ddlReferrer.SelectedValue), 0, chkPatientReferrerIsDebtor.Checked);
+            }
+            catch (UniqueConstraintException) 
+            {
+                // happens when 2 forms allow adding - do nothing and let form re-update
+            }
+
+            FillGrid();
+        }
+    }
+    protected void GrdRegistration_RowEditing(object sender, GridViewEditEventArgs e)
+    {
+        GrdRegistration.EditIndex = e.NewEditIndex;
+        FillGrid();
+    }
+    protected void GridView_Sorting(object sender, GridViewSortEventArgs e)
+    {
+        // dont allow sorting if in edit mode
+        if (GrdRegistration.EditIndex >= 0)
+            return;
+
+        Sort(e.SortExpression);
+    }
+
+    protected void Sort(string sortExpression, params string[] sortExpr)
+    {
+        DataTable dataTable = Session["registerreferrertopatient_data"] as DataTable;
+
+        if (dataTable != null)
+        {
+            if (Session["registerreferrertopatient_sortexpression"] == null)
+                Session["registerreferrertopatient_sortexpression"] = "";
+
+            DataView dataView = new DataView(dataTable);
+            string[] sortData = Session["registerreferrertopatient_sortexpression"].ToString().Trim().Split(' ');
+
+            string newSortExpr = (sortExpr.Length == 0) ?
+                (sortExpression == sortData[0] && sortData[1] == "ASC") ? "DESC" : "ASC" :
+                sortExpr[0];
+
+            dataView.Sort = sortExpression + " " + newSortExpr;
+            Session["registerreferrertopatient_sortexpression"] = sortExpression + " " + newSortExpr;
+
+            GrdRegistration.DataSource = dataView;
+            GrdRegistration.DataBind();
+        }
+    }
+
+    #endregion
+
+    #region HideTableAndSetErrorMessage, HideErrorMessag
+
+    private void HideTableAndSetErrorMessage(string errMsg = "", string details = "")
+    {
+        GrdRegistration.Visible = false;
+        lnkThisPatient.Visible = false;
+        SetErrorMessage(errMsg, details);
+    }
+    private void SetErrorMessage(string errMsg = "", string details = "")
+    {
+        if (errMsg.Contains(Environment.NewLine))
+            errMsg = errMsg.Replace(Environment.NewLine, "<br />");
+
+        // double escape so shows up literally on webpage for 'alert' message
+        string detailsToDisplay = (details.Length == 0 ? "" : " <a href=\"#\" onclick=\"alert('" + details.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("'", "\\'").Replace("\"", "\\'") + "'); return false;\">Details</a>");
+
+        lblErrorMessage.Visible = true;
+        if (errMsg != null && errMsg.Length > 0)
+            lblErrorMessage.Text = errMsg + detailsToDisplay + "<br />";
+        else
+            lblErrorMessage.Text = "An error has occurred. Plase contact the system administrator. " + detailsToDisplay + "<br />";
+    }
+    private void HideErrorMessage()
+    {
+        lblErrorMessage.Visible = false;
+        lblErrorMessage.Text = "";
+    }
+
+    #endregion
+}

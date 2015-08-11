@@ -1,0 +1,140 @@
+﻿<%@ Page Title="Treatment Template Letters" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true"
+    CodeFile="MaintainTreatmentLetters.aspx.cs" Inherits="MaintainTreatmentLetters" %>
+
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <table>
+        <tr>
+            <td>
+                <h2>Treatment Template Letters</h2>
+            </td>
+        </tr>
+    </table>
+
+
+    <br />
+    <br />
+
+
+
+        <asp:ValidationSummary ID="EditTreatmentTemplateLettersValidationSummary" runat="server" CssClass="failureNotification" 
+             ValidationGroup="EditTreatmentTemplateLettersValidationSummary"/>
+        <asp:ValidationSummary ID="AddTreatmentTemplateLettersValidationSummary" runat="server" CssClass="failureNotification" 
+             ValidationGroup="AddTreatmentTemplateLettersValidationGroup"/>
+        <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+
+    <p>
+        <asp:GridView ID="GrdTreatmentTemplateLetters" runat="server" 
+             AutoGenerateColumns="False" DataKeyNames="lettertreatmenttemplate_letter_treatment_template_id" 
+             OnRowCancelingEdit="GrdTreatmentTemplateLetters_RowCancelingEdit" 
+             OnRowDataBound="GrdTreatmentTemplateLetters_RowDataBound" 
+             OnRowEditing="GrdTreatmentTemplateLetters_RowEditing" 
+             OnRowUpdating="GrdTreatmentTemplateLetters_RowUpdating" ShowFooter="True" 
+             OnRowCommand="GrdTreatmentTemplateLetters_RowCommand" 
+             OnRowDeleting="GrdTreatmentTemplateLetters_RowDeleting" 
+             OnRowCreated="GrdTreatmentTemplateLetters_RowCreated"
+             AllowSorting="True" 
+             OnSorting="GridView_Sorting"
+             RowStyle-VerticalAlign="top"
+             ClientIDMode="Predictable">
+
+            <Columns> 
+
+                <asp:TemplateField HeaderText="ID"  HeaderStyle-HorizontalAlign="Left" SortExpression="lettertreatmenttemplate_letter_treatment_template_id"> 
+                    <EditItemTemplate> 
+                        <asp:Label ID="lblId" runat="server" Text='<%# Bind("lettertreatmenttemplate_letter_treatment_template_id") %>'></asp:Label>
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblId" runat="server" Text='<%# Bind("lettertreatmenttemplate_letter_treatment_template_id") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+
+                <asp:TemplateField HeaderText="EPC/Ref. Type" HeaderStyle-HorizontalAlign="Left" SortExpression="field_descr" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:Label ID="lblField" runat="server" Text='<%# Eval("field_descr") %>'></asp:Label> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblField" runat="server" Text='<%# Eval("field_descr") %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:DropDownList ID="ddlNewField" runat="server" DataTextField="descr" DataValueField="field_id"> </asp:DropDownList>
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="First Letter" HeaderStyle-HorizontalAlign="Left" SortExpression="firstletter_docname" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:DropDownList ID="ddlFirstLetter" runat="server" DataTextField="descr" DataValueField="field_id"> </asp:DropDownList> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblFirstLetter" runat="server" Text='<%# Eval("firstletter_docname") %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:DropDownList ID="ddlNewFirstLetter" runat="server" DataTextField="descr" DataValueField="field_id"> </asp:DropDownList>
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Last Letter" HeaderStyle-HorizontalAlign="Left" SortExpression="lastletter_docname" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:DropDownList ID="ddlLastLetter" runat="server" DataTextField="descr" DataValueField="field_id"> </asp:DropDownList> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblLastLetter" runat="server" Text='<%# Eval("lastletter_docname") %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:DropDownList ID="ddlNewLastLetter" runat="server" DataTextField="descr" DataValueField="field_id"> </asp:DropDownList>
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Last Letter When EPC/Ref. Replaced" HeaderStyle-HorizontalAlign="Left" SortExpression="lastletterwhenreplacingepc_docname" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:DropDownList ID="ddlLastLetterWhenReplacingEPC" runat="server" DataTextField="descr" DataValueField="field_id"> </asp:DropDownList> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblLastLetterWhenReplacingEPC" runat="server" Text='<%# Eval("lastletterwhenreplacingepc_docname") %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:DropDownList ID="ddlNewLastLetterWhenReplacingEPC" runat="server" DataTextField="descr" DataValueField="field_id"> </asp:DropDownList>
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+
+                <asp:TemplateField HeaderText="Treatment Note Letter" HeaderStyle-HorizontalAlign="Left" SortExpression="treatmentnotesletter_docname" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:DropDownList ID="ddlTreatmentNoteLetter" runat="server" DataTextField="descr" DataValueField="field_id"> </asp:DropDownList> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblTreatmentNoteLetter" runat="server" Text='<%# Eval("treatmentnotesletter_docname") %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:DropDownList ID="ddlNewTreatmentNoteLetter" runat="server" DataTextField="descr" DataValueField="field_id"> </asp:DropDownList>
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+
+                <asp:TemplateField HeaderText="" ShowHeader="False" HeaderStyle-HorizontalAlign="Left" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:LinkButton ID="lnkUpdate" runat="server" CausesValidation="True" CommandName="Update" Text="Update" ValidationGroup="EditTreatmentTemplateLettersValidationSummary"></asp:LinkButton> 
+                        <asp:LinkButton ID="lnkCancel" runat="server" CausesValidation="False" CommandName="Cancel" Text="Cancel"></asp:LinkButton> 
+                    </EditItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:LinkButton ID="lnkAdd" runat="server" CausesValidation="True" CommandName="Insert" Text="Insert" ValidationGroup="AddTreatmentTemplateLettersValidationGroup"></asp:LinkButton> 
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                       <asp:ImageButton ID="lnkEdit" runat="server" CommandName="Edit" ImageUrl="~/images/Inline-edit-icon-24.png"  AlternateText="Inline Edit" ToolTip="Inline Edit"/>
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:CommandField HeaderText="" ShowDeleteButton="True" ShowHeader="True" ButtonType="Image"  DeleteImageUrl="~/images/Delete-icon-24.png" /> 
+
+            </Columns> 
+        </asp:GridView>
+    </p>
+    <p>
+        <asp:Label ID="Label1" runat="server"></asp:Label>
+        <br />
+    </p>
+</asp:Content>

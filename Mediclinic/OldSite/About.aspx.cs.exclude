@@ -1,0 +1,47 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Configuration;
+using System.IO;
+
+using System.Xml;
+
+using OfficeInterop;
+
+/*
+SELECT
+
+	TOP (100)
+	(SELECT        COUNT(*) AS Expr1
+	 FROM            InvoiceLine
+	 WHERE        (invoice_id = Invoice.invoice_id)) AS invoice_lines_count, 
+    invoice_id, entity_id, invoice_type_id, booking_id, payer_organisation_id, payer_patient_id, non_booking_invoice_organisation_id, healthcare_claim_number, reject_letter_id, staff_id, site_id, invoice_date_added, total, gst, is_paid, is_refund, is_batched, reversed_by, reversed_date
+
+FROM     Invoice
+ORDER BY invoice_lines_count DESC
+
+*/
+
+
+public partial class About : System.Web.UI.Page
+{
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (!IsPostBack)
+            txtInvoiceIDs.Text = "149087, 125048";  // 7717
+    }
+
+    protected void btnTest_Click(object sender, EventArgs e)
+    {
+        int[] invoiceIDs = txtInvoiceIDs.Text.Split(',').Select(n => Convert.ToInt32(n.Trim())).ToArray();
+        Invoice invoice = InvoiceDB.GetByID(invoiceIDs[0]);
+
+        //int[] invoiceIDs = new int[] { 149573, 125048 };
+
+        Letter.GenerateInvoicesToPrint(invoiceIDs, Response, invoice.Site.IsClinic);
+    }
+
+}

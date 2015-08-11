@@ -1,0 +1,118 @@
+﻿
+
+****** change FROM db 0027 !!!!!!!!!!
+
+===> they will need to go in and set pricing (and default time slot mins per service) .. as I could not find it in the DB
+===> it is in SELECT * FROM FrontDesk.dbo.ITEM .. but has like 12 prices with discount info and so on .. just put it in themself
+-------------------------------------------------------------------------------------------
+
+SELECT
+	 AppTypeID
+	,Description
+	,ShortDesc
+	,Archive
+ FROM FrontDesk.dbo.AppType
+ order by AppTypeID
+
+-------------------------------------------------------------------------------------------
+
+	Declare @AppTypeID   int
+	Declare @Description varchar(200)
+	Declare @ShortDesc   varchar(200)
+	Declare @Archive     bit
+
+
+	DECLARE DatabaseCursor CURSOR FOR 
+
+	SELECT 
+		 AppTypeID
+		,Description
+		,ShortDesc
+		,Archive
+	FROM FrontDesk.dbo.AppType
+	ORDER BY AppTypeID
+
+	OPEN DatabaseCursor  
+	FETCH NEXT FROM DatabaseCursor INTO @AppTypeID, @Description, @ShortDesc, @Archive
+
+	WHILE @@FETCH_STATUS = 0 
+	BEGIN 
+
+		SET IDENTITY_INSERT Mediclinic_0027.dbo.Offering ON
+		INSERT INTO Mediclinic_0027.dbo.Offering ( 
+		  offering_id
+		 ,field_id
+		 ,offering_type_id
+		 ,aged_care_patient_type_id
+		 ,num_clinic_visits_allowed_per_year
+		 ,offering_invoice_type_id
+		 ,name
+		 ,short_name
+		 ,descr
+		 ,is_gst_exempt
+		 ,default_price
+		 ,service_time_minutes
+		 ,is_deleted
+		 ,max_nbr_claimable
+		 ,max_nbr_claimable_months
+		 ,medicare_company_code
+		 ,dva_company_code
+		 ,medicare_charge
+		 ,dva_charge
+		 ,tac_charge
+		 ,popup_message
+		 ,reminder_letter_months_later_to_send
+		 ,reminder_letter_id
+		 ,use_custom_color
+		 ,custom_color
+		)
+		VALUES
+		(
+			 @AppTypeID
+			,313
+			,63
+			,1
+			,0
+			,1
+			,@Description
+			,@ShortDesc
+			,@Description
+			,1
+			,0.00
+			,10
+			,@Archive
+			,0
+			,0
+			,''
+			,''
+			,0.00
+			,0.00
+			,0.00
+			,''
+			,0
+			,NULL
+			,0
+			,'FFFFFF'
+		)
+		SET IDENTITY_INSERT Mediclinic_0027.dbo.Offering OFF
+
+
+		FETCH NEXT FROM DatabaseCursor INTO @AppTypeID, @Description, @ShortDesc, @Archive
+	
+	END 
+	CLOSE DatabaseCursor  
+	DEALLOCATE DatabaseCursor
+	
+	--delete Mediclinic_0027.dbo.offering where offering_id < 1000 AND offering_id > 9
+	--select * from Mediclinic_0027.dbo.Offering
+
+-------------------------------------------------------------------------------------------
+
+delete Mediclinic_0027.dbo.Offering where offering_id > 9
+
+DBCC CHECKIDENT(Offering,RESEED,1);
+DBCC CHECKIDENT(Offering);
+
+-------------------------------------------------------------------------------------------
+
+

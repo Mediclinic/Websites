@@ -1,0 +1,95 @@
+﻿
+-------------------------------------------------------------------------------------------
+
+SELECT * INTO FD3.dbo.Attachments FROM FrontDesk.dbo.Attachments where AttachmentID in (101060,101059,101021,101025,100793,100820)
+SELECT * INTO FD3.dbo.ClinicalNotes FROM FrontDesk.dbo.ClinicalNotes where ClinicalNotesID in (68445,62835,55970,61708,61279,85507,85486,73538)
+
+SELECT AttachmentID
+      ,ClientID
+      ,DateAdded
+      ,Description
+      ,Extension
+      ,Data  -- image
+      ,Owner
+      ,OwnerAccess
+      ,OwnerHideDescription
+      ,ClinicalNotesOnly
+FROM FrontDesk.dbo.Attachments
+
+SELECT ClinicalNotesID
+      ,ClientID
+      ,PracID
+      ,TreatmentDate
+      ,UserName
+      ,Notes  -- ntext
+      ,NoteType
+      ,TimeStamp
+      ,GroupID
+      ,ChartImage
+      ,TemplateID
+      ,ModifiedNote
+      ,TemplateType
+FROM FrontDesk.dbo.ClinicalNotes
+
+-------------------------------------------------------------------------------------------
+
+--SELECT * FROM Appoint ORDER BY AppointmentID
+--SELECT COUNT(*) FROM Attachments
+--SELECT DISTINCT extension FROM Attachments
+--SELECT top 100 * FROM Attachments ORDER BY AttachmentID
+
+
+-- C:\Program Files\Microsoft SQL Server\100\Tools\Binn
+DECLARE  @Command      VARCHAR(500),
+		 @AttachmentID INT,
+		 @Description  VARCHAR(200),
+		 @Extension	   VARCHAR(200),
+		 @ClientID     INT
+ 
+DECLARE curPhotoImage CURSOR  FOR			 -- Cursor for each image in table
+
+SELECT   AttachmentID
+		,Description
+		,Extension
+		,ClientID
+FROM  Attachments
+WHERE  AttachmentID <= 50008
+ORDER BY ClientID, AttachmentID
+ 
+OPEN curPhotoImage
+ 
+FETCH NEXT FROM curPhotoImage INTO  @AttachmentID, @Description, @Extension, @ClientID
+ 
+WHILE (@@FETCH_STATUS = 0) -- Cursor loop 
+	BEGIN
+		-- Keep the bcp command on ONE LINE - SINGLE LINE!!! - broken up for presentation
+		SET @Command = 'bcp "SELECT DATA FROM FrontDesk.dbo.Attachments WHERE AttachmentID = ' +
+		convert(VARCHAR,@AttachmentID) + '" queryout "C:\Program Files\Microsoft SQL Server\MSSQL10_50.SQLEXPRESS\MSSQL\DATA\FDImages\' + convert(VARCHAR,@ClientID) + '_' + @Description + '.' + @Extension + '" -T -n -SELI-LAPTOP\SQLEXPRESS -f bcp.fmt  '
+
+		PRINT @Command
+
+		EXEC xp_cmdshell @Command	 -- Carry out image export to file from db table
+	
+		FETCH NEXT FROM curPhotoImage INTO  @AttachmentID, @Description, @Extension, @ClientID
+	END  -- cursor loop
+ 
+CLOSE curPhotoImage
+ 
+DEALLOCATE curPhotoImage 
+
+-------------------------------------------------------------------------------------------
+
+-- To allow advanced options to be changed.
+EXEC sp_configure 'show advanced options', 1
+GO
+-- To update the currently configured value for advanced options.
+RECONFIGURE
+GO
+-- To enable the feature.
+EXEC sp_configure 'xp_cmdshell', 1
+GO
+-- To update the currently configured value for this feature.
+RECONFIGURE
+GO
+
+-------------------------------------------------------------------------------------------

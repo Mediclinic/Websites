@@ -1,0 +1,592 @@
+﻿
+
+****** change FROM db 0027 !!!!!!!!!!
+
+-------------------------------------------------------------------------------------------
+
+SELECT 
+	 InvoiceID    -- invoice_id if invoice, else ignore
+	,TransID      -- id if not invoice
+	,TransType
+	,InvoiceDate  -- invoice_date_added
+	,ClientID     -- patient
+	,ShortDescription
+	,Description
+	,Credit
+	,Debit
+	,PracID    -- get clinic from here
+	,Completed
+	,SubType
+	,Username
+FROM FrontDesk.dbo.TRANS
+--where TransType not in ('I','P','J','A','R','W')
+--where TransType in ('A')
+--where InvoiceID in (53399, 164140, 164036, 15033, 103130,163997,164026,164037,164338,164501)
+ORDER BY InvoiceID, TransID
+
+
+SELECT DISTINCT TransType,
+(SELECT COUNT(*) FROM FrontDesk.dbo.TRANS T2 WHERE T1.TransType = t2.TransType)
+FROM FrontDesk.dbo.TRANS T1
+/*
+	TransType	Count
+	W			80      (credit) Write Off   (Cr Note)          eg InvoiceID 53399
+	J			11391   (credit) Credit Note (Cr Note)
+	I			133405  (debit ) Invoice     (Invoice)
+	P			144554  (credit) Payment     (Receipt)
+	K			976     (credit) Payment     (Receipt)
+	R			94      (credit) Refund      (Refund)           eg InvoiceID 15033
+
+
+	T			627     (debit/credit) Practice Transfer  ??    debits first PracID and credits other PracID    eg InvoiceID  164140, 164036
+
+	A			439     (credit) Unallocated Payment -- not linked to any invoice, so ignore  eg InvoiceID 103130 
+*/
+
+
+/*
+SELECT 
+(SELECT count(*) FROM FrontDesk.dbo.TRANS t2 WHERE t2.InvoiceID = t1.InvoiceID AND t2.TransType = 'T')
+,* FROM FrontDesk.dbo.TRANS t1
+WHERE (SELECT count(*) FROM FrontDesk.dbo.TRANS t2 WHERE t2.InvoiceID = t1.InvoiceID AND t2.TransType = 'T') not in (0,2)
+
+--UPDATE FrontDesk.dbo.TRANS SET Debit = 119.50  WHERE TransID = 276324
+--DELETE FrontDesk.dbo.TRANS WHERE TransID = 276323
+*/
+
+/*
+SELECT 
+--DISTINCT INVOICEID
+(SELECT count(*) FROM FrontDesk.dbo.TRANS t2 WHERE t2.InvoiceID = t1.InvoiceID AND t2.TransType = 'i')
+,* 
+FROM FrontDesk.dbo.TRANS t1
+WHERE (SELECT count(*) FROM FrontDesk.dbo.TRANS t2 WHERE t2.InvoiceID = t1.InvoiceID AND t2.TransType = 'i') not in (1, 0)
+
+-- DELETE FrontDesk.dbo.TRANS WHERE InvoiceID IN (69183, 69186, 76080, 76081, 84516)
+*/
+
+
+
+
+/*
+
+		SET IDENTITY_INSERT Mediclinic_0027.dbo.Offering ON
+		INSERT INTO Mediclinic_0027.dbo.Offering ( 
+		  offering_id
+		 ,field_id
+		 ,offering_type_id
+		 ,aged_care_patient_type_id
+		 ,num_clinic_visits_allowed_per_year
+		 ,offering_invoice_type_id
+		 ,name
+		 ,short_name
+		 ,descr
+		 ,is_gst_exempt
+		 ,default_price
+		 ,service_time_minutes
+		 ,is_deleted
+		 ,max_nbr_claimable
+		 ,max_nbr_claimable_months
+		 ,medicare_company_code
+		 ,dva_company_code
+		 ,medicare_charge
+		 ,dva_charge
+		 ,tac_charge
+		 ,popup_message
+		 ,reminder_letter_months_later_to_send
+		 ,reminder_letter_id
+		 ,use_custom_color
+		 ,custom_color
+		)
+		VALUES
+		(
+			 0 
+			,313
+			,63
+			,1
+			,0
+			,1
+			,'FD Import'
+			,'FD Import'
+			,'FD Import'
+			,1
+			,0.00
+			,10
+			,1  -- is_deleted
+			,0
+			,0
+			,''
+			,''
+			,0.00
+			,0.00
+			,0.00
+			,''
+			,0
+			,NULL
+			,0
+			,'FFFFFF'
+		)
+		SET IDENTITY_INSERT Mediclinic_0027.dbo.Offering OFF
+
+
+*/
+
+-------------------------------------------------------------------------------------------
+
+1. Put in Offering 'FD Import' ID 0
+
+2. GET LIST OF DISTINCT INVOICE IDS
+
+FOR EACH:
+- SELECT INVOICE           [I]   -- PUT THEM IN
+- SELECT RECEIPTS          [P,K] -- PUT THEM IN
+- SELECT CREDIT NOTES      [J,W] -- PUT THEM IN
+- SELECT REFUNDS           [R]   -- PUT THEM IN
+
+-------------------------------------------------------------------------------------------
+
+DECLARE @InvoiceID   int;    -- invoice_id if invoice, else ignore
+DECLARE @TransID     int;     -- id if not invoice
+DECLARE @TransType   varchar(10);    -- I/J/P/....
+DECLARE @InvoiceDate datetime;  -- invoice_date_added
+DECLARE @ClientID    int;     -- patient
+DECLARE @PracID      int;      -- get clinic from here
+DECLARE @Description varchar(1000)
+DECLARE @Credit      money;
+DECLARE @Debit       money;
+DECLARE @PGroupID    int;
+
+Declare @entity_id  int
+
+DECLARE Cur1 CURSOR FOR
+
+SELECT 
+	 InvoiceID                    -- invoice_id if invoice, else ignore
+	,TransID                      -- id if not invoice
+	,TransType                    -- I/J/P/....
+	,InvoiceDate                  -- invoice_date_added
+	,ClientID                     -- patient
+	,FrontDesk.dbo.TRANS.PracID   -- get clinic from here
+	,Description
+	,Credit
+	,Debit
+	,FrontDesk.dbo.Practice.PGroupID
+FROM     FrontDesk.dbo.TRANS
+LEFT OUTER JOIN FrontDesk.dbo.Practice ON FrontDesk.dbo.TRANS.PracID = FrontDesk.dbo.Practice.PracID
+WHERE    TransType = 'I'
+ORDER BY InvoiceID,TransID;
+
+
+OPEN Cur1
+FETCH NEXT FROM Cur1 INTO @InvoiceID, @TransID, @TransType, @InvoiceDate, @ClientID, @PracID, @Description, @Credit, @Debit, @PGroupID
+WHILE @@FETCH_STATUS = 0
+BEGIN
+
+	PRINT '';
+	PRINT 'Insert Invoice: ' + Cast(@InvoiceID as Varchar) + ' |  ' +  Cast(@Debit as Varchar);
+	
+
+	-- add entity
+    INSERT INTO Mediclinic_0027.dbo.Entity DEFAULT VALUES;
+    SET @entity_id = SCOPE_IDENTITY()
+
+	-- INSERT Invoice
+	SET IDENTITY_INSERT Mediclinic_0027.dbo.Invoice ON
+
+	INSERT INTO Mediclinic_0027.dbo.Invoice ( 
+		 invoice_id
+		,entity_id
+		,invoice_type_id
+		,booking_id
+		,payer_organisation_id
+		,payer_patient_id
+		,non_booking_invoice_organisation_id
+		,healthcare_claim_number
+		,reject_letter_id
+		,message
+		,staff_id
+		,site_id
+		,invoice_date_added
+		,total
+		,gst
+		,is_paid
+		,is_refund
+		,is_batched
+		,reversed_by
+		,reversed_date
+	)
+	VALUES
+	(
+		 @InvoiceID
+		,@entity_id
+		,108                    -- standard invoice
+		,NULL                   -- booking_id
+		,NULL                   -- payer_organisation_id
+		,@ClientID              -- payer_patient_id
+		,@PGroupID
+		,''   -- healthcare_claim_number
+		,null -- reject_letter_id
+		,''   --message
+		,-2   --staff_id
+		,1 -- site_id
+		,@InvoiceDate -- invoice_date_added
+		,Cast(@Debit as DECIMAL(8,2))  --total
+		,0.00
+		,1
+		,0
+		,0
+		,NULL
+		,NULL
+	)
+
+	SET IDENTITY_INSERT Mediclinic_0027.dbo.Invoice OFF
+	
+	INSERT INTO  Mediclinic_0027.dbo.InvoiceLine ( 
+		 invoice_id
+		,patient_id
+		,offering_id
+		,quantity
+		,price
+		,tax
+		,area_treated
+	)
+	VALUES
+	(
+		 @InvoiceID
+		,@ClientID
+		,0
+		,1
+		,Cast(@Debit as DECIMAL(8,2))
+		,0.00
+		,@Description
+	)	
+
+	
+	FETCH NEXT FROM Cur1 INTO @InvoiceID, @TransID, @TransType, @InvoiceDate, @ClientID, @PracID, @Description, @Credit, @Debit, @PGroupID
+	
+END;
+PRINT 'DONE';
+CLOSE Cur1;
+DEALLOCATE Cur1;
+
+-------------------------------------------------------------------------------------------
+
+DECLARE @InvoiceID   int;    -- invoice_id if invoice, else ignore
+DECLARE @TransID     int;     -- id if not invoice
+DECLARE @TransType   varchar(10);    -- I/J/P/....
+DECLARE @InvoiceDate datetime;  -- invoice_date_added
+DECLARE @ClientID    int;     -- patient
+DECLARE @PracID      int;      -- get clinic from here
+DECLARE @Description varchar(1000)
+DECLARE @Credit      money;
+DECLARE @Debit       money;
+
+
+DECLARE Cur1 CURSOR FOR
+
+SELECT 
+	 InvoiceID    -- invoice_id if invoice, else ignore
+	,TransID      -- id if not invoice
+	,TransType    -- I/J/P/....
+	,InvoiceDate  -- invoice_date_added
+	,ClientID     -- patient
+	,PracID       -- get clinic from here
+	,Description
+	,Credit
+	,Debit
+FROM     FrontDesk.dbo.TRANS T1
+WHERE    TransType IN ('P','K',   'J','W', 'R')
+AND (SELECT COUNT(*) FROM FrontDesk.dbo.TRANS T2 WHERE TransType IN ('I')  AND T2.InvoiceID = t1.InvoiceID) = 1
+ORDER BY InvoiceID,TransID;
+
+
+OPEN Cur1
+FETCH NEXT FROM Cur1 INTO @InvoiceID, @TransID, @TransType, @InvoiceDate, @ClientID, @PracID, @Description, @Credit, @Debit
+WHILE @@FETCH_STATUS = 0
+BEGIN
+
+		IF @TransType IN ('P','K')
+		BEGIN
+	
+			PRINT '  Insert Receipt: ' + Cast(@TransID as Varchar) + ' | Inv: ' + Cast(@InvoiceID as Varchar) + ' | ' +  Cast(@Credit as Varchar);
+			-- INSERT Receipt
+			
+			
+			SET IDENTITY_INSERT Mediclinic_0027.dbo.Receipt ON
+			INSERT INTO Mediclinic_0027.dbo.Receipt ( 
+				 receipt_id
+				,receipt_payment_type_id
+				,invoice_id
+				,total
+				,amount_reconciled
+				,is_failed_to_clear
+				,is_overpaid
+				,receipt_date_added
+				,reconciliation_date
+				,staff_id
+				,reversed_by
+				,reversed_date
+				,pre_reversed_amount
+			)
+			VALUES
+			(
+				 @TransID
+				,129 -- receipt_payment_type_id
+				,@InvoiceID
+				,Cast(@Credit as DECIMAL(8,2))
+				,0 --amount_reconciled
+				,0 --is_failed_to_clear
+				,0 --is_overpaid
+				,@InvoiceDate
+				,NULL --reconciliation_date
+				,-2 --staff_id
+				,NULL --reversed_by
+				,NULL --reversed_date
+				,0 --pre_reversed_amount
+			)			
+			SET IDENTITY_INSERT Mediclinic_0027.dbo.Receipt OFF
+			
+		END
+
+		IF @TransType IN ('J','W')
+		BEGIN
+	
+			PRINT '  Insert Cr Note: ' + Cast(@TransID as Varchar) + ' | Inv: ' + Cast(@InvoiceID as Varchar) + ' | ' +  Cast(@Credit as Varchar);
+			-- INSERT Cr Note
+			
+			SET IDENTITY_INSERT Mediclinic_0027.dbo.CreditNote ON
+			INSERT INTO Mediclinic_0027.dbo.CreditNote ( 
+			  creditnote_id
+			 ,invoice_id
+			 ,total
+			 ,reason
+			 ,credit_note_date_added
+			 ,staff_id
+			 ,reversed_by
+			 ,reversed_date
+			 ,pre_reversed_amount
+			)
+			VALUES
+			(
+			  @TransID
+			 ,@InvoiceID
+			 ,Cast(@Credit as DECIMAL(8,2))
+			 ,@Description  -- reason
+			 ,@InvoiceDate
+			 ,-2 --staff_id
+			 ,NULL --reversed_by
+			 ,NULL --reversed_date
+			 ,0 --pre_reversed_amount
+			)
+			SET IDENTITY_INSERT Mediclinic_0027.dbo.CreditNote OFF
+
+			
+		END
+
+		IF @TransType IN ('R')
+		BEGIN
+	
+			PRINT '  Insert Refund: ' + Cast(@TransID as Varchar) + ' | Inv: ' + Cast(@InvoiceID as Varchar) + ' | ' +  Cast(@Credit as Varchar);
+			-- INSERT Refund
+			
+			SET IDENTITY_INSERT Mediclinic_0027.dbo.Refund ON
+			INSERT INTO Mediclinic_0027.dbo.Refund ( 
+				 refund_id
+				,invoice_id
+				,total
+				,refund_reason_id
+				,comment
+				,refund_date_added
+				,staff_id
+			)
+			VALUES
+			(
+				 @TransID
+				,@InvoiceID
+				,Cast(@Credit as DECIMAL(8,2))
+				,308 --refund_reason_id
+				,@Description --comment
+				,@InvoiceDate
+				,-2 --staff_id
+			)
+			SET IDENTITY_INSERT Mediclinic_0027.dbo.Refund OFF
+			
+			
+		END
+
+	
+	FETCH NEXT FROM Cur1 INTO @InvoiceID, @TransID, @TransType, @InvoiceDate, @ClientID, @PracID, @Description, @Credit, @Debit
+	
+END;
+PRINT 'DONE';
+CLOSE Cur1;
+DEALLOCATE Cur1;
+
+-------------------------------------------------------------------------------------------
+
+UPDATE Mediclinic_0027.dbo.Invoice SET is_paid = 0 WHERE invoice_id IN
+(
+	SELECT
+	invoice_id
+	/*
+	(
+	  Invoice.total  
+	- ISNULL((SELECT SUM(total) FROM Mediclinic_0027.dbo.Receipt    WHERE Mediclinic_0027.dbo.Receipt.invoice_id = Invoice.invoice_id),0)   
+	- ISNULL((SELECT SUM(total) FROM Mediclinic_0027.dbo.CreditNote WHERE Mediclinic_0027.dbo.CreditNote.invoice_id = Invoice.invoice_id),0)  
+	) as owing
+	,(SELECT SUM(total) FROM Mediclinic_0027.dbo.Receipt    WHERE Mediclinic_0027.dbo.Receipt.invoice_id = Invoice.invoice_id) as receipts
+	,(SELECT SUM(total) FROM Mediclinic_0027.dbo.CreditNote WHERE Mediclinic_0027.dbo.CreditNote.invoice_id = Invoice.invoice_id) as cr_notes
+	,total
+	,* 
+	*/
+	FROM Mediclinic_0027.dbo.Invoice
+	WHERE
+	(
+	  Invoice.total  
+	- ISNULL((SELECT SUM(total) FROM Mediclinic_0027.dbo.Receipt    WHERE Mediclinic_0027.dbo.Receipt.invoice_id = Invoice.invoice_id),0)   
+	- ISNULL((SELECT SUM(total) FROM Mediclinic_0027.dbo.CreditNote WHERE Mediclinic_0027.dbo.CreditNote.invoice_id = Invoice.invoice_id),0)  
+	) > 0
+)
+
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+
+DECLARE @InvoiceID   int;    -- invoice_id if invoice, else ignore
+DECLARE @TransID     int;     -- id if not invoice
+DECLARE @TransType   varchar(10);    -- I/J/P/....
+DECLARE @InvoiceDate datetime;  -- invoice_date_added
+DECLARE @ClientID    int;     -- patient
+DECLARE @PracID      int;      -- get clinic from here
+DECLARE @Description varchar(1000)
+DECLARE @Credit      money;
+DECLARE @Debit       money;
+
+DECLARE @InvoiceID2   int;    -- invoice_id if invoice, else ignore
+DECLARE @TransID2     int;     -- id if not invoice
+DECLARE @TransType2   varchar(2);    -- I/J/P/....
+DECLARE @InvoiceDate2 datetime;  -- invoice_date_added
+DECLARE @ClientID2    int;     -- patient
+DECLARE @PracID2      int;      -- get clinic from here
+DECLARE @Description2 varchar(1000)
+DECLARE @Credit2      money;
+DECLARE @Debit2       money;
+
+
+
+DECLARE Cur1 CURSOR FOR
+
+SELECT 
+	 InvoiceID    -- invoice_id if invoice, else ignore
+	,TransID      -- id if not invoice
+	,TransType    -- I/J/P/....
+	,InvoiceDate  -- invoice_date_added
+	,ClientID     -- patient
+	,PracID       -- get clinic from here
+	,Description
+	,Credit
+	,Debit
+FROM     FrontDesk.dbo.TRANS
+WHERE    TransType = 'I'
+ORDER BY InvoiceID;
+
+
+OPEN Cur1
+FETCH NEXT FROM Cur1 INTO @InvoiceID, @TransID, @TransType, @InvoiceDate, @ClientID, @PracID, @Description, @Credit, @Debit
+WHILE @@FETCH_STATUS = 0
+BEGIN
+
+	PRINT '';
+	PRINT 'Insert Invoice: ' + Cast(@InvoiceID as Varchar) + ' |  ' +  Cast(@Debit as Varchar);
+	
+	-- INSERT Invoice
+	
+	
+	DECLARE Cur2 CURSOR FOR
+	
+	SELECT 
+		 InvoiceID    -- invoice_id if invoice, else ignore
+		,TransID      -- id if not invoice
+		,TransType    -- I/J/P/....
+		,InvoiceDate  -- invoice_date_added
+		,ClientID     -- patient
+		,PracID       -- get clinic from here
+		,Description
+		,Credit
+		,Debit
+	FROM     FrontDesk.dbo.TRANS
+	WHERE    InvoiceID = @InvoiceID AND TransType IN ('P','K',   'J','W', 'R')
+	ORDER BY TransID
+	
+	OPEN Cur2;
+	FETCH NEXT FROM Cur2 INTO @InvoiceID2, @TransID2, @TransType2, @InvoiceDate2, @ClientID2, @PracID2, @Description2, @Credit2, @Debit2
+	WHILE @@FETCH_STATUS = 0
+	BEGIN
+	
+		IF @TransType2 IN ('P','K')
+		BEGIN
+	
+			PRINT '  Insert Receipt: ' + Cast(@TransID2 as Varchar) + ' | Inv: ' + Cast(@InvoiceID2 as Varchar) + ' | ' +  Cast(@Credit2 as Varchar);
+			-- INSERT Receipt
+			
+		END
+
+		IF @TransType2 IN ('J','W')
+		BEGIN
+	
+			PRINT '  Insert Cr Note: ' + Cast(@TransID2 as Varchar) + ' | Inv: ' + Cast(@InvoiceID2 as Varchar) + ' | ' +  Cast(@Credit2 as Varchar);
+			-- INSERT Receipt
+			
+		END
+
+		IF @TransType2 IN ('R')
+		BEGIN
+	
+			PRINT '  Insert Refund: ' + Cast(@TransID2 as Varchar) + ' | Inv: ' + Cast(@InvoiceID2 as Varchar) + ' | ' +  Cast(@Credit2 as Varchar);
+			-- INSERT Receipt
+			
+		END
+	
+		
+		FETCH NEXT FROM Cur2 INTO @InvoiceID2, @TransID2, @TransType2, @InvoiceDate2, @ClientID2, @PracID2, @Description2, @Credit2, @Debit2
+		
+	END;
+	CLOSE Cur2;
+	DEALLOCATE Cur2;
+	
+	
+	FETCH NEXT FROM Cur1 INTO @InvoiceID, @TransID, @TransType, @InvoiceDate, @ClientID, @PracID, @Description, @Credit, @Debit
+	
+END;
+PRINT 'DONE';
+CLOSE Cur1;
+DEALLOCATE Cur1;
+
+-------------------------------------------------------------------------------------------

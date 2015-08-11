@@ -1,0 +1,65 @@
+﻿put in patient links to clinics
+
+-- figure out how to do this as a query
+select most recent booking added date of that patient
+then attact that patient to the clinic
+
+
+
+
+select * from Mediclinic_0027.dbo.Booking
+select * from Mediclinic_0027.dbo.ContactAus
+select * from Mediclinic_0027.dbo.HealthCard 
+select * from Mediclinic_0027.dbo.patient
+select * from Mediclinic_0027.dbo.RegisterReferrer
+select * from Mediclinic_0027.dbo.Referrer
+select * from Mediclinic_0027.dbo.Organisation
+select * from Mediclinic_0027.dbo.Referrer
+select * from Mediclinic_0027.dbo.person
+select * from Mediclinic_0027.dbo.Entity
+
+
+delete Mediclinic_0027.dbo.Note
+delete Mediclinic_0027.dbo.HealthCard
+delete Mediclinic_0027.dbo.Booking
+delete Mediclinic_0027.dbo.ContactAus where contact_id >= 1;
+
+delete Mediclinic_0027.dbo.PatientReferrer
+delete Mediclinic_0027.dbo.RegisterReferrer
+delete Mediclinic_0027.dbo.Organisation WHERE organisation_id > 0
+delete Mediclinic_0027.dbo.Referrer
+
+delete Mediclinic_0027.dbo.Staff where staff_id > 50000
+
+delete Mediclinic_0027.dbo.patient where person_id >= 1;
+delete Mediclinic_0027.dbo.person where person_id >= 9;
+delete Mediclinic_0027.dbo.entity where entity_id >= 13;
+
+delete Mediclinic_0027.dbo.Offering where offering_id > 9;
+
+DBCC CHECKIDENT(Note,RESEED,1);
+DBCC CHECKIDENT(Note);
+DBCC CHECKIDENT(HealthCard,RESEED,1);
+DBCC CHECKIDENT(HealthCard);
+DBCC CHECKIDENT(ContactAus,RESEED,1);
+DBCC CHECKIDENT(ContactAus);
+DBCC CHECKIDENT(Patient,RESEED,1);
+DBCC CHECKIDENT(Patient);
+DBCC CHECKIDENT(Person,RESEED,1);
+DBCC CHECKIDENT(Person);
+DBCC CHECKIDENT(Entity,RESEED,1);
+DBCC CHECKIDENT(Entity);
+
+DBCC CHECKIDENT(PatientReferrer,RESEED,1);
+DBCC CHECKIDENT(PatientReferrer);
+DBCC CHECKIDENT(RegisterReferrer,RESEED,1);
+DBCC CHECKIDENT(RegisterReferrer);
+DBCC CHECKIDENT(Organisation,RESEED,1);
+DBCC CHECKIDENT(Organisation);
+DBCC CHECKIDENT(Referrer,RESEED,1);
+DBCC CHECKIDENT(Referrer);
+DBCC CHECKIDENT(Staff,RESEED,1);
+DBCC CHECKIDENT(Staff);
+
+DBCC CHECKIDENT(Offering,RESEED,1);
+DBCC CHECKIDENT(Offering);

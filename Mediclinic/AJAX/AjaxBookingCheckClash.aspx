@@ -1,0 +1,1 @@
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="AjaxBookingCheckClash.aspx.cs" Inherits="AjaxBookingCheckClash" %>

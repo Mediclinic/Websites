@@ -1,0 +1,203 @@
+﻿<%@ Page Title="Recall Letters" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="RecallLetters.aspx.cs" Inherits="RecallLetters" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script type="text/javascript" src="Scripts/post_to_url.js"></script>
+    <script type="text/javascript" src="Scripts/date_picker.js"></script>
+    <link href="Styles/date_picker.css" rel="stylesheet" type="text/css" />
+    <script type="text/javascript">
+
+        function go_to_print_batch() {
+            var h = new Object(); // or just {}
+            h['selected_patient_ids'] = document.getElementById('hiddenPatientIDs').value.trim();
+            post_to_url("PrintBatchLetters.aspx", h, "post");
+        }
+
+    </script>
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+    <table>
+        <tr>
+            <td><h2 id="heading" runat="server">Recall Letters</h2></td>
+
+            <td style="width:50px;"></td>
+
+            <td>
+
+                <table border="0" cellpadding="0" cellspacing="0">
+                    <tr valign="bottom">
+                        <td rowspan="2" valign="middle">Last Visit</td>
+                        <td style="width:10px;"></td>
+                        <td>After</td>
+                        <td style="width:5px;"></td>
+                        <td><asp:TextBox ID="txtStartDate" runat="server" Columns="10"/><asp:ImageButton ID="txtStartDate_Picker" runat="server" ImageUrl="~/images/Calendar-icon-24px.png" /></td>
+                        <td style="width:25px;"></td>
+                        <td><label for="chkShowWithEPC">Show Those With EPC's Remaining</label></td>
+                        <td style="width:6px;"></td>
+                        <td><asp:CheckBox ID="chkShowWithEPC" runat="server" Text="" Checked="true" /></td>
+                    </tr>
+                    <tr valign="bottom">
+                        <td></td>
+                        <td>Before</td>
+                        <td></td>
+                        <td><asp:TextBox ID="txtEndDate" runat="server" Columns="10"/><asp:ImageButton ID="txtEndDate_Picker" runat="server" ImageUrl="~/images/Calendar-icon-24px.png" /></td>
+                        <td></td>
+                        <td><label for="chkShowWithNoEPC">Show Those with No EPC or EPC Expired</label></td>
+                        <td></td>
+                        <td><asp:CheckBox ID="chkShowWithNoEPC" runat="server" Text="" Checked="true" /></td>
+                    </tr>
+                    <tr>
+                        <td colspan="100%" style="height:8px;"></td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Clinic
+                        </td>
+                        <td></td>
+                        <td colspan="7">
+                            <asp:DropDownList ID="ddlClinics" runat="server" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="100%" style="height:4px;"></td>
+                    </tr>
+                    <tr>
+                        <td>
+                            No Recall Letters After 
+                        </td>
+                        <td></td>
+                        <td colspan="7">
+                            <asp:TextBox ID="txtNoRecallLettersAfterDate" runat="server" Columns="10"/><asp:ImageButton ID="txtNoRecallLettersAfterDate_Picker" runat="server" ImageUrl="~/images/Calendar-icon-24px.png" />
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+            <td style="width:25px;"></td>
+            <td>
+                <asp:Button ID="btnUpdate" runat="server" OnClick="btnUpdate_Click" Text="Update" />
+            </td>
+
+        </tr>
+
+    </table>
+    
+    <span id="spnErrorMessage" runat="server">
+        <br />
+        <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification" Text=""></asp:Label>
+    </span>
+
+    <asp:HiddenField ID="hiddenPatientIDs" runat="server" />
+    <br />
+
+
+    <table>
+        <tr valign="top">
+            <td>
+
+                <table id="tbl_select_org_and_patient" runat="server">
+                    <tr>
+                        <th align="left">
+                            <center><asp:Button ID="btnPrintBatch" runat="server" Text="Print Letters" OnClientClick="go_to_print_batch(); return false;" /></center>
+                        </th>
+                        <th  class="hiddencol"></th>
+                        <td  class="hiddencol" align="left">
+                            <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <th align="left">Select Letter</th>
+                                    <td align="right"><asp:Button ID="btnPrint" runat="server" Text="&nbsp;&nbsp;&nbsp;Print&nbsp;&nbsp;&nbsp;" OnClick="btnPrint_Click" OnClientClick="javascript:clear_error_msg();" /> </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr id="tr_orgs_search_row_space_below" runat="server" height="6">
+                        <td colspan="3"></td>
+                    </tr>
+
+                    <tr>
+                        <td></td>
+                        <td class="hiddencol" style="width:40px"></td>
+                        <td class="hiddencol"></td>
+                    </tr>
+
+                    <tr>
+                        <td valign="top">
+
+                            <asp:GridView ID="GrdPatient" runat="server" 
+                                 AutoGenerateColumns="False" DataKeyNames="patient_patient_id" 
+                                 OnRowCancelingEdit="GrdPatient_RowCancelingEdit" 
+                                 OnRowDataBound="GrdPatient_RowDataBound" 
+                                 OnRowEditing="GrdPatient_RowEditing" 
+                                 OnRowUpdating="GrdPatient_RowUpdating" ShowFooter="False" 
+                                 OnRowCommand="GrdPatient_RowCommand" 
+                                 OnRowDeleting="GrdPatient_RowDeleting" 
+                                 OnRowCreated="GrdPatient_RowCreated"
+                                 AllowSorting="True" 
+                                 OnSorting="GridView_Sorting"
+                                 RowStyle-VerticalAlign="top"
+                                 AllowPaging="True"
+                                 OnPageIndexChanging="GrdPatient_PageIndexChanging"
+                                 PageSize="22"
+                                 ClientIDMode="Predictable">
+                                 <PagerSettings Mode="NumericFirstLast" FirstPageText="First" PreviousPageText="Previous" NextPageText="Next" LastPageText="Last" />
+             
+
+                                <Columns> 
+
+                                    <asp:TemplateField HeaderText="ID"  HeaderStyle-HorizontalAlign="Left" SortExpression="patient_patient_id"> 
+                                        <ItemTemplate> 
+                                            <asp:Label ID="lblId" runat="server" Text='<%# Eval("patient_patient_id") %>'></asp:Label> 
+                                        </ItemTemplate> 
+                                    </asp:TemplateField> 
+
+                                    <asp:TemplateField HeaderText="Patient" HeaderStyle-HorizontalAlign="Left" SortExpression="person_firstname" FooterStyle-VerticalAlign="Top"> 
+                                        <ItemTemplate> 
+                                            <asp:HyperLink ID="lnkName" runat="server" Text='<%# Eval("person_firstname") + " " + Eval("person_surname")  %>' NavigateUrl='<%#  String.Format("~/AddEditPatient.aspx?type=view&id={0}",Eval("patient_patient_id"))%>' ToolTip="Full Edit"  />
+                                        </ItemTemplate> 
+                                    </asp:TemplateField> 
+
+                                    <asp:TemplateField HeaderText="Last Booking" HeaderStyle-HorizontalAlign="Left" SortExpression="booking_date_start" FooterStyle-VerticalAlign="Top"> 
+                                        <ItemTemplate> 
+                                            <asp:Label ID="lblDate" runat="server" Text='<%# Eval("booking_date_start", "{0:dd-MM-yyyy}") %>'></asp:Label> 
+                                        </ItemTemplate> 
+                                    </asp:TemplateField> 
+
+                                    <asp:TemplateField HeaderText="Clinic" HeaderStyle-HorizontalAlign="Left" SortExpression="organisation_name" FooterStyle-VerticalAlign="Top"> 
+                                        <ItemTemplate> 
+                                            <asp:Label ID="lblClinic" runat="server" Text='<%# Eval("organisation_name") %>'></asp:Label> 
+                                        </ItemTemplate> 
+                                    </asp:TemplateField> 
+
+                                    <asp:TemplateField HeaderText="EPC Expires" HeaderStyle-HorizontalAlign="Left" SortExpression="epc_expire_date" FooterStyle-VerticalAlign="Top"> 
+                                        <ItemTemplate> 
+                                            <asp:Label ID="lblEPCExpiry" runat="server" Text='<%# Eval("epc_expire_date", "{0:dd-MM-yyyy}") %>'></asp:Label> 
+                                        </ItemTemplate> 
+                                    </asp:TemplateField> 
+
+                                    <asp:TemplateField HeaderText="EPCs Remaining" HeaderStyle-HorizontalAlign="Left" SortExpression="epc_count_remaining" FooterStyle-VerticalAlign="Top"> 
+                                        <ItemTemplate> 
+                                            <asp:Label ID="lblEPCsRemaining" runat="server" Text='<%# Eval("epc_count_remaining") %>'></asp:Label> 
+                                        </ItemTemplate> 
+                                    </asp:TemplateField> 
+
+                                    <asp:TemplateField HeaderText="Last Recall Letter Sent" HeaderStyle-HorizontalAlign="Left" SortExpression="most_recent_recall_sent" FooterStyle-VerticalAlign="Top"> 
+                                        <ItemTemplate> 
+                                            <asp:HyperLink ID="lnkLastRecallLetterSent" runat="server" Text='<%# Eval("most_recent_recall_sent", "{0:dd-MM-yyyy}") %>' NavigateUrl='<%# String.Format("~/LetterPrintHistory.aspx?patient={0}", Eval("patient_patient_id")) %>' />
+                                        </ItemTemplate> 
+                                    </asp:TemplateField> 
+
+                                </Columns> 
+                            </asp:GridView>
+
+                        </td>
+                        <td class="hiddencol"></td>
+                        <td class="hiddencol" valign="top"><asp:ListBox ID="lstLetters" runat="server" rows="30" SelectionMode="Single" style="min-width:350px;"></asp:ListBox></td>
+                    </tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+</asp:Content>

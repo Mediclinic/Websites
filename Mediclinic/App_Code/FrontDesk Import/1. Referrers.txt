@@ -1,0 +1,467 @@
+﻿
+
+****** change FROM db 0027 !!!!!!!!!!
+
+-------------------------------------------------------------------------------------------
+
+	Declare @ReferrerID   int
+	Declare @Title        varchar(200)
+	Declare @Name         varchar(200)
+	Declare @Surname      varchar(200)
+	Declare @Phone        varchar(200)
+	Declare @Address1     varchar(200)
+	Declare @Address2     varchar(200)
+	Declare @Address3     varchar(200)
+	Declare @Fax          varchar(200)
+	Declare @Email        varchar(200)
+	Declare @ProviderNo   varchar(200)
+	Declare @Type         varchar(200)
+	Declare @Active       bit
+	Declare @Organisation varchar(200)
+	Declare @Address4    varchar(200)
+
+
+	Declare @entity_id   int
+	Declare @entity_id2  int
+	Declare @person_id   int
+	Declare @referrer_org_id   int
+
+	DECLARE @title_id    int
+
+	DECLARE @addr3_State varchar(200)
+	DECLARE @addr3_PCode varchar(200)
+	DECLARE @suburb_id   int
+	DECLARE @addr_line2  varchar(200)
+	
+
+
+	DECLARE DatabaseCursor CURSOR FOR 
+	SELECT 
+		ReferrerID,
+		Title,
+		(SELECT title_id FROM Mediclinic_0027.dbo.Title WHERE descr COLLATE DATABASE_DEFAULT = FrontDesk.dbo.Referrer.Title COLLATE DATABASE_DEFAULT ) title_id, 
+		Name,
+		Surname,
+		Phone,
+		Address1,
+		Address2,
+		Address3,
+		Fax,
+		Email,
+		ProviderNo,
+		Type,
+		Active,
+		Organisation,
+		Address4
+		
+	FROM FrontDesk.dbo.Referrer
+	ORDER BY ReferrerID
+
+
+	OPEN DatabaseCursor  
+	FETCH NEXT FROM DatabaseCursor INTO @ReferrerID, @Title, @title_id, @Name, @Surname, @Phone, @Address1, @Address2, @Address3, @Fax, @Email, @ProviderNo, @Type, @Active, @Organisation, @Address4
+
+
+	WHILE @@FETCH_STATUS = 0 
+	BEGIN 
+
+		IF @title_id IS NULL BEGIN SET @title_id   = 0 END
+		IF @Name     IS NULL BEGIN SET @Name       = ''  END
+		IF @Surname  IS NULL BEGIN SET @Surname    = ''  END
+		SET @Name    = LTRIM(RTRIM(@Name))
+		SET @Surname = LTRIM(RTRIM(@Surname))
+		SET @Active  = @Active ^ 1
+		IF @Address1   IS NULL BEGIN SET @Address1 = ''  END
+		IF @Address2   IS NULL BEGIN SET @Address1 = ''  END
+		IF @Address3   IS NULL BEGIN SET @Address3 = ''  END
+
+
+
+	    -- add entity
+        INSERT INTO Mediclinic_0027.dbo.Entity DEFAULT VALUES;
+        SET @entity_id = SCOPE_IDENTITY()
+
+
+		-- add person
+        INSERT INTO Mediclinic_0027.dbo.Person (added_by,entity_id, title_id, firstname, middlename, surname, nickname, gender, dob, person_date_added, person_date_modified) 
+        VALUES
+        (
+			 NULL
+			,@entity_id
+			,@title_id
+			,@Name
+			,''
+			,@Surname
+			,''
+			,''
+			,NULL
+			,GETDATE()
+			,NULL
+        )
+        SET @person_id = SCOPE_IDENTITY()
+
+
+		-- add referrer
+		SET IDENTITY_INSERT Mediclinic_0027.dbo.Referrer ON
+		INSERT INTO Mediclinic_0027.dbo.Referrer (referrer_id,person_id, referrer_date_added, is_deleted) 
+		VALUES
+		(
+			 @ReferrerID
+			,@person_id
+			,GETDATE()
+			,@Active
+		)
+		SET IDENTITY_INSERT Mediclinic_0027.dbo.Referrer OFF
+
+
+	    -- add entity2
+        INSERT INTO Mediclinic_0027.dbo.Entity DEFAULT VALUES;
+        SET @entity_id2 = SCOPE_IDENTITY()
+
+
+		-- add referrer clinic
+		IF @Organisation IS NULL BEGIN SET @Organisation = '' END
+		INSERT INTO Mediclinic_0027.dbo.Organisation (entity_id,parent_organisation_id,use_parent_offernig_prices,organisation_type_id,organisation_customer_type_id,
+								  name,acn,abn,organisation_date_added,organisation_date_modified,is_debtor,is_creditor,bpay_account,is_deleted,
+
+								  weeks_per_service_cycle,start_date,end_date,comment,free_services,excl_sun,excl_mon,excl_tue,excl_wed,excl_thu,
+								  excl_fri,excl_sat,
+								  sun_start_time,sun_end_time,mon_start_time,mon_end_time,tue_start_time,tue_end_time,wed_start_time,
+								  wed_end_time,thu_start_time,thu_end_time,fri_start_time,fri_end_time,sat_start_time,sat_end_time,
+								  sun_lunch_start_time,sun_lunch_end_time,mon_lunch_start_time,mon_lunch_end_time,tue_lunch_start_time,tue_lunch_end_time,wed_lunch_start_time,
+								  wed_lunch_end_time,thu_lunch_start_time,thu_lunch_end_time,fri_lunch_start_time,fri_lunch_end_time,sat_lunch_start_time,sat_lunch_end_time,
+								  last_batch_run)
+		VALUES
+		(
+			 @entity_id2
+			,NULL
+			,0
+			,191
+			,0
+			,@Organisation
+			,''
+			,''
+			,GETDATE()
+			,NULL
+			,0
+			,1
+			,''
+			,@Active
+
+			,0
+			,NULL
+			,NULL
+			,''
+			,0
+			,0
+			,0
+			,0
+			,0
+			,0
+			,0
+			,0
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,NULL
+		)
+		SET @referrer_org_id = SCOPE_IDENTITY()
+
+
+		-- add register_referrer
+
+		IF (@ProviderNo IS NULL) BEGIN SET @ProviderNo = '' END
+
+		SET IDENTITY_INSERT Mediclinic_0027.dbo.RegisterReferrer ON
+		INSERT INTO Mediclinic_0027.dbo.RegisterReferrer ( 
+			  register_referrer_id
+			 ,organisation_id
+			 ,referrer_id
+			 ,provider_number
+			 ,report_every_visit_to_referrer
+			 ,batch_send_all_patients_treatment_notes
+			 ,date_last_batch_send_all_patients_treatment_notes
+			 ,register_referrer_date_added
+			 ,is_deleted
+		)
+		VALUES
+		(
+			 @ReferrerID
+			,@referrer_org_id
+			,@ReferrerID
+			,@ProviderNo
+			,0
+			,1
+			,NULL
+			,GETDATE()
+			,@Active
+		)
+		SET IDENTITY_INSERT Mediclinic_0027.dbo.RegisterReferrer OFF
+
+
+
+		-- add address/phone nbr/etc
+		SET @Address1 = LTRIM(RTRIM(@Address1))
+		SET @Address2 = LTRIM(RTRIM(@Address2))
+		SET @Address3 = LTRIM(RTRIM(@Address3))
+		SET @Address2 = REPLACE(REPLACE(REPLACE(@Address2,' ','<>'),'><',''),'<>',' ')  -- remove duplicate spaces
+		SET @Address3 = REPLACE(REPLACE(REPLACE(@Address3,' ','<>'),'><',''),'<>',' ')  -- remove duplicate spaces
+		SET @suburb_id = NULL
+
+  
+		IF @Address2 LIKE '%MT DRUITT%'
+		BEGIN
+			SET @Address2 = REPLACE(@Address2, 'MT DRUITT', 'MOUNT DRUITT')
+		END
+		IF @Address3 LIKE '%MT DRUITT%'
+		BEGIN
+			SET @Address3 = REPLACE(@Address3, 'MT DRUITT', 'MOUNT DRUITT')
+		END
+		
+
+		IF ((@Address3 IS NULL OR @Address3 = '') AND @Address2 LIKE '% [a-z][a-z][a-z] [0-9][0-9][0-9][0-9]')
+		BEGIN
+			SET @Address3 = SUBSTRING(@Address2, LEN(@Address2) - 7, 8)
+			SET @Address2 = SUBSTRING(@Address2, 1, LEN(@Address2) - 9)
+			--SELECT @Address2, @Address3
+		END		
+		IF (@Address3 IS NOT NULL AND @Address3 like '[a-z][a-z][a-z] [0-9][0-9][0-9][0-9]')
+		BEGIN
+			SET @addr3_State = SUBSTRING(@Address3, 1, 3)
+			SET @addr3_PCode = SUBSTRING(@Address3, 5, 4)
+			SET @suburb_id = (SELECT suburb_id FROM Mediclinic_0027.dbo.Suburb WHERE name = @Address2 AND postcode = @addr3_PCode AND state = @addr3_State)
+			--SELECT @Address2, @addr3_State, @addr3_PCode, @suburb_id
+		END
+
+
+		IF (@Address1 <> '' OR @suburb_id IS NOT NULL)
+		BEGIN
+
+			SET @addr_line2 = ''
+			IF @suburb_id IS NULL AND @Address2 IS NOT NULL AND LEN(@Address2) > 0 BEGIN SET @addr_line2 = @Address2 END
+
+			INSERT INTO Mediclinic_0027.dbo.ContactAus ( 
+				 entity_id,
+				 contact_type_id,
+				 free_text,
+				 addr_line1,
+				 addr_line2,
+				 street_name,
+				 address_channel_type_id,
+				 suburb_id,
+				 country_id,
+				 site_id,
+				 is_billing_addr,
+				 is_shipping_addr,
+				 is_inc_on_docs,
+				 contact_date_added,
+				 contact_date_modified,
+				 contact_date_deleted
+			)
+			VALUES 
+			(
+				 @entity_id,
+				 35,  -- home address
+				 '',  -- free text
+				 @Address1,
+				 @addr_line2, -- addr_line2
+				 '',  -- street_name
+				 NULL, -- address_channel_type_id
+				 @suburb_id,
+				 NULL, -- country_id,
+				 1,  -- site_id
+				 0,  -- is_billing_addr
+				 0,  -- is_shipping_addr,
+				 0,  -- is_inc_on_docs,
+				 GETDATE(),
+				 NULL,
+				 NULL
+			)
+
+		END
+
+		SET @Phone = LTRIM(RTRIM(@Phone))
+		SET @Fax   = LTRIM(RTRIM(@Fax))
+		SET @Email = LTRIM(RTRIM(@Email))
+
+
+		IF (@Phone <> '' AND LEN(@Phone) > 0)
+		BEGIN
+
+			INSERT INTO Mediclinic_0027.dbo.ContactAus ( 
+				 entity_id,
+				 contact_type_id,
+				 free_text,
+				 addr_line1,
+				 addr_line2,
+				 street_name,
+				 address_channel_type_id,
+				 suburb_id,
+				 country_id,
+				 site_id,
+				 is_billing_addr,
+				 is_shipping_addr,
+				 is_inc_on_docs,
+				 contact_date_added,
+				 contact_date_modified,
+				 contact_date_deleted
+			)
+			VALUES 
+			(
+				 @entity_id,
+				 34,  -- office phone
+				 '',  -- free text
+				 @Phone,
+				 '', -- addr_line2
+				 '',  -- street_name
+				 NULL, -- address_channel_type_id
+				 NULL,
+				 NULL, -- country_id,
+				 1,  -- site_id
+				 0,  -- is_billing_addr
+				 0,  -- is_shipping_addr,
+				 0,  -- is_inc_on_docs,
+				 GETDATE(),
+				 NULL,
+				 NULL
+			)
+
+		END
+
+		IF (@Fax <> '' AND LEN(@Fax) > 0)
+		BEGIN
+
+			INSERT INTO Mediclinic_0027.dbo.ContactAus ( 
+				 entity_id,
+				 contact_type_id,
+				 free_text,
+				 addr_line1,
+				 addr_line2,
+				 street_name,
+				 address_channel_type_id,
+				 suburb_id,
+				 country_id,
+				 site_id,
+				 is_billing_addr,
+				 is_shipping_addr,
+				 is_inc_on_docs,
+				 contact_date_added,
+				 contact_date_modified,
+				 contact_date_deleted
+			)
+			VALUES 
+			(
+				 @entity_id,
+				 29,  -- fax
+				 '',  -- free text
+				 @Fax,
+				 '', -- addr_line2
+				 '',  -- street_name
+				 NULL, -- address_channel_type_id
+				 NULL,
+				 NULL, -- country_id,
+				 1,  -- site_id
+				 0,  -- is_billing_addr
+				 0,  -- is_shipping_addr,
+				 0,  -- is_inc_on_docs,
+				 GETDATE(),
+				 NULL,
+				 NULL
+			)
+
+		END
+
+		IF (@Email <> '' AND LEN(@Email) > 0)
+		BEGIN
+
+			INSERT INTO Mediclinic_0027.dbo.ContactAus ( 
+				 entity_id,
+				 contact_type_id,
+				 free_text,
+				 addr_line1,
+				 addr_line2,
+				 street_name,
+				 address_channel_type_id,
+				 suburb_id,
+				 country_id,
+				 site_id,
+				 is_billing_addr,
+				 is_shipping_addr,
+				 is_inc_on_docs,
+				 contact_date_added,
+				 contact_date_modified,
+				 contact_date_deleted
+			)
+			VALUES 
+			(
+				 @entity_id,
+				 27,  -- email
+				 '',  -- free text
+				 @Email,
+				 '', -- addr_line2
+				 '',  -- street_name
+				 NULL, -- address_channel_type_id
+				 NULL,
+				 NULL, -- country_id,
+				 1,  -- site_id
+				 0,  -- is_billing_addr
+				 0,  -- is_shipping_addr,
+				 0,  -- is_inc_on_docs,
+				 GETDATE(),
+				 NULL,
+				 NULL
+			)
+
+		END
+
+
+		FETCH NEXT FROM DatabaseCursor INTO @ReferrerID, @Title, @title_id, @Name, @Surname, @Phone, @Address1, @Address2, @Address3, @Fax, @Email, @ProviderNo, @Type, @Active, @Organisation, @Address4
+	
+	END 
+	CLOSE DatabaseCursor  
+	DEALLOCATE DatabaseCursor
+
+-------------------------------------------------------------------------------------------
+
+
+SELECT 
+	RefGPID,
+	* 
+FROM     FrontDesk.dbo.CLIENT
+--WHERE RefGPID is not null
+ORDER BY FrontDesk.dbo.CLIENT.ClientID
+
+
+SELECT * FROM FrontDesk.dbo.Referrer
+ORDER BY FrontDesk.dbo.Referrer.Surname, FrontDesk.dbo.Referrer.Name
+
+-------------------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------------------
+
+

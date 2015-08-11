@@ -1,0 +1,169 @@
+﻿<%@ Page Title="Stats" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="Stats.aspx.cs" Inherits="Stats" %>
+
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script type="text/javascript" src="Scripts/date_picker.js"></script>
+    <link href="Styles/date_picker.css" rel="stylesheet" type="text/css" />
+    <script type="text/javascript">
+
+        window.onresize = function (event) { resize(false); };
+        //window.onload = resize(true); // has to be after onresize for some reason
+
+        addLoadEvent(function () {
+            resize(true);
+            setTimeout(function () { resize_panel_width('pnlOrgStats'); resize_panel_width('pnlPatients'); }, 50);
+        });
+
+        function resize(onload) {
+
+            if (onload) {
+                // only seems to work with some timeout after page is loaded
+                setTimeout(function () { resize(false); }, 25);
+                return;
+            }
+
+            var newHeight = document.documentElement.clientHeight - 250;
+            document.getElementById('pnlOrgStats').style.maxHeight = newHeight + "px";
+            document.getElementById('pnlPatients').style.maxHeight = newHeight + "px";
+        }
+
+
+        function resize_panel_width(pnlName) {
+            var panel = document.getElementById(pnlName);
+            if (panel != null) {
+                var width_difference = parseInt(panel.offsetWidth) - parseInt(panel.clientWidth);
+                panel.style.width += String(parseInt(panel.offsetWidth) + width_difference) + "px";
+            }
+        }
+
+    </script>
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <table border="0" cellpadding="0" cellspacing="0">
+        <tr>
+            <td valign="top">
+                <table border="0" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td class="nowrap">
+                            <h2 id="Heading" runat="server">Organisation Statistics</h2>
+                        </td>
+                        <td><h2><asp:HyperLink ID="lnkToEntity" runat="server"></asp:HyperLink></h2></td>
+                    </tr>
+                </table>
+            </td>
+            <td style="width:75px"></td>
+            <td valign="bottom">
+                <table>
+                    <tr>
+                        <td class="nowrap"><asp:Label ID="lblSearchDate" runat="server">Start Date: </asp:Label></td>
+                        <td class="nowrap"><asp:TextBox ID="txtStartDate" runat="server" Columns="10"/></td>
+                        <td class="nowrap"><asp:ImageButton ID="txtStartDate_Picker" runat="server" ImageUrl="~/images/Calendar-icon-24px.png" /></td>
+                        <td class="nowrap"><button type="button" onclick="javascript:document.getElementById('txtStartDate').value = '';return false;">Clear</button></td>
+
+                        <td style="width:20px"></td>
+
+                        <td class="nowrap"><asp:Label ID="lblEndDate" runat="server">End Date: </asp:Label></td>
+                        <td class="nowrap"><asp:TextBox ID="txtEndDate" runat="server" Columns="10"></asp:TextBox></td>
+                        <td class="nowrap"><asp:ImageButton ID="txtEndDate_Picker" runat="server" ImageUrl="~/images/Calendar-icon-24px.png" /></td>
+                        <td class="nowrap"><button type="button" onclick="javascript:document.getElementById('txtEndDate').value = '';return false;">Clear</button></td>
+
+                        <td style="width:40px"></td>
+
+                        <td><asp:Button ID="btnSearch" runat="server" Text="Update" OnClick="btnSearch_Click" /></td>
+
+                    </tr>
+                </table>
+            </td>
+
+        </tr>
+    </table>
+
+
+
+
+    <br />
+
+    <asp:ValidationSummary ID="EditPatientValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditPatientValidationSummary"/>
+    <asp:Label ID="lblErrorMessage" runat="server" CssClass="failureNotification"></asp:Label>
+
+
+    <table border="0" cellpadding="0" cellspacing="0">
+        <tr>
+            <td valign="top">
+
+                <asp:Panel ID="pnlOrgStats" runat="server" ScrollBars="Auto" style="max-height:600px;">
+                    <asp:Repeater id="lstOrgStats" runat="server">
+                        <HeaderTemplate>
+                            <table cellspacing="0" cellpadding="1" border="1" style="border-collapse:collapse;">
+                                <tr>
+                                    <th></th>
+                                    <th>&nbsp;New Bookings&nbsp;</th>
+                                    <th>&nbsp;New Patients&nbsp;</th>
+                                </tr>
+                        </HeaderTemplate>
+                        <ItemTemplate>
+                                <tr>
+                                    <td class="nowrap">&nbsp;<asp:Label ID="lblOrg" Text='<%# Eval("name") %>' runat="server"></asp:Label>&nbsp;</td>
+                                    <td class="nowrap" align="center">&nbsp;<asp:Label ID="lblBookings" runat="server" Text='<%# Eval("n_bookings") %>'></asp:Label>&nbsp;</td>
+                                    <td class="nowrap" align="center">&nbsp;<asp:LinkButton ID="lnkPatients" runat="server" OnCommand="lnkPatients_Command" CommandArgument='<%# Eval("organisation_id") %>' Text='<%# Eval("n_patients") %>' />&nbsp;</td>
+                                </tr>
+                        </ItemTemplate>
+                        <FooterTemplate>
+                                <tr>
+                                    <td align="center"><b>Total</b></td>
+                                    <td align="center"><asp:Label ID="lblSum_Bookings" runat="server" Font-Bold="True"></asp:Label></td>
+                                    <td align="center"><asp:Label ID="lblSum_Patients" runat="server" Font-Bold="True"></asp:Label></td>
+                                </tr>
+                            </table>
+                        </FooterTemplate>
+                    </asp:Repeater>
+                </asp:Panel>
+
+            </td>
+
+            <td style="width:30px"></td>
+
+            <td valign="top">
+
+                <asp:Panel ID="pnlPatients" runat="server" ScrollBars="Auto" style="max-height:600px;">
+                    <asp:Repeater id="lstPatients" runat="server">
+                        <HeaderTemplate>
+                            <table cellspacing="0" cellpadding="1" border="1" style="border-collapse:collapse;">
+                                <tr>
+                                    <th>&nbsp;Referrer&nbsp;</th>
+                                    <th>&nbsp;Patient&nbsp;</th>
+                                    <th>&nbsp;Organisation&nbsp;</th>
+                                </tr>
+                        </HeaderTemplate>
+                        <ItemTemplate>
+                                <tr>
+                                    <td class="nowrap">
+                                        &nbsp;
+                                        <asp:Label ID="lblReferrer" runat="server" Text='<%# Eval("referrer_info_firstname") + " " + Eval("referrer_info_surname") %>'></asp:Label>
+
+                                        <asp:Label ID="lblReferrerCount" runat="server" Text='<%# " (" + Eval("referrer_count") + ")" %>' Visible='<%# ((int)Eval("referrer_count")) > 0 ? true : false %>'></asp:Label>
+
+                                        &nbsp;</td>
+                                    <td class="nowrap">&nbsp;<asp:Label ID="lblPatient" runat="server" Text='<%# Eval("patient_person_firstname") + " " + Eval("patient_person_surname") %>'></asp:Label>&nbsp;</td>
+                                    <td class="nowrap">&nbsp;<asp:Label ID="lblOrganisation" runat="server" Text='<%# Eval("organisation_name") %>'></asp:Label>&nbsp;</td>
+                                </tr>
+                        </ItemTemplate>
+                        <FooterTemplate>
+                            </table>
+                        </FooterTemplate>
+                    </asp:Repeater>
+                </asp:Panel>
+
+
+                <br />
+                <center>
+                    <asp:Button ID="btnExport" runat="server" Text="Export" OnCommand="btnExport_Command" Visible="False" />
+                </center>
+
+            </td>
+
+        </tr>
+    </table>
+
+</asp:Content>

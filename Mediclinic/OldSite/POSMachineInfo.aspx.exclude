@@ -1,0 +1,227 @@
+﻿<%@ Page Title="POS Machines" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="POSMachineInfo.aspx.cs" Inherits="POSMachineInfo" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <center>
+    <table border="0" cellpadding="0" cellspacing="0">
+        <tr>
+            <td>
+
+                <asp:ValidationSummary ID="EditSitePOSMachineValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditSitePOSMachineValidationSummary"/>
+                <asp:ValidationSummary ID="AddSitePOSMachineValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="AddSitePOSMachineValidationGroup"/>
+
+                <asp:ValidationSummary ID="EditOrgPOSMachineValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditOrgPOSMachineValidationSummary"/>
+                <asp:ValidationSummary ID="AddOrgPOSMachineValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="AddOrgPOSMachineValidationGroup"/>
+
+                <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+
+                <table>
+                    <tr>
+                        <td align="center">
+                            <h2>Organisation POS Machines</h2>
+                            * Able to be selected by Providers loged to that clinic
+                        </td>
+                        <td></td>
+                        <td align="center">
+                            <h2>Site POS Machines</h2>
+                            * Able to be selected by Admin loged in to that site
+
+                        </td>
+                    </tr>
+                    <tr style="height:15px">
+                        <td colspan="3"></td>
+                    </tr>
+                    <tr>
+                        <td valign="top" align="center">
+                            <asp:GridView ID="GrdOrgPOSMachine" runat="server" 
+                                 AutoGenerateColumns="False" DataKeyNames="pm_pos_machine_id" 
+                                 OnRowCancelingEdit="GrdOrgPOSMachine_RowCancelingEdit" 
+                                 OnRowDataBound="GrdOrgPOSMachine_RowDataBound" 
+                                 OnRowEditing="GrdOrgPOSMachine_RowEditing" 
+                                 OnRowUpdating="GrdOrgPOSMachine_RowUpdating" ShowFooter="True" 
+                                 OnRowCommand="GrdOrgPOSMachine_RowCommand" 
+                                 OnRowDeleting="GrdOrgPOSMachine_RowDeleting" 
+                                 OnRowCreated="GrdOrgPOSMachine_RowCreated"
+                                 AllowSorting="True" 
+                                 OnSorting="GrdOrgPOSMachine_Sorting"
+                                 RowStyle-VerticalAlign="top"
+                                 AllowPaging="True"
+                                 OnPageIndexChanging="GrdOrgPOSMachine_PageIndexChanging"
+                                 PageSize="22"
+                                 ClientIDMode="Predictable">
+                                <PagerSettings Mode="NumericFirstLast" FirstPageText="First" PreviousPageText="Previous" NextPageText="Next" LastPageText="Last" />
+                     
+                                <Columns> 
+
+                                    <asp:TemplateField HeaderText="ID"  HeaderStyle-HorizontalAlign="Left" SortExpression="pm_pos_machine_id"> 
+                                        <EditItemTemplate> 
+                                            <asp:Label ID="lblId" runat="server" Text='<%# Bind("pm_pos_machine_id") %>'></asp:Label>
+                                        </EditItemTemplate> 
+                                        <ItemTemplate> 
+                                            <asp:Label ID="lblId" runat="server" Text='<%# Bind("pm_pos_machine_id") %>' Font-Bold='<%# Eval("bold") != DBNull.Value && (bool)Eval("bold") %>'></asp:Label> 
+                                        </ItemTemplate> 
+                                    </asp:TemplateField>
+
+                                    <asp:TemplateField HeaderText="Organisation" HeaderStyle-HorizontalAlign="Left" SortExpression="organisation_name" FooterStyle-VerticalAlign="Top"> 
+                                        <EditItemTemplate> 
+                                            <asp:DropDownList ID="ddlOrganisation" runat="server" DataTextField="organisation_name" DataValueField="organisation_entity_id"> </asp:DropDownList> 
+                                        </EditItemTemplate> 
+                                        <ItemTemplate> 
+                                            <asp:Label ID="lblOrganisation" runat="server" Text='<%# Eval("organisation_name") %>' Font-Bold='<%# Eval("bold") != DBNull.Value && (bool)Eval("bold") %>'></asp:Label> 
+                                        </ItemTemplate> 
+                                        <FooterTemplate> 
+                                            <asp:DropDownList ID="ddlNewOrganisation" runat="server" DataTextField="name" DataValueField="entity_id"> </asp:DropDownList>
+                                        </FooterTemplate> 
+                                    </asp:TemplateField> 
+
+                                    <asp:TemplateField HeaderText="POS ID" HeaderStyle-HorizontalAlign="Left" SortExpression="pm_pos_id" FooterStyle-VerticalAlign="Top"> 
+                                        <EditItemTemplate> 
+                                            <asp:TextBox Width="90%" ID="txtPOSID" runat="server" Text='<%# Bind("pm_pos_id") %>'></asp:TextBox> 
+                                            <asp:RequiredFieldValidator ID="txtValidatePOSIDRequired" runat="server" CssClass="failureNotification"  
+                                                ControlToValidate="txtPOSID" 
+                                                ErrorMessage="POS ID is required."
+                                                Display="Dynamic"
+                                                ValidationGroup="EditOrgPOSMachineValidationSummary">*</asp:RequiredFieldValidator>
+                                        </EditItemTemplate> 
+                                        <FooterTemplate>
+                                            <asp:TextBox Width="90%" ID="txtNewPOSID" runat="server" ></asp:TextBox>
+                                            <asp:RequiredFieldValidator ID="txtValidateNewPOSIDRequired" runat="server" CssClass="failureNotification"  
+                                                ControlToValidate="txtNewPOSID" 
+                                                ErrorMessage="POS ID is required."
+                                                Display="Dynamic"
+                                                ValidationGroup="AddOrgPOSMachineValidationGroup">*</asp:RequiredFieldValidator>
+                                        </FooterTemplate> 
+                                        <ItemTemplate> 
+                                            <asp:Label ID="lblPOSID" runat="server" Text='<%# Bind("pm_pos_id") %>' Font-Bold='<%# Eval("bold") != DBNull.Value && (bool)Eval("bold") %>'></asp:Label> 
+                                        </ItemTemplate> 
+                                    </asp:TemplateField> 
+
+                                    <asp:TemplateField HeaderText="Date Added" HeaderStyle-HorizontalAlign="Left" SortExpression="pm_date_added" FooterStyle-VerticalAlign="Top"> 
+                                        <ItemTemplate> 
+                                            <asp:Label ID="lblDateAdded" runat="server" Text='<%# Eval("pm_date_added", "{0:dd-MM-yyyy}")  %>' Font-Bold='<%# Eval("bold") != DBNull.Value && (bool)Eval("bold") %>'></asp:Label> 
+                                        </ItemTemplate> 
+                                    </asp:TemplateField> 
+
+
+                                    <asp:TemplateField HeaderText="" ShowHeader="False" HeaderStyle-HorizontalAlign="Left" FooterStyle-VerticalAlign="Top"> 
+                                        <EditItemTemplate> 
+                                            <asp:LinkButton ID="lnkUpdate" runat="server" CausesValidation="True" CommandName="Update" Text="Update" ValidationGroup="EditOrgPOSMachineValidationSummary"></asp:LinkButton> 
+                                            <asp:LinkButton ID="lnkCancel" runat="server" CausesValidation="False" CommandName="Cancel" Text="Cancel"></asp:LinkButton> 
+                                        </EditItemTemplate> 
+                                        <FooterTemplate> 
+                                            <asp:LinkButton ID="lnkAdd" runat="server" CausesValidation="True" CommandName="Insert" Text="Insert" ValidationGroup="AddOrgPOSMachineValidationGroup"></asp:LinkButton> 
+                                        </FooterTemplate> 
+                                        <ItemTemplate> 
+                                           <asp:ImageButton ID="lnkEdit" runat="server" CommandName="Edit" ImageUrl="~/images/Inline-edit-icon-24.png"  AlternateText="Inline Edit" ToolTip="Inline Edit"/>
+                                        </ItemTemplate> 
+                                    </asp:TemplateField> 
+
+                                </Columns> 
+                            </asp:GridView>
+                        </td>
+                        <td style="width:25px"></td>
+                        <td valign="top" align="center">
+                            <asp:GridView ID="GrdSitePOSMachine" runat="server" 
+                                 AutoGenerateColumns="False" DataKeyNames="pm_pos_machine_id" 
+                                 OnRowCancelingEdit="GrdSitePOSMachine_RowCancelingEdit" 
+                                 OnRowDataBound="GrdSitePOSMachine_RowDataBound" 
+                                 OnRowEditing="GrdSitePOSMachine_RowEditing" 
+                                 OnRowUpdating="GrdSitePOSMachine_RowUpdating" ShowFooter="True" 
+                                 OnRowCommand="GrdSitePOSMachine_RowCommand" 
+                                 OnRowDeleting="GrdSitePOSMachine_RowDeleting" 
+                                 OnRowCreated="GrdSitePOSMachine_RowCreated"
+                                 AllowSorting="True" 
+                                 OnSorting="GrdSitePOSMachine_Sorting"
+                                 RowStyle-VerticalAlign="top"
+                                 AllowPaging="True"
+                                 OnPageIndexChanging="GrdSitePOSMachine_PageIndexChanging"
+                                 PageSize="22"
+                                 ClientIDMode="Predictable">
+                                <PagerSettings Mode="NumericFirstLast" FirstPageText="First" PreviousPageText="Previous" NextPageText="Next" LastPageText="Last" />
+                     
+                                <Columns> 
+
+                                    <asp:TemplateField HeaderText="ID"  HeaderStyle-HorizontalAlign="Left" SortExpression="pm_pos_machine_id"> 
+                                        <EditItemTemplate> 
+                                            <asp:Label ID="lblId" runat="server" Text='<%# Bind("pm_pos_machine_id") %>'></asp:Label>
+                                        </EditItemTemplate> 
+                                        <ItemTemplate> 
+                                            <asp:Label ID="lblId" runat="server" Text='<%# Bind("pm_pos_machine_id") %>' Font-Bold='<%# Eval("bold") != DBNull.Value && (bool)Eval("bold") %>'></asp:Label> 
+                                        </ItemTemplate> 
+                                    </asp:TemplateField>
+
+                                    <asp:TemplateField HeaderText="Site" HeaderStyle-HorizontalAlign="Left" SortExpression="site_name" FooterStyle-VerticalAlign="Top"> 
+                                        <EditItemTemplate> 
+                                            <asp:DropDownList ID="ddlSite" runat="server" DataTextField="site_name" DataValueField="site_entity_id"> </asp:DropDownList> 
+                                        </EditItemTemplate> 
+                                        <ItemTemplate> 
+                                            <asp:Label ID="lblSite" runat="server" Text='<%# Eval("site_name") %>' Font-Bold='<%# Eval("bold") != DBNull.Value && (bool)Eval("bold") %>'></asp:Label> 
+                                        </ItemTemplate> 
+                                        <FooterTemplate> 
+                                            <asp:DropDownList ID="ddlNewSite" runat="server" DataTextField="name" DataValueField="entity_id"> </asp:DropDownList>
+                                        </FooterTemplate> 
+                                    </asp:TemplateField> 
+
+                                    <asp:TemplateField HeaderText="POS ID" HeaderStyle-HorizontalAlign="Left" SortExpression="pm_pos_id" FooterStyle-VerticalAlign="Top"> 
+                                        <EditItemTemplate> 
+                                            <asp:TextBox Width="90%" ID="txtPOSID" runat="server" Text='<%# Bind("pm_pos_id") %>'></asp:TextBox> 
+                                            <asp:RequiredFieldValidator ID="txtValidatePOSIDRequired" runat="server" CssClass="failureNotification"  
+                                                ControlToValidate="txtPOSID" 
+                                                ErrorMessage="POS ID is required."
+                                                Display="Dynamic"
+                                                ValidationGroup="EditSitePOSMachineValidationSummary">*</asp:RequiredFieldValidator>
+                                        </EditItemTemplate> 
+                                        <FooterTemplate>
+                                            <asp:TextBox Width="90%" ID="txtNewPOSID" runat="server" ></asp:TextBox>
+                                            <asp:RequiredFieldValidator ID="txtValidateNewPOSIDRequired" runat="server" CssClass="failureNotification"  
+                                                ControlToValidate="txtNewPOSID" 
+                                                ErrorMessage="POS ID is required."
+                                                Display="Dynamic"
+                                                ValidationGroup="AddSitePOSMachineValidationGroup">*</asp:RequiredFieldValidator>
+                                        </FooterTemplate> 
+                                        <ItemTemplate> 
+                                            <asp:Label ID="lblPOSID" runat="server" Text='<%# Bind("pm_pos_id") %>' Font-Bold='<%# Eval("bold") != DBNull.Value && (bool)Eval("bold") %>'></asp:Label> 
+                                        </ItemTemplate> 
+                                    </asp:TemplateField> 
+
+                                    <asp:TemplateField HeaderText="Date Added" HeaderStyle-HorizontalAlign="Left" SortExpression="pm_date_added" FooterStyle-VerticalAlign="Top"> 
+                                        <ItemTemplate> 
+                                            <asp:Label ID="lblDateAdded" runat="server" Text='<%# Eval("pm_date_added", "{0:dd-MM-yyyy}")  %>' Font-Bold='<%# Eval("bold") != DBNull.Value && (bool)Eval("bold") %>'></asp:Label> 
+                                        </ItemTemplate> 
+                                    </asp:TemplateField> 
+
+
+                                    <asp:TemplateField HeaderText="" ShowHeader="False" HeaderStyle-HorizontalAlign="Left" FooterStyle-VerticalAlign="Top"> 
+                                        <EditItemTemplate> 
+                                            <asp:LinkButton ID="lnkUpdate" runat="server" CausesValidation="True" CommandName="Update" Text="Update" ValidationGroup="EditSitePOSMachineValidationSummary"></asp:LinkButton> 
+                                            <asp:LinkButton ID="lnkCancel" runat="server" CausesValidation="False" CommandName="Cancel" Text="Cancel"></asp:LinkButton> 
+                                        </EditItemTemplate> 
+                                        <FooterTemplate> 
+                                            <asp:LinkButton ID="lnkAdd" runat="server" CausesValidation="True" CommandName="Insert" Text="Insert" ValidationGroup="AddSitePOSMachineValidationGroup"></asp:LinkButton> 
+                                        </FooterTemplate> 
+                                        <ItemTemplate> 
+                                           <asp:ImageButton ID="lnkEdit" runat="server" CommandName="Edit" ImageUrl="~/images/Inline-edit-icon-24.png"  AlternateText="Inline Edit" ToolTip="Inline Edit"/>
+                                        </ItemTemplate> 
+                                    </asp:TemplateField> 
+
+                                </Columns> 
+                            </asp:GridView>
+                        </td>
+                    </tr>
+
+                </table>
+
+                <br /><br /><br /><br />
+                <center>
+                <asp:Button ID="btnClose" runat="server" Text="Close" OnClientClick="window.returnValue=false;self.close();" />
+                </center>
+
+
+            </td>
+        </tr>
+    </table>
+    </center>
+
+</asp:Content>

@@ -1,0 +1,465 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Configuration;
+
+public partial class SiteMasterV2 : System.Web.UI.MasterPage
+{
+
+    private int startTime;
+
+    protected override void OnInit(EventArgs e)
+    {
+
+        if (HttpContext.Current.Request.RawUrl.Contains("/Account/LoginV2.aspx") && Request.RawUrl.IndexOf("ReturnUrl=") != -1)
+        {
+            string ReturnUrl = Server.UrlDecode(Request.RawUrl.Substring(Request.RawUrl.IndexOf("ReturnUrl=") + 10));
+            if (ReturnUrl.StartsWith("/Account/CreateNewPatientV2.aspx") ||
+                ReturnUrl.StartsWith("/BookingNextAvailableV2.aspx") ||
+                ReturnUrl.StartsWith("/CreateNewCustomerSiteV2.aspx") ||
+                ReturnUrl.EndsWith("/TermsAndConditionsV2.aspx"))
+            {
+
+                // need this since if no auth set, always goes to config file field 'loginUrl'
+                // which means LostPassword page (or any other page) will redirect back to what is set as the 'loginUrl'
+                System.Web.Security.FormsAuthentication.SetAuthCookie("--", true);
+
+
+                //Logger.LogQuery(HttpContext.Current.Request.RawUrl, false, false, true);
+                //Logger.LogQuery(ReturnUrl, false, false, true);
+
+                Response.Redirect(ReturnUrl);
+            }
+        }
+
+        startTime = Environment.TickCount;
+
+        bool hideHeader =
+            //HttpContext.Current.Request.Url.LocalPath.Contains("/StreetAndSuburbInfo.aspx")                  ||
+            //HttpContext.Current.Request.Url.LocalPath.Contains("/AddEditContact.aspx")                       ||
+
+            HttpContext.Current.Request.Url.LocalPath.EndsWith("/Account/LogoutV2.aspx")                     ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/BookingSheetBlockoutV2.aspx")               ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/BookingCreateInvoiceV2.aspx")               ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/BookingCreateInvoiceAgedCareV2.aspx")       ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/Contact_SuburbListPopupV2.aspx")            ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/ContactAusDetailV2.aspx")                   ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/ContactTypeListV2.aspx")                    ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/EPCDetailV2.aspx")                          ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/Invoice_CreditNoteDetailV2.aspx")           ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/Invoice_ReceiptDetailV2.aspx")              ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/Invoice_RefundDetailV2.aspx")               ||
+           (HttpContext.Current.Request.Url.LocalPath.Contains("/Invoice_ViewV2.aspx") && !HttpContext.Current.Request.Url.AbsoluteUri.Contains("is_popup=0")) ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/NoteListV2.aspx")                           ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/Notifications_AddCreditEmailPopupV2.aspx")  ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/OfferingPopupMessageDetailV2.aspx")         ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/OrganisationListPopupV2.aspx")              ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/PatientFlashingMessageDetailV2.aspx")       ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/PatientListPopupV2.aspx")                   ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/PatientReferrerHistoryPopupV2.aspx")        ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/ReferrerListPopupV2.aspx")                  ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/ReferrerDoctorListPopupV2.aspx")            ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/ReferrerClinicListPopupV2.aspx")            ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/StaffOfferingsBulkUpdateV2.aspx");
+
+        UpdateLogout(hideHeader);
+
+        if (Session["SystemVariables"] != null && !Page.Title.StartsWith(((SystemVariables)Session["SystemVariables"])["Site"].Value + " - "))
+            Page.Title = ((SystemVariables)Session["SystemVariables"])["Site"].Value + " - " + Page.Title;
+
+        base.OnInit(e);
+    }
+    protected override void OnPreRender(EventArgs e)
+    {
+        base.OnPreRender(e);
+
+        if (Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["ShowPageExecutionTime"]))
+        {
+            double executionTime = (double)(Environment.TickCount - startTime) / 1000.0;
+
+            //if (Session["StaffID"] != null && Convert.ToInt32(Session["StaffID"]) < 0)
+                lblPageLoadTime.Text = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Load Time: " + executionTime + " seconds";
+        }
+    }
+
+
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        try
+        {
+            //Logger.LogRequest(Request, false, true);
+
+            SetupGUI();
+            div_menu.Style["display"] = Request.Browser.Type.Contains("Firefox") ? "none" : "block";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogException(ex, true);
+            throw;
+        }
+    }
+
+
+    protected void lnkBackToCallCenter_Click(object sender, EventArgs e)
+    {
+        Session["DB"] = (string)Session["PreviousDB"];
+        Session["SystemVariables"] = SystemVariableDB.GetAll();
+
+        // Set system staff variables of external staff member 'Call Center'
+        Staff staff = StaffDB.GetByID(Convert.ToInt32(Session["PreviousStaffID"]));
+        Session["IsLoggedIn"]                       = true;
+        Session["IsStakeholder"]                    = staff.IsStakeholder;
+        Session["IsMasterAdmin"]                    = staff.IsMasterAdmin;
+        Session["IsAdmin"]                          = staff.IsAdmin;
+        Session["IsPrincipal"]                      = staff.IsPrincipal;
+        Session["IsProvider"]                       = staff.IsProvider;
+        Session["IsExternal"]                       = staff.IsExternal;
+        Session["StaffID"]                          = staff.StaffID;
+        Session["StaffFullnameWithoutMiddlename"]   = staff.Person.FullnameWithoutMiddlename;
+        Session["StaffFirstname"]                   = staff.Person.Firstname;
+
+        Site site = SiteDB.GetByID(Convert.ToInt32(Session["PreviousSiteID"]));
+        Session["SiteID"]         = site.SiteID;
+        Session["SiteName"]       = site.Name;
+        Session["SiteIsClinic"]   = site.SiteType.ID == 1;
+        Session["SiteIsAgedCare"] = site.SiteType.ID == 2;
+        Session["SiteIsGP"]       = site.SiteType.ID == 3;
+        Session["SiteTypeID"]     = site.SiteType.ID;
+        Session["SiteTypeDescr"]  = site.SiteType.Descr;
+
+        Session.Remove("PreviousDB");
+        Session.Remove("PreviousStaffID");
+        Session.Remove("PreviousSiteID");
+
+
+        // Set OrgID in session as external user has OrgID set
+        Session.Remove("OrgID");
+        Session.Remove("OrgName");
+
+        // Remove patient list session data for pt searches
+        Session.Remove("patientinfo_data");
+        Session.Remove("patientlist_data");
+        Session.Remove("patientlist_sortexpression");
+        Session.Remove("patientinfo_sortexpression");
+
+        // Go to call center page
+        Response.Redirect("~/CallCenterV2.aspx", false);
+        return;
+    }
+
+    protected void SetupGUI()
+    {
+        bool isLoggedIn    = Session["IsLoggedIn"]    != null && Convert.ToBoolean(Session["IsLoggedIn"]);
+        bool isStakeholder = Session["IsStakeholder"] != null && Convert.ToBoolean(Session["IsStakeholder"]);
+        bool isMasterAdmin = Session["IsMasterAdmin"] != null && Convert.ToBoolean(Session["IsMasterAdmin"]);
+        bool isAdmin       = Session["IsAdmin"]       != null && Convert.ToBoolean(Session["IsAdmin"]);
+        bool isPrincipal   = Session["IsPrincipal"]   != null && Convert.ToBoolean(Session["IsPrincipal"]);
+        bool isProvider    = Session["IsProvider"]    != null && Convert.ToBoolean(Session["IsProvider"]);
+        bool isExternal    = Session["IsExternal"]    != null && Convert.ToBoolean(Session["IsExternal"]);
+
+        bool isAdminView    = (isStakeholder || isMasterAdmin || isAdmin) && !isExternal;
+        bool isProviderView = (isPrincipal   || isProvider)               && !isAdminView && !isExternal;
+        bool isExternalView = isExternal;
+
+
+        bool isAgedCare = Session["SiteTypeID"] != null && Convert.ToInt32(Session["SiteTypeID"]) == 2;
+        bool isClinics  = Session["SiteTypeID"] != null && Convert.ToInt32(Session["SiteTypeID"]) == 1;
+        lblSiteIsClinic.Value   = isClinics  ? "1" : "0";
+        lblSiteIsAgedCare.Value = isAgedCare ? "1" : "0";
+
+
+        //if (Session["SystemVariables"] != null)
+        //    lblBannerMessage.Text = ((SystemVariables)Session["SystemVariables"])["BannerMessage"].Value;
+        //lblBannerMessage.Visible = Session["SystemVariables"] != null && Convert.ToBoolean(((SystemVariables)Session["SystemVariables"])["ShowBannerMessage"].Value);
+
+        //lblSupportContactMessage.Text = "<b>" + System.Configuration.ConfigurationManager.AppSettings["SupportContactMessage"] + "</b>";
+
+
+        banner.Style["background"] = (Session["SystemVariables"] == null || ((SystemVariables)Session["SystemVariables"])["MainLogo"] == null) ? "url(../imagesV2/comp_logo.png) no-repeat center center" : "url(../imagesV2/" + ((SystemVariables)Session["SystemVariables"])["MainLogo"].Value + ") no-repeat center center";
+
+        lblSiteName.Text    = Session["SystemVariables"] == null ? "Mediclinic" : ((SystemVariables)Session["SystemVariables"])["Site"].Value;
+        lblSiteName.Visible = lblDataStoredAusServersMsg.Visible = lnkLiveSupport.Visible = Session["SystemVariables"] != null;
+
+        // when call centre logged in, put call-centre prefix showing at the end of the sitename always visible
+        if (Session != null && Session["StaffID"] != null && (new List<int> { -5, -7, -8 }).Contains((int)Session["StaffID"]))
+            lblSiteName.Text += Session["SystemVariables"] == null ? "" : " <span style=\"color:#82cde9\">[" + ((SystemVariables)Session["SystemVariables"])["CallCenterPrefix"].Value + "]</span>";
+
+
+        spn_login_display.Visible = isLoggedIn;
+
+        if (isLoggedIn)
+        {
+            lblUsername.Text = Session["StaffFullnameWithoutMiddlename"].ToString();
+
+            string siteOrgNameRaw = (isAdminView) ?
+                Session["SiteName"] == null ? "[No Site Selected]"   : (string)Session["SiteName"] :
+                Session["OrgName"]  == null ? "[No Clinic Selected]" : (string)Session["OrgName"];
+
+            string siteOrgNameTrimmed = Utilities.TrimName(siteOrgNameRaw, 37, 2);
+
+            lblSiteOrOrg.Text = siteOrgNameTrimmed;
+
+            //if (siteOrgNameRaw != siteOrgNameTrimmed)
+            //    lblSiteOrOrg.Attributes["title"] = siteOrgNameRaw;
+
+
+            lnkSelectSiteOrOrg.Text        = isAdminView ? "Change Site" : "Change Clinic";
+            lnkSelectSiteOrOrg.NavigateUrl = isAdminView ? "~/Account/SelectSiteV2.aspx" : "~/Account/SelectOrgV2.aspx";
+
+
+            if (Session["SiteID"] == null || (!isAdminView && Session["OrgID"] == null))
+            {
+                lnkChangePwd.Visible = false;
+                lnkChangePwd_OpenBracket.Visible = false;
+                lnkChangePwd_CloseBracket.Visible = false;
+            }
+
+            /*
+            if (Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["ShowLastBuildTime"]))
+            {
+                //lblLastBuildTime.Text = Utilities.IsDev() ?
+                //    " Last Build: " + Utilities.GetBuildDate().ToString("dd MMM HH:mm:ss") + " " :
+                //    " Last Build: " + Utilities.GetBuildDate().ToString("dd MMM HH:mm") + " ";
+            }
+            */
+        }
+
+        /*
+         * set menu width so will be centered
+         */
+
+        if (isAdminView && Session != null && Session["StaffID"] != null && (new List<int> { -7, -8 }).Contains((int)Session["StaffID"]))
+            div_menu2.Style["width"] = "1035px !important;";
+        else if (isAdminView)
+            div_menu2.Style["width"] = "985px !important;";  // 1075px
+        else if (isProviderView)
+            div_menu2.Style["width"] = "465px !important;";
+        else if (Session != null && Session["StaffID"] != null && (int)Session["StaffID"] == -5)
+            div_menu2.Style["width"] = "335px !important;";
+        else 
+            div_menu2.Style["width"] = "425px !important;";
+
+
+
+
+        /*
+         * set and hide/show menu items depending on user privileges
+         */
+
+
+        lblMenuOrganisations.Text           = !isAgedCare ? "Clinics"      : "Facilities";
+        lnkMenuOrganisationList.Text        = !isAgedCare ? "Clinics List" : "Facilities List";
+        lnkMenuOrganisationList.NavigateUrl = !isAgedCare ? "~/OrganisationListV2.aspx?type=clinic"               : "~/OrganisationListV2.aspx?type=ac";
+        lnkMenuAddOrganisation.Text         = !isAgedCare ? "Add Clinic"   : "Add Facility";
+        lnkMenuAddOrganisation.NavigateUrl  = !isAgedCare ? "~/OrganisationDetailV2.aspx?type=add&orgtype=clinic" : "~/OrganisationDetailV2.aspx?type=add&orgtype=ac";
+        lblMenuPatients.Text                = !isAgedCare ? "Patients"     : "Residents";
+        lnkMenuPatientList.Text             = !isAgedCare ? "Patient List" : "Resident List";
+        lnkMenuPatientAdd.Text              = !isAgedCare ? "Add Patient"  : "Add Resident";
+
+
+        mh_staff.Visible          = mh_staff_spacer.Visible         = isStakeholder || isMasterAdmin;
+        mh_patients_space.Visible = mh_patients.Visible             = isAdminView   || isProviderView;
+        mh_organisation.Visible   = mh_organisation_spacer.Visible  = isAdminView;
+        mh_referrers.Visible      = mh_referrers_space.Visible      = isAdminView   || isProviderView;
+        mh_bookings_space.Visible = mh_bookings.Visible             = isAdminView   || isProviderView;
+        //mh_offerings.Visible      = mh_offerings_spacer.Visible     = isAdminView;
+        lblMenuBookings.Text = isAdminView ? "Bookings & Sales" : "Bookings";
+        mi_bookings_offerings_seperator.Visible                         = isAdminView;
+        mi_bookings_offerings_products_and_services_list.Visible        = isAdminView;
+        mi_bookings_offerings_set_specific_prices.Visible               = isAdminView;
+        mi_bookings_offerings_invoice_cash_add.Visible                  = isAdminView;
+
+        mh_sales.Visible          = mh_sales_space.Visible          = isAdminView   || isProviderView;
+        mh_financials.Visible     = mh_financials_spacer.Visible    = isAdminView;
+        mh_letters.Visible        = mh_letters_space.Visible        = isAdminView   || isProviderView;
+        mh_sms_and_email.Visible  = mh_sms_and_email_spacer.Visible = isAdminView;
+        mh_site_and_settings.Visible                                = isAdminView;
+
+        mh_ext_patient_list.Visible         = mh_ext_patient_list_space.Visible = isExternal;
+        mh_ext_patient_add.Visible          = mh_ext_patient_add_space.Visible  = isExternal;
+        mh_ext_next_booking_space.Visible   = isExternal;
+        mh_ext_next_booking.Visible         = mh_ext_bookings_space.Visible     = isExternal;
+        mh_ext_bookings_space.Visible       = false;
+        mh_ext_bookings.Visible             = isExternal;
+        //mh_ext_bookings.Visible             = mh_ext_bookings_space.Visible     = isExternal;
+        mh_ext_return_to_callcenter.Visible = mh_ext_return_to_callcenter_space_post.Visible = Session != null && Session["StaffID"] != null && (new List<int> { -5, -7, -8 }).Contains((int)Session["StaffID"]);
+
+        mh_ext_return_to_callcenter_space_pre.Visible = false;
+        if (Session != null && Session["StaffID"] != null && (new List<int> { -5, -7, -8 }).Contains((int)Session["StaffID"]))
+        {
+            mh_ext_return_to_callcenter_space_pre.Visible  = true;
+            mh_ext_return_to_callcenter_space_post.Visible = false;
+        }
+
+
+
+        if (isExternal)
+        {
+            lnkMenuPatientListExt.NavigateUrl = "~/PatientListV2.aspx";
+            lnkMenuPatientAddExt.NavigateUrl  = "~/PatientAddV2.aspx";
+            lnkMenuBookingsExt.NavigateUrl    = "~/BookingsV2.aspx?orgs=" + Session["OrgID"] + ( Session != null && Session["StaffID"] != null && (int)Session["StaffID"] != -5 ? "&ndays=3" : "&ndays=4");
+        }
+
+
+        mi_patient_ac_types.Visible                = isAgedCare && isAdminView;
+        mi_patient_ac_types_prices_per_fac.Visible = isAgedCare && isAdminView;
+
+        mi_referrer_epc_letters_generate_unsent_list.Visible       = isAdminView;
+        mi_referrer_epc_letters_reprint_list.Visible               = isAdminView;
+
+
+        mi_link_bookings.InnerText                                 = isAdminView ? "Make Booking" : "Bookings";
+        mi_bookings_call_center.Visible = isAdminView && Session  != null && Session["SystemVariables"] != null && ((SystemVariables)Session["SystemVariables"])["IsMediclinicCallCenter"].Value == "1";
+
+        if (isAdminView)
+        {
+            mi_bookings_list.Visible = false;
+        }
+        if (!isAdminView)
+        {
+            mi_link_bookings.HRef      = "/BookingsV2.aspx?orgs=" + Session["OrgID"] + "&ndays=1";
+            mi_link_bookings_list.HRef = "/BookingsListV2.aspx?staff=" + Session["StaffID"] + "&start_date=" + DateTime.Today.ToString("yyyy_MM_dd") + "&end_date=" + DateTime.Today.ToString("yyyy_MM_dd");
+
+            mi_bookings_list.Visible                               = isAdminView || isProviderView;
+            mi_bookings_report.Visible                             = isAdminView;
+            mi_bookings_schedule_report.Visible                    = isAdminView || isProviderView;
+            mi_bookings_change_edit_reason.Visible                 = isAdminView;
+            mi_bookings_change_unavailability_reason.Visible       = isAdminView;
+        }
+
+
+        mi_link_offerings_set_specific_prices.InnerText = !isAgedCare ? "Set Specific Prices Per Clinic" : "Set Specific Prices Per Facility/Wing/Unit";
+        mi_link_offerings_invoice_cash_add.HRef         = isAdminView ? "/InvoiceCashAddV2.aspx" : "/InvoiceCashAddV2.aspx?org=" + (Session["OrgID"] == null ? "" : Session["OrgID"].ToString()); ;
+
+
+        mh_sales.Visible = mh_sales_space.Visible = isProviderView;
+        mi_link_sales_invoice_cash_add.HRef = isAdminView ? 
+                                                "/InvoiceCashAddV2.aspx" : 
+                                                "/InvoiceCashAddV2.aspx?org=" + (Session["OrgID"] == null ? "" : Session["OrgID"].ToString());
+
+
+        mi_financials_claim_nbr_allocation.Visible = isStakeholder;
+        mi_financials_claim_nbrs_allocated.Visible = isStakeholder;
+        mi_financials_hinx_generation.Visible      = isStakeholder;
+
+
+        if (!isAdminView)
+        {
+            mi_letters_maintain.Visible                      = false;
+            mi_letters_maintain_treatment_letters.Visible    = false;
+            mi_letters_print_batch.Visible                   = false;
+            mi_letters_print_batch_referrers.Visible         = false;
+            mi_letters_recall.Visible                        = false;
+            mi_letters_service_specific_bk_reminders.Visible = false;
+
+            mi_link_letters_print.HRef        += (Session != null && Session["OrgID"] != null ? "?org=" + Session["OrgID"].ToString() : "");
+            mi_link_letters_sent_history.HRef += (Session != null && Session["OrgID"] != null ? "?org=" + Session["OrgID"].ToString() : "");
+        }
+        else
+        {
+            mi_letters_recall.Visible = !isAgedCare;
+        }
+
+
+        mi_website_settings.Visible                = isStakeholder || isMasterAdmin;
+        mi_add_new_field.Visible                   = isStakeholder;
+        mi_create_new_site.Visible                 = isStakeholder;
+
+
+
+
+        if (HttpContext.Current.Request.Url.LocalPath.Contains("/Account/LoginV2.aspx")            ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/Account/SelectOrgV2.aspx")        ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/Account/SelectSiteV2.aspx")       ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/Account/CreateNewLoginV2.aspx")   ||
+            HttpContext.Current.Request.Url.LocalPath.Contains("/Account/LostPasswordV2.aspx")     ||
+            HttpContext.Current.Request.Url.LocalPath.EndsWith("/Account/CreateNewPatientV2.aspx") ||
+            HttpContext.Current.Request.Url.LocalPath.EndsWith("/CreateNewCustomerSiteV2.aspx")    ||
+            HttpContext.Current.Request.Url.LocalPath.EndsWith("/TermsAndConditionsV2.aspx")
+            )
+            div_menu2.Visible = false;
+    }
+
+
+    protected void UpdateLogout(bool hideHeader)
+    {
+        bool isLoggedIn    = Session["IsLoggedIn"]    != null && Convert.ToBoolean(Session["IsLoggedIn"]);
+        bool isStakeholder = Session["IsStakeholder"] != null && Convert.ToBoolean(Session["IsStakeholder"]);
+        bool isMasterAdmin = Session["IsMasterAdmin"] != null && Convert.ToBoolean(Session["IsMasterAdmin"]);
+        bool isAdmin       = Session["IsAdmin"]       != null && Convert.ToBoolean(Session["IsAdmin"]);
+        bool isPrincipal   = Session["IsPrincipal"]   != null && Convert.ToBoolean(Session["IsPrincipal"]);
+
+        bool isAdminView = isStakeholder || isMasterAdmin || isAdmin;
+
+
+        if (!isLoggedIn)
+        {
+            Logout(hideHeader);
+            return;
+        }
+
+        // if another session logged in - logout here
+        if (Session["StaffID"] == null || !(new List<int> { -5, -7, -8 }).Contains((int)Session["StaffID"]))
+        {
+            UserLogin userlogin = null;
+            if (HttpContext.Current.Session != null && HttpContext.Current.Session["DB"] != null)
+            {
+                userlogin = (Session["PatientID"] == null) ?
+                    UserLoginDB.GetByUserID(Convert.ToInt32(Session["StaffID"]), -1) :
+                    UserLoginDB.GetByUserID(-1, Convert.ToInt32(Session["PatientID"]));
+            }
+
+            if (userlogin == null || userlogin.SessionID != HttpContext.Current.Session.SessionID.ToString())
+            {
+                Logout(hideHeader);
+                return;
+            }
+
+            if (Session["SiteID"] == null &&
+                !HttpContext.Current.Request.Url.LocalPath.Contains("/Account/LoginV2.aspx") &&
+                !HttpContext.Current.Request.Url.LocalPath.Contains("/Account/LogoutV2.aspx") &&
+                !HttpContext.Current.Request.Url.LocalPath.Contains("/Account/SelectSiteV2.aspx"))
+                Response.Redirect("~/Account/SelectSiteV2.aspx?from_url=" + Request.RawUrl);
+
+
+            if (!isAdminView && Session["OrgID"] == null &&
+                !HttpContext.Current.Request.Url.LocalPath.Contains("/Account/LoginV2.aspx") &&
+                !HttpContext.Current.Request.Url.LocalPath.Contains("/Account/LogoutV2.aspx") &&
+                !HttpContext.Current.Request.Url.LocalPath.Contains("/Account/SelectOrgV2.aspx") &&
+                !HttpContext.Current.Request.Url.LocalPath.Contains("/Account/SelectSiteV2.aspx"))
+                Response.Redirect("~/Account/SelectOrgV2.aspx?from_url=" + Request.RawUrl);
+
+            UserLoginDB.UpdateLastAccessTime(userlogin.UserloginID, DateTime.Now, Request.RawUrl.Contains("/Account/Logout.aspx") ? "" : Request.RawUrl);
+        }
+
+    }
+
+    protected void Logout(bool hideHeader)
+    {
+        Session.Remove("IsLoggedIn");
+        Session.Remove("IsStakeholder");
+        Session.Remove("IsPrincipal");
+        Session.Remove("IsAdmin");
+        Session.Remove("StaffID");
+        Session.Remove("StaffFullnameWithoutMiddlename");
+        Session.Remove("StaffFirstname");
+        Session.Remove("NumDaysToDisplayOnBookingScreen");
+        //System.Web.Security.FormsAuthentication.SignOut();
+        if (!HttpContext.Current.Request.Url.LocalPath.Contains("/Account/LoginV2.aspx")            &&
+            !HttpContext.Current.Request.Url.LocalPath.EndsWith("/Account/LogoutV2.aspx")           &&
+            !HttpContext.Current.Request.Url.LocalPath.Contains("/Account/CreateNewLoginV2.aspx")   &&
+            !HttpContext.Current.Request.Url.LocalPath.EndsWith("/Account/LostPasswordV2.aspx")     &&
+            !HttpContext.Current.Request.Url.LocalPath.EndsWith("/Account/CreateNewPatientV2.aspx") &&
+            !HttpContext.Current.Request.Url.LocalPath.EndsWith("/BookingNextAvailableV2.aspx")     &&
+            !HttpContext.Current.Request.Url.LocalPath.EndsWith("/CreateNewCustomerSiteV2.aspx")    &&
+            !HttpContext.Current.Request.Url.LocalPath.EndsWith("/TermsAndConditionsV2.aspx"))
+            Response.Redirect("~/Account/LoginV2.aspx" + (Request.RawUrl == "" || Request.RawUrl == "/" || Request.RawUrl.StartsWith("/Default.aspx") ? "" : "?show_header=" + (hideHeader ? "0" : "1") + "&from_url=" + Request.RawUrl));
+
+    }
+
+}

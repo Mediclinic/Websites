@@ -1,0 +1,501 @@
+﻿<%@ Page Title="Referrers" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="ReferrerInfoList.aspx.cs" Inherits="ReferrerInfoList" %>
+<%@ Register TagPrefix="UC" TagName="DuplicatePersonModalElementControl" Src="~/Controls/DuplicatePersonModalElementControl.ascx" %>
+<%@ Register TagPrefix="UC" TagName="IconKeyControl" Src="~/Controls/IconKeyControl.ascx" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <link href="Styles/duplicate_person_modal_box.css" rel="stylesheet" type="text/css" />
+    <script type="text/javascript" src="Scripts/provider_nbr_check.js"></script>
+    <script src="Scripts/check_duplicate_persons.js" type="text/javascript"></script>
+    <script type="text/javascript">
+
+        function title_changed_reset_gender(ddlTitle, ddlGender) {
+            ddlTitle = document.getElementById(ddlTitle);
+            var selValue = ddlTitle.options[ddlTitle.selectedIndex].value;
+            if (selValue == 6 || selValue == 265 || selValue == 266)
+                setSelectedValue(document.getElementById(ddlGender), "M");
+            if (selValue == 7 || selValue == 26)
+                setSelectedValue(document.getElementById(ddlGender), "F");
+        }
+        function setSelectedValue(selectObj, valueToSet) {
+            for (var i = 0; i < selectObj.options.length; i++) {
+                if (selectObj.options[i].value == valueToSet) {
+                    selectObj.options[i].selected = true;
+                    return;
+                }
+            }
+        }
+
+
+        function move_patients(from_regref_id, from_regref_text) {
+
+            var retVal = window.showModalDialog("ReferrerListPopup.aspx", 'Show Popup Window', "dialogHeight:700px;dialogWidth:1150px;resizable:yes;center:yes;");
+            if (typeof retVal === "undefined")
+                return;
+
+            var index = retVal.indexOf(":");
+            var to_regref_id = retVal.substring(0, index);
+            var to_regref_text = retVal.substring(index + 1)
+
+            if (from_regref_id == to_regref_id)
+                return;
+
+            if (!(confirm('Are you sure you want to move all patients of\r\n    ' + from_regref_text + ' \r\nto\r\n    ' + to_regref_text + '?')))
+                return
+
+            document.getElementById('hiddenMovePatientFrom').value = from_regref_id;
+            document.getElementById('hiddenMovePatientTo').value = to_regref_id;
+            document.getElementById('btnMovePatients').click();
+        }
+
+    </script>
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <asp:HiddenField ID="hiddenMovePatientFrom" runat="server" />
+    <asp:HiddenField ID="hiddenMovePatientTo" runat="server" />
+    <asp:Button ID="btnMovePatients" runat="server" CssClass="hiddencol" OnClick="btnMovePatients_Click" />
+
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+            <td>
+        
+                <h2>
+                   Referrers
+                </h2>
+
+                <div style="line-height:6px;">&nbsp;</div>
+
+                <table border="0" cellpadding="0" cellspacing="2">
+                    <tr>
+                        <td><asp:LinkButton ID="btnHoverToolTipSurname" runat="server" Text="?" ToolTip="Display only those with surnames containing the entered text" OnClientClick="javascript:return false;" /></td>
+                        <td class="nowrap"><asp:Label ID="lblSearchSurname" runat="server">Search By Surname: </asp:Label></td>
+                        <td><asp:TextBox ID="txtSearchSurname" runat="server"></asp:TextBox></td>
+                        <td class="nowrap"><asp:CheckBox ID="chkSurnameSearchOnlyStartWith" runat="server" Text="starts with" Font-Size="X-Small" /></td>
+                        <td><asp:Button ID="btnSearchSurname" runat="server" Text="Search" onclick="btnSearchSurname_Click" /></td>
+                        <td><asp:Button ID="btnClearSurnameSearch" runat="server" Text="Clear" onclick="btnClearSurnameSearch_Click" /></td>
+                        <td style="width:75px"></td>
+                        <td rowspan="2" class="nowrap"><asp:CheckBox ID="chkUsePaging" runat="server" Text="use paging" Font-Size="X-Small" AutoPostBack="True" OnCheckedChanged="chkUsePaging_CheckedChanged" Checked="True" /></td>
+                        <td rowspan="2" style="width:25px"></td>
+                        <td rowspan="2" class="nowrap"><asp:CheckBox ID="chkShowDeleted" runat="server" Text="show deleted" Font-Size="X-Small" AutoPostBack="True" OnCheckedChanged="chkShowDeleted_CheckedChanged" Checked="False" /></td>
+
+                        <%-- 
+                        <td id="td_generate_treatment_notes_space_before" runat="server" style="width:75px"></td>
+                        <td id="td_generate_treatment_notes_date_label" runat="server" class="nowrap"><asp:Label ID="lblLastBatchSendTreatmentNotes_AllReferrers" runat="server"></asp:Label></td>
+                        <td id="td_generate_treatment_notes_date_space_before" runat="server" style="width:2px"></td>
+                        <td id="td_generate_treatment_notes_button" runat="server">
+                            <asp:Button ID="btnRunBatchSendTreatmentNotes_AllReferrers_Last6Months" runat="server" Text="Last 6 Mo" Width="75" onclick="btnRunBatchSendTreatmentNotes_AllReferrers_Last6Months_Click" />
+                            <br />
+                            <asp:Button ID="btnRunBatchSendTreatmentNotes_AllReferrers_SinceLast" runat="server" Text="Since Last" Width="75" onclick="btnRunBatchSendTreatmentNotes_AllReferrers_SinceLast_Click" />
+                        </td>
+                        --%>
+
+                        <td style="width:75px"></td>
+                    </tr>
+                    <tr>
+                        <td><asp:LinkButton ID="btnHoverToolTipProviderNbr" runat="server" Text="?" ToolTip="Display only those with provider numbers containing the entered text" OnClientClick="javascript:return false;" /></td>
+                        <td class="nowrap"><asp:Label ID="lblSearchProviderNbr" runat="server">Search By Provider Nbr: </asp:Label></td>
+                        <td><asp:TextBox ID="txtSearchProviderNbr" runat="server"></asp:TextBox></td>
+                        <td class="nowrap"><asp:CheckBox ID="chkProviderNbrSearchOnlyStartWith" runat="server" Text="starts with" Font-Size="X-Small" /></td>
+                        <td><asp:Button ID="btnSearchProviderNbr" runat="server" Text="Search" onclick="btnSearchProviderNbr_Click" /></td>
+                        <td><asp:Button ID="btnClearProviderNbrSearch" runat="server" Text="Clear" onclick="btnClearProviderNbrSearch_Click" /></td>
+                        <td></td>
+
+                        <td></td>
+                    </tr>
+
+
+                </table>
+            </td>
+
+            <td align="right">
+                <UC:IconKeyControl ID="iconKeyControl" runat="server" />
+            </td>
+
+        </tr>
+    </table>
+
+
+    <asp:ValidationSummary ID="EditReferrerValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditReferrerValidationSummary"/>
+    <asp:ValidationSummary ID="AddReferrerValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="AddReferrerValidationGroup"/>
+    <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+
+    <p>
+        <asp:GridView ID="GrdReferrer" runat="server" 
+             AutoGenerateColumns="False" DataKeyNames="referrer_id" 
+             OnRowCancelingEdit="GrdReferrer_RowCancelingEdit" 
+             OnRowDataBound="GrdReferrer_RowDataBound" 
+             OnRowEditing="GrdReferrer_RowEditing" 
+             OnRowUpdating="GrdReferrer_RowUpdating" ShowFooter="False" 
+             OnRowCommand="GrdReferrer_RowCommand" 
+             OnRowDeleting="GrdReferrer_RowDeleting" 
+             OnRowCreated="GrdReferrer_RowCreated"
+             AllowSorting="True" 
+             OnSorting="GridView_Sorting"
+             RowStyle-VerticalAlign="top"
+             AllowPaging="True"
+             OnPageIndexChanging="GrdReferrer_PageIndexChanging"
+             PageSize="16"
+             ClientIDMode="Predictable">
+             <PagerSettings Mode="NumericFirstLast" FirstPageText="First" PreviousPageText="Previous" NextPageText="Next" LastPageText="Last" />
+
+            <Columns> 
+
+                <%-- RegReferrer --%>
+
+                <asp:TemplateField HeaderText="ID"  HeaderStyle-HorizontalAlign="Left" SortExpression="register_referrer_id"> 
+                    <EditItemTemplate> 
+                        <asp:Label ID="lblId" runat="server" Text='<%# Bind("register_referrer_id") %>'></asp:Label>
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblId" runat="server" Text='<%# Bind("register_referrer_id") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+
+                <%-- Referrer --%>
+
+                <asp:TemplateField HeaderText="Title" HeaderStyle-HorizontalAlign="Left" SortExpression="descr" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:DropDownList ID="ddlTitle" runat="server" DataTextField="descr" DataValueField="title_id"> </asp:DropDownList> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblTitle" runat="server" Text='<%# Eval("title_id") == DBNull.Value || (int)Eval("title_id") == 0 ? "" :  Eval("descr") %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:DropDownList ID="ddlNewTitle" runat="server" DataTextField="descr" DataValueField="title_id"> </asp:DropDownList>
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Firstname" HeaderStyle-HorizontalAlign="Left" SortExpression="firstname" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:TextBox Width="90%" ID="txtFirstname" runat="server" Text='<%# Bind("firstname") %>'></asp:TextBox> 
+                        <asp:RequiredFieldValidator ID="txtValidateFirstnameRequired" runat="server" CssClass="failureNotification"  
+                            ControlToValidate="txtFirstname" 
+                            ErrorMessage="Firstname is required."
+                            Display="Dynamic"
+                            ValidationGroup="EditReferrerValidationSummary">*</asp:RequiredFieldValidator>
+                        <asp:RegularExpressionValidator ID="txtValidateFirstnameRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtFirstname"
+                            ValidationExpression="^[a-zA-Z\-\.\s']+$"
+                            ErrorMessage="Firstname can only be letters, hyphens, or fullstops."
+                            Display="Dynamic"
+                            ValidationGroup="EditReferrerValidationSummary">*</asp:RegularExpressionValidator>
+                    </EditItemTemplate> 
+                    <FooterTemplate>
+                        <asp:TextBox Width="90%" ID="txtNewFirstname" runat="server" ></asp:TextBox>
+                        <asp:RequiredFieldValidator ID="txtValidateNewFirstnameRequired" runat="server" CssClass="failureNotification"  
+                            ControlToValidate="txtNewFirstname" 
+                            ErrorMessage="Firstname is required."
+                            Display="Dynamic"
+                            ValidationGroup="AddReferrerValidationGroup">*</asp:RequiredFieldValidator>
+                        <asp:RegularExpressionValidator ID="txtValidateNewFirstnameRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtNewFirstname"
+                            ValidationExpression="^[a-zA-Z\-\.\s']+$"
+                            ErrorMessage="Firstname can only be letters, hyphens, or fullstops."
+                            Display="Dynamic"
+                            ValidationGroup="AddReferrerValidationGroup">*</asp:RegularExpressionValidator>
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblFirstname" runat="server" Text='<%# Bind("firstname") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="M.name" HeaderStyle-HorizontalAlign="Left" SortExpression="middlename" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:TextBox Width="90%" ID="txtMiddlename" runat="server" Text='<%# Bind("middlename") %>'></asp:TextBox> 
+                        <asp:RegularExpressionValidator ID="txtValidateMiddlenameRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtMiddlename"
+                            ValidationExpression="^[a-zA-Z\-\.\s']+$"
+                            ErrorMessage="Middlename can only be letters, hyphens, or fullstops."
+                            Display="Dynamic"
+                            ValidationGroup="EditReferrerValidationSummary">*</asp:RegularExpressionValidator>
+                    </EditItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:TextBox Width="90%" ID="txtNewMiddlename" runat="server" ></asp:TextBox> 
+                        <asp:RegularExpressionValidator ID="txtValidateNewMiddlenameRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtNewMiddlename"
+                            ValidationExpression="^[a-zA-Z\-\.\s']+$"
+                            ErrorMessage="Middlename can only be letters, hyphens, or fullstops."
+                            Display="Dynamic"
+                            ValidationGroup="AddReferrerValidationGroup">*</asp:RegularExpressionValidator>
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblMiddlename" runat="server" Text='<%# Bind("middlename") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Surname" HeaderStyle-HorizontalAlign="Left" SortExpression="surname" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:TextBox Width="90%" ID="txtSurname" runat="server" Text='<%# Bind("surname") %>'></asp:TextBox> 
+                        <asp:RequiredFieldValidator ID="txtValidateSurnameRequired" runat="server" CssClass="failureNotification"  
+                            ControlToValidate="txtSurname" 
+                            ErrorMessage="Surname is required."
+                            Display="Dynamic"
+                            ValidationGroup="EditReferrerValidationSummary">*</asp:RequiredFieldValidator>
+                        <asp:RegularExpressionValidator ID="txtValidateSurnameNameRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtSurname"
+                            ValidationExpression="^[a-zA-Z\-\.\s']+$"
+                            ErrorMessage="Surname can only be letters, hyphens, or fullstops."
+                            Display="Dynamic"
+                            ValidationGroup="EditReferrerValidationSummary">*</asp:RegularExpressionValidator>
+                     </EditItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:TextBox Width="90%" ID="txtNewSurname" runat="server" ></asp:TextBox> 
+                        <asp:RequiredFieldValidator ID="txtValidateSurnameRequired" runat="server" CssClass="failureNotification"  
+                            ControlToValidate="txtNewSurname" 
+                            ErrorMessage="Surname is required."
+                            Display="Dynamic"
+                            ValidationGroup="AddReferrerValidationGroup">*</asp:RequiredFieldValidator>
+                        <asp:RegularExpressionValidator ID="txtValidateNewSurnameRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtNewSurname"
+                            ValidationExpression="^[a-zA-Z\-\.\s']+$"
+                            ErrorMessage="Surname can only be letters, hyphens, or fullstops."
+                            Display="Dynamic"
+                            ValidationGroup="AddReferrerValidationGroup">*</asp:RegularExpressionValidator>
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblSurname" runat="server" Text='<%# Bind("surname") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Gender" HeaderStyle-HorizontalAlign="Left" SortExpression="gender" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:DropDownList ID="ddlGender" runat="server" SelectedValue='<%# Eval("gender") %>'> 
+                            <asp:ListItem Text="M" Value="M"></asp:ListItem>
+                            <asp:ListItem Text="F" Value="F"></asp:ListItem>
+                            <asp:ListItem Text="-" Value=""></asp:ListItem>
+                        </asp:DropDownList> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblGender" runat="server" Text='<%# ( Eval("gender").ToString() == "M")?"Male" : (( Eval("gender").ToString() == "F")?"Female" : "-") %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:DropDownList ID="ddlNewGender" runat="server" >
+                            <asp:ListItem Text="M" Value="M" Selected="True"></asp:ListItem> 
+                            <asp:ListItem Text="F" Value="F"></asp:ListItem>
+                        </asp:DropDownList>
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+
+                <%-- Org --%>
+
+                <asp:TemplateField HeaderText="Org Name" HeaderStyle-HorizontalAlign="Left" FooterStyle-VerticalAlign="Top" SortExpression="name"> 
+                    <EditItemTemplate> 
+                        <asp:TextBox Width="85%" ID="txtName" runat="server" Text='<%# Bind("name") %>'></asp:TextBox> 
+                        <asp:RequiredFieldValidator ID="txtValidateNameRequired" runat="server" CssClass="failureNotification"  
+                            ControlToValidate="txtName" 
+                            ErrorMessage="Org Name is required."
+                            Display="Dynamic"
+                            ValidationGroup="EditReferrerValidationSummary">*</asp:RequiredFieldValidator>
+                        <asp:RegularExpressionValidator ID="txtValidateNameRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtName"
+                            ValidationExpression="^[a-zA-Z\-\s\.\',]+$"
+                            ErrorMessage="Org Name can only be letters, and dashes."
+                            Display="Dynamic"
+                            ValidationGroup="EditReferrerValidationSummary">*</asp:RegularExpressionValidator>
+                    </EditItemTemplate> 
+                    <FooterTemplate>
+                        <asp:TextBox Width="85%" ID="txtNewName" runat="server" ></asp:TextBox>
+                        <asp:RequiredFieldValidator ID="txtValidateNewNameRequired" runat="server" CssClass="failureNotification"  
+                            ControlToValidate="txtNewName" 
+                            ErrorMessage="Org Name is required."
+                            Display="Dynamic"
+                            ValidationGroup="AddReferrerValidationGroup">*</asp:RequiredFieldValidator>
+                        <asp:RegularExpressionValidator ID="txtValidateNewNameRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtNewName"
+                            ValidationExpression="^[a-zA-Z\-\s\.\',]+$"
+                            ErrorMessage="Org Name can only be letters, and dashes."
+                            Display="Dynamic"
+                            ValidationGroup="AddReferrerValidationGroup">*</asp:RegularExpressionValidator>
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lnkTitle" runat="server" Text='<%# Eval("name") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Org ABN" HeaderStyle-HorizontalAlign="Left" FooterStyle-VerticalAlign="Top" SortExpression="abn"> 
+                    <EditItemTemplate> 
+                        <asp:TextBox Width="75%" ID="txtABN" runat="server" Text='<%# Bind("abn") %>'></asp:TextBox> 
+                        <asp:RegularExpressionValidator ID="txtValidateABNRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtABN"
+                            ValidationExpression="^[0-9\-]+$"
+                            ErrorMessage="Org ABN can only be numbers and dashes."
+                            Display="Dynamic"
+                            ValidationGroup="EditReferrerValidationSummary">*</asp:RegularExpressionValidator>
+                    </EditItemTemplate> 
+                    <FooterTemplate>
+                        <asp:TextBox Width="75%" ID="txtNewABN" runat="server" ></asp:TextBox>
+                        <asp:RegularExpressionValidator ID="txtValidateNewABNRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtNewABN"
+                            ValidationExpression="^[0-9\-]+$"
+                            ErrorMessage="Org ABN can only be numbers and dashes."
+                            Display="Dynamic"
+                            ValidationGroup="AddReferrerValidationGroup">*</asp:RegularExpressionValidator>
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblABN" runat="server" Text='<%# Bind("abn") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Org ACN" HeaderStyle-HorizontalAlign="Left" FooterStyle-VerticalAlign="Top" SortExpression="acn"> 
+                    <EditItemTemplate> 
+                        <asp:TextBox Width="75%" ID="txtACN" runat="server" Text='<%# Bind("acn") %>'></asp:TextBox> 
+                        <asp:RegularExpressionValidator ID="txtValidateACNRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtACN"
+                            ValidationExpression="^[0-9\-]+$"
+                            ErrorMessage="Org ACN can only be numbers and dashes."
+                            Display="Dynamic"
+                            ValidationGroup="EditReferrerValidationSummary">*</asp:RegularExpressionValidator>
+                    </EditItemTemplate> 
+                    <FooterTemplate>
+                        <asp:TextBox Width="75%" ID="txtNewACN" runat="server" ></asp:TextBox>
+                        <asp:RegularExpressionValidator ID="txtValidateNewACNRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtNewACN"
+                            ValidationExpression="^[0-9\-]+$"
+                            ErrorMessage="Org ACN can only be numbers and dashes."
+                            Display="Dynamic"
+                            ValidationGroup="AddReferrerValidationGroup">*</asp:RegularExpressionValidator>
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblACN" runat="server" Text='<%# Bind("acn") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+
+                <%-- RegReferrer --%>
+
+                <asp:TemplateField HeaderText="Provider Number" HeaderStyle-HorizontalAlign="Left" SortExpression="provider_number" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:TextBox Width="90%" ID="txtProviderNumber" runat="server" Text='<%# Bind("provider_number") %>'></asp:TextBox> 
+                        <asp:RegularExpressionValidator ID="txtValidateProviderNumberRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtProviderNumber"
+                            ValidationExpression="^[a-zA-Z\-\s]+$"
+                            ErrorMessage="Provider Number can only be letters, hyphens, or fullstops."
+                            Display="Dynamic"
+                            ValidationGroup="EditRegistrationValidationGroup">*</asp:RegularExpressionValidator>
+                    </EditItemTemplate> 
+                    <FooterTemplate>
+                        <asp:TextBox Width="90%" ID="txtNewProviderNumber" runat="server" ></asp:TextBox>
+                        <asp:RegularExpressionValidator ID="txtValidateNewProviderNumberRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtNewProviderNumber"
+                            ValidationExpression="^[a-zA-Z\-\s]+$"
+                            ErrorMessage="Provider Number can only be letters, hyphens, or fullstops."
+                            Display="Dynamic"
+                            ValidationGroup="AddRegistrationValidationGroup">*</asp:RegularExpressionValidator>
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblProviderNumber" runat="server" Text='<%# Bind("provider_number") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Report Every Visit" SortExpression="report_every_visit_to_referrer" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:CheckBox ID="chkIsReportEveryVisit" runat="server" Checked='<%# Eval("report_every_visit_to_referrer").ToString()=="True"?true:false %>' />
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblIsReportEveryVisit" runat="server" Text='<%# Eval("report_every_visit_to_referrer").ToString()=="True"?"Yes":"No" %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:CheckBox ID="chkNewIsReportEveryVisit" runat="server" />
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Batch Send Treatment Notes" SortExpression="batch_send_all_patients_treatment_notes" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:CheckBox ID="chkIsBatchSendAllPatientsTreatmentNotes" runat="server" Checked='<%# Eval("batch_send_all_patients_treatment_notes").ToString()=="True"?true:false %>' />
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblIsBatchSendAllPatientsTreatmentNotes" runat="server" Text='<%# Eval("batch_send_all_patients_treatment_notes").ToString()=="True"?"Yes":"No" %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:CheckBox ID="chkNewIsBatchSendAllPatientsTreatmentNotes" runat="server" />
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Last Batch Send Letters"  HeaderStyle-HorizontalAlign="Left" SortExpression="date_last_batch_send_all_patients_treatment_notes"> 
+                    <EditItemTemplate> 
+                        <asp:Label ID="lblDateLastBatchSendAllPatientsTreatmentNotes" runat="server" Text='<%# Eval("date_last_batch_send_all_patients_treatment_notes", "{0:dd-MM-yyyy}")  %>'></asp:Label>
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblNewDateLastBatchSendAllPatientsTreatmentNotes" runat="server" Text='<%# Eval("date_last_batch_send_all_patients_treatment_notes", "{0:dd-MM-yyyy}")  %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <%-- 
+                <asp:TemplateField HeaderText="Treatment Notes<br />All Patients"  HeaderStyle-HorizontalAlign="Left" ItemStyle-HorizontalAlign="Center"> 
+                    <ItemTemplate> 
+                        <asp:Button ID="btnRunBatchSendTreatmentNotes" runat="server" Text="Generate 6 mo" OnClick="btnRunBatchSendTreatmentNotes_Click" CommandArgument='<%# Eval("register_referrer_id") %>' />
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+                --%>
+
+
+                <asp:TemplateField HeaderText="Date Added"  HeaderStyle-HorizontalAlign="Left" SortExpression="register_referrer_date_added"> 
+                    <EditItemTemplate> 
+                        <asp:Label ID="lblDateAdded" runat="server" Text='<%# Eval("register_referrer_date_added", "{0:dd-MM-yyyy}") %>'></asp:Label>
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblDateAdded" runat="server" Text='<%# Eval("register_referrer_date_added", "{0:dd-MM-yyyy}") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Contact"  HeaderStyle-HorizontalAlign="Left"> 
+                    <ItemTemplate> 
+                        <asp:HyperLink ID="lnkContactInfo" runat="server" Text="Clinic Contact" ></asp:HyperLink>
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Patients"  HeaderStyle-HorizontalAlign="Left" SortExpression="count" ItemStyle-Wrap="False"> 
+                    <ItemTemplate> 
+                        <asp:HyperLink ID="lnkPatients" runat="server" Text='<%# "Patients (" + Eval("count") + ")"  %>' NavigateUrl='<%# "~/PatientInfo.aspx?extended_search_open=1&referrer_search=" + Eval("register_referrer_id") %>' ></asp:HyperLink>
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Move Patients"  HeaderStyle-HorizontalAlign="Left"> 
+                    <ItemTemplate> 
+                        <asp:HyperLink ID="lnkMovePatients" runat="server" Text="Move" onclick='<%# "javascript:move_patients(" + Eval("register_referrer_id") + ",\"" + Eval("firstname") + " " + Eval("surname") + " [" + Eval("name") + "]\"); return false;"  %>' NavigateUrl='javascript:void(0)' ></asp:HyperLink>
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Deleted" SortExpression="is_deleted" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:Label ID="lblIsDeleted" runat="server" Text='<%# Eval("is_deleted").ToString()=="True"?"Yes":"No" %>'></asp:Label> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblIsDeleted" runat="server" Text='<%# Eval("is_deleted").ToString()=="True"?"Yes":"No" %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="" ShowHeader="False" HeaderStyle-HorizontalAlign="Left" FooterStyle-VerticalAlign="Top" ItemStyle-CssClass="nowrap"> 
+                    <EditItemTemplate> 
+                        <asp:LinkButton ID="lnkUpdate" runat="server" CausesValidation="True" CommandName="Update" Text="Update" ValidationGroup="EditReferrerValidationSummary"></asp:LinkButton> 
+                        <asp:LinkButton ID="lnkCancel" runat="server" CausesValidation="False" CommandName="Cancel" Text="Cancel"></asp:LinkButton> 
+                    </EditItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:LinkButton ID="lnkAdd" runat="server" CausesValidation="True" CommandName="Insert" Text="Insert" ValidationGroup="AddReferrerValidationGroup"></asp:LinkButton> 
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:ImageButton ID="lnkEdit" runat="server" CommandName="Edit" ImageUrl="~/images/Inline-edit-icon-24.png"  AlternateText="Inline Edit" ToolTip="Inline Edit"/>
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="" ShowHeader="True" HeaderStyle-HorizontalAlign="Left" FooterStyle-VerticalAlign="Top">
+                    <ItemTemplate>
+                        <asp:ImageButton ID="btnDelete" runat="server"  CommandName="_Delete" CommandArgument='<%# Bind("register_referrer_id") %>' ImageUrl="~/images/Delete-icon-24.png" AlternateText="Delete" ToolTip="Delete" />
+                    </ItemTemplate>
+                </asp:TemplateField>
+
+            </Columns> 
+        </asp:GridView>
+    </p>
+    <p>
+        <br />  
+        <asp:Label ID="Label1" runat="server"></asp:Label>
+        <asp:Button ID="btnAddNewReferrer" runat="server" Text="Add New Referrer" Visible="False" />
+        <br />
+    </p>
+
+</asp:Content>

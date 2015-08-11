@@ -1,0 +1,844 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Configuration;
+using System.Text.RegularExpressions;
+using System.Collections;
+using System.IO;
+
+public partial class Letters_RecallV2 : System.Web.UI.Page
+{
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        try
+        {
+
+            HideErrorMessage();
+
+            if (!IsPostBack)
+            {
+                PagePermissions.EnforcePermissions_RequireAny(Session, Response, true, true, true, true, true, false);
+                Session.Remove("data_selected");
+                Session.Remove("sortExpression_Selected");
+                Session.Remove("sortExpression_Offering");
+
+                SetupGUI();
+                FillGrid();
+
+                PopulateLettersList();
+            }
+
+        }
+        catch (CustomMessageException ex)
+        {
+            if (IsPostBack) SetErrorMessage(ex.Message);
+            else HideTableAndSetErrorMessage(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            if (IsPostBack) SetErrorMessage("", ex.ToString());
+            else HideTableAndSetErrorMessage("", ex.ToString());
+        }
+    }
+
+    protected void SetupGUI()
+    {
+        txtStartDate_Picker.OnClientClick                = "displayDatePicker('txtStartDate', this, 'dmy', '-'); return false;";
+        //txtEndDate_Picker.OnClientClick                  = "displayDatePicker('txtEndDate',   this, 'dmy', '-'); return false;";
+        txtNoRecallLettersAfterDate_Picker.OnClientClick = "displayDatePicker('txtNoRecallLettersAfterDate',   this, 'dmy', '-'); return false;";
+
+        //txtStartDate.Text = IsValidFormStartDate() ? (GetFormStartDate(false) == DateTime.MinValue ? "" : GetFormStartDate(false).ToString("dd-MM-yyyy")) : DateTime.Today.AddYears(-1).ToString("dd-MM-yyyy");   //  DateTime.Now.AddYears(-1).ToString("dd-MM-yyyy"); // 
+        txtEndDate.Text   = IsValidFormEndDate()   ? (GetFormEndDate(false)   == DateTime.MinValue ? "" : GetFormEndDate(false).ToString("dd-MM-yyyy"))   : DateTime.Today.ToString("dd-MM-yyyy");  //  DateTime.Now.AddYears(1).ToString("dd-MM-yyyy");  // 
+        txtNoRecallLettersAfterDate.Text = IsValidFormNoRecallDate() ? (GetFormNoRecallDate(false) == DateTime.MinValue ? "" : GetFormNoRecallDate(false).ToString("dd-MM-yyyy")) : DateTime.Today.ToString("dd-MM-yyyy");
+
+        string show_with_epc = Request.QueryString["show_with_epc"];
+        if (show_with_epc != null && (show_with_epc == "1" || show_with_epc == "0"))
+            chkShowWithEPC.Checked = show_with_epc == "1";
+
+        string show_with_no_epc = Request.QueryString["show_with_no_epc"];
+        if (show_with_no_epc != null && (show_with_no_epc == "1" || show_with_no_epc == "0"))
+            chkShowWithNoEPC.Checked = show_with_no_epc == "1";
+
+
+        UserView userView = UserView.GetInstance();
+
+        ddlClinics.Style["width"] = "290px";
+        ddlClinics.Items.Add(new ListItem("All " + (userView.IsAgedCareView ? "Facilities" : "Clinics"), 0.ToString()));
+        DataTable dt_clinics = OrganisationDB.GetDataTable_Clinics(false);
+        for(int i=0; i<dt_clinics.Rows.Count; i++)
+            ddlClinics.Items.Add(new ListItem(dt_clinics.Rows[i]["name"].ToString(), dt_clinics.Rows[i]["organisation_id"].ToString()));
+
+        string org = Request.QueryString["org"];
+        if (org != null && ddlClinics.Items.FindByValue(org) != null)
+            ddlClinics.SelectedValue = org;
+    }
+
+
+
+    #region GetFormParam, IsValidDate/GetDate
+
+    protected bool IsValidFormStartDate()
+    {
+        string start_date = Request.QueryString["start_date"];
+        return start_date != null && (start_date.Length == 0 || Regex.IsMatch(start_date, @"^\d{4}_\d{2}_\d{2}$"));
+    }
+    protected DateTime GetFormStartDate(bool checkIsValid = true)
+    {
+        if (checkIsValid && !IsValidFormStartDate())
+            throw new Exception("Invalid url 'start date'");
+        return Request.QueryString["start_date"].Length == 0 ? DateTime.MinValue : GetDateFromString(Request.QueryString["start_date"], "yyyy_mm_dd");
+    }
+    protected bool IsValidFormEndDate()
+    {
+        string end_date = Request.QueryString["end_date"];
+        return end_date != null && (end_date.Length == 0 || Regex.IsMatch(end_date, @"^\d{4}_\d{2}_\d{2}$"));
+    }
+    protected DateTime GetFormEndDate(bool checkIsValid = true)
+    {
+        if (checkIsValid && !IsValidFormEndDate())
+            throw new Exception("Invalid url 'end date'");
+        return Request.QueryString["end_date"].Length == 0 ? DateTime.MinValue : GetDateFromString(Request.QueryString["end_date"], "yyyy_mm_dd");
+    }
+    protected bool IsValidFormNoRecallDate()
+    {
+        string no_recall_after = Request.QueryString["no_recall_after"];
+        return no_recall_after != null && (no_recall_after.Length == 0 || Regex.IsMatch(no_recall_after, @"^\d{4}_\d{2}_\d{2}$"));
+    }
+    protected DateTime GetFormNoRecallDate(bool checkIsValid = true)
+    {
+        if (checkIsValid && !IsValidFormNoRecallDate())
+            throw new Exception("Invalid url 'no_recall_after'");
+        return Request.QueryString["no_recall_after"].Length == 0 ? DateTime.MinValue : GetDateFromString(Request.QueryString["no_recall_after"], "yyyy_mm_dd");
+    }
+
+    
+
+    protected DateTime GetDateFromString(string sDate, string format)
+    {
+        if (format == "yyyy_mm_dd")
+        {
+            string[] dateparts = sDate.Split('_');
+            return new DateTime(Convert.ToInt32(dateparts[0]), Convert.ToInt32(dateparts[1]), Convert.ToInt32(dateparts[2]));
+        }
+        else if (format == "dd_mm_yyyy")
+        {
+            string[] dateparts = sDate.Split('_');
+            return new DateTime(Convert.ToInt32(dateparts[2]), Convert.ToInt32(dateparts[1]), Convert.ToInt32(dateparts[0]));
+        }
+        if (format == "yyyy-mm-dd")
+        {
+            string[] dateparts = sDate.Split('-');
+            return new DateTime(Convert.ToInt32(dateparts[0]), Convert.ToInt32(dateparts[1]), Convert.ToInt32(dateparts[2]));
+        }
+        else if (format == "dd-mm-yyyy")
+        {
+            string[] dateparts = sDate.Split('-');
+            return new DateTime(Convert.ToInt32(dateparts[2]), Convert.ToInt32(dateparts[1]), Convert.ToInt32(dateparts[0]));
+        }
+        else
+            throw new ArgumentOutOfRangeException("Unknown date format");
+    }
+
+    protected bool IsValidDate(string strDate)
+    {
+        try
+        {
+            if (!System.Text.RegularExpressions.Regex.IsMatch(strDate, @"^\d{2}\-\d{2}\-\d{4}$"))
+                return false;
+
+            string[] parts = strDate.Split('-');
+            DateTime d = new DateTime(Convert.ToInt32(parts[2]), Convert.ToInt32(parts[1]), Convert.ToInt32(parts[0]));
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+    public DateTime GetDate(string inDate)
+    {
+        inDate = inDate.Trim();
+
+        if (inDate.Length == 0)
+        {
+            return DateTime.MinValue;
+        }
+        else
+        {
+            string[] parts = inDate.Split(new char[] { '-' });
+            return new DateTime(Convert.ToInt32(parts[2]), Convert.ToInt32(parts[1]), Convert.ToInt32(parts[0]));
+        }
+    }
+
+    #endregion
+
+    #region btnUpdate_Click
+
+    protected void btnUpdate_Click(object sender, EventArgs e)
+    {
+        HideErrorMessage();
+
+        //if (txtStartDate.Text.Length > 0 && (!Regex.IsMatch(txtStartDate.Text, @"^\d{2}\-\d{2}\-\d{4}$") || !IsValidDate(txtStartDate.Text)))
+        //{
+        //    SetErrorMessage("Start date must be empty or valid and of the format dd-mm-yyyy");
+        //    return;
+        //}
+        if (txtEndDate.Text.Length > 0 && (!Regex.IsMatch(txtEndDate.Text, @"^\d{2}\-\d{2}\-\d{4}$") || !IsValidDate(txtEndDate.Text)))
+        {
+            SetErrorMessage("End date must be empty or valid and of the format dd-mm-yyyy");
+            return;
+        }
+        if (txtNoRecallLettersAfterDate.Text.Length > 0 && (!Regex.IsMatch(txtNoRecallLettersAfterDate.Text, @"^\d{2}\-\d{2}\-\d{4}$") || !IsValidDate(txtNoRecallLettersAfterDate.Text)))
+        {
+            SetErrorMessage("No recall letters after date must be empty or valid and of the format dd-mm-yyyy");
+            return;
+        }
+
+
+       // DateTime startDate = txtStartDate.Text.Length == 0 ? DateTime.MinValue : GetDateFromString(txtStartDate.Text, "dd-mm-yyyy");
+        DateTime endDate   = txtEndDate.Text.Length   == 0 ? DateTime.MinValue : GetDateFromString(txtEndDate.Text, "dd-mm-yyyy");
+        DateTime noRecallLettersAfterDate = txtNoRecallLettersAfterDate.Text.Length == 0 ? DateTime.MinValue : GetDateFromString(txtNoRecallLettersAfterDate.Text, "dd-mm-yyyy");
+
+        string url = ClearSearchesFromUrl(Request.RawUrl);
+        //url = UrlParamModifier.AddEdit(url, "start_date"              , startDate                == DateTime.MinValue ? "" : startDate.ToString("yyyy_MM_dd"));
+        url = UrlParamModifier.AddEdit(url, "end_date"                , endDate                  == DateTime.MinValue ? "" : endDate.ToString("yyyy_MM_dd"));
+        url = UrlParamModifier.AddEdit(url, "no_recall_after"         , noRecallLettersAfterDate == DateTime.MinValue ? "" : noRecallLettersAfterDate.ToString("yyyy_MM_dd"));
+        url = UrlParamModifier.Update(!chkShowWithEPC.Checked         , url, "show_with_epc", chkShowWithEPC.Checked ? "1" : "0");
+        url = UrlParamModifier.Update(!chkShowWithNoEPC.Checked       , url, "show_with_no_epc", chkShowWithNoEPC.Checked ? "1" : "0");
+        url = UrlParamModifier.Update(ddlClinics.SelectedValue != "0" , url, "org", ddlClinics.SelectedValue);
+
+        Response.Redirect(url);
+    }
+
+    protected string ClearSearchesFromUrl(string url)
+    {
+        //url = UrlParamModifier.Remove(url, "start_date");
+        url = UrlParamModifier.Remove(url, "end_date");
+        url = UrlParamModifier.Remove(url, "no_recall_after");
+        url = UrlParamModifier.Remove(url, "show_with_epc");
+        url = UrlParamModifier.Remove(url, "show_with_no_epc");
+        url = UrlParamModifier.Remove(url, "org");
+
+        return url;
+    }
+
+    #endregion
+
+    #region btnExport_Click
+
+    protected void btnExport_Click(object sender, EventArgs e)
+    {
+        DataTable dt = Session["recallpatientinfo_data"] as DataTable;
+        bool tblEmpty = (dt.Rows.Count == 1 && dt.Rows[0][0] == DBNull.Value);
+        if (tblEmpty)
+            dt.Rows.RemoveAt(0);
+
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+        sb.Append( "ID"                    ).Append(",");
+        sb.Append("Patient"                ).Append(",");
+        sb.Append("Last Booking"           ).Append(",");
+        sb.Append("Clinic"                 ).Append(",");
+        sb.Append("EPC Expires"            ).Append(",");
+        sb.Append("EPC's Remaining"        ).Append(",");
+        sb.Append("Last Recall Letter Sent");
+        sb.AppendLine();
+
+        for (int i = 0; i < dt.Rows.Count; i++)
+        {
+            sb.Append( dt.Rows[i]["patient_patient_id"].ToString()                                                                                            ).Append(",");
+            sb.Append( dt.Rows[i]["person_firstname"].ToString() + " " + dt.Rows[i]["person_surname"].ToString()                                              ).Append(",");
+            sb.Append( ((DateTime)dt.Rows[i]["booking_date_start"]).ToString("dd-MM-yyyy")                                                                    ).Append(",");
+            sb.Append( dt.Rows[i]["organisation_name"].ToString()                                                                                             ).Append(",");
+            sb.Append( dt.Rows[i]["epc_expire_date"]         == DBNull.Value ? "" : ((DateTime)dt.Rows[i]["epc_expire_date"]).ToString("dd-MM-yyyy")          ).Append(",");
+            sb.Append( dt.Rows[i]["epc_count_remaining"].ToString()                                                                                           ).Append(",");
+            sb.Append( dt.Rows[i]["most_recent_recall_sent"] == DBNull.Value ? "" : ((DateTime)dt.Rows[i]["most_recent_recall_sent"]).ToString("dd-MM-yyyy")  );
+            sb.AppendLine();
+        }
+
+        ExportCSV(Response, sb.ToString(), "recall_letters.csv");
+    }
+    protected static void ExportCSV(HttpResponse response, string fileText, string fileName)
+    {
+        byte[] buffer = GetBytes(fileText);
+
+        try
+        {
+            response.Clear();
+            response.ContentType = "text/plain";
+            response.OutputStream.Write(buffer, 0, buffer.Length);
+            response.AddHeader("Content-Disposition", "attachment;filename=\"" + fileName + "\"");
+            response.End();
+        }
+        catch (System.Web.HttpException ex) 
+        {
+            // ignore exception where user closed the download box
+            if (!ex.Message.StartsWith("The remote host closed the connection. The error code is"))
+                throw;
+        }
+    }
+    protected static byte[] GetBytes(string str)
+    {
+        byte[] bytes = new byte[str.Length * sizeof(char)];
+        System.Buffer.BlockCopy(str.ToCharArray(), 0, bytes, 0, bytes.Length);
+        return bytes;
+    }
+
+    #endregion
+
+
+
+    #region GrdPatient
+
+    protected void FillGrid()
+    {
+        DateTime fromDate = DateTime.MinValue; // IsValidDate(txtStartDate.Text) ? GetDate(txtStartDate.Text) : DateTime.MinValue;
+        DateTime toDate   = IsValidDate(txtEndDate.Text)   ? GetDate(txtEndDate.Text)   : DateTime.MinValue;
+        DateTime nNoRecallLettersAfterDate = IsValidDate(txtNoRecallLettersAfterDate.Text) ? GetDate(txtNoRecallLettersAfterDate.Text) : DateTime.MinValue;
+
+
+        //DataTable dt = PatientDB.GetRecallPatients(fromDate, toDate, chkOnlyShowIfHasEPCs.Checked, Convert.ToInt32(ddlClinics.SelectedValue));
+        DataTable dt = PatientDB.GetRecallPatients(fromDate, toDate, false, Convert.ToInt32(ddlClinics.SelectedValue));
+        
+
+
+        int[] patientIDs = new int[dt.Rows.Count];
+        for(int i=0; i<dt.Rows.Count; i++)
+            patientIDs[i] = Convert.ToInt32(dt.Rows[i]["patient_patient_id"]);
+
+
+        Hashtable mostRecentRecallHashByPatientID = LetterPrintHistoryDB.GetMostRecentRecallHashByPatients(patientIDs);
+
+        
+        Hashtable patientHealthCardCache        = PatientsHealthCardsCacheDB.GetBullkActive(patientIDs);
+        Hashtable epcRemainingCache             = GetEPCRemainingCache(patientHealthCardCache);
+        Hashtable patientsMedicareCountCache    = PatientsMedicareCardCountThisYearCacheDB.GetBullk(patientIDs, DateTime.Today.Year);
+        Hashtable patientsEPCRemainingCache     = PatientsEPCRemainingCacheDB.GetBullk(patientIDs, DateTime.Today.AddYears(-1));
+        int       MedicareMaxNbrServicesPerYear = Convert.ToInt32(SystemVariableDB.GetByDescr("MedicareMaxNbrServicesPerYear").Value);
+
+
+        ArrayList remainingPatientIDs = new ArrayList();
+
+        dt.Columns.Add("epc_expire_date"     , typeof(DateTime));
+        dt.Columns.Add("has_valid_epc"       , typeof(Boolean));
+        dt.Columns.Add("epc_count_remaining" , typeof(Int32));
+
+        dt.Columns.Add("most_recent_recall_sent", typeof(DateTime));
+        for (int i = dt.Rows.Count - 1; i >= 0; i--)
+        {
+            int patientID = Convert.ToInt32(dt.Rows[i]["patient_patient_id"]);
+
+            HealthCard               hc                       = GetHealthCardFromCache(patientHealthCardCache, patientID);
+            bool                     hasEPC                   = hc != null && hc.DateReferralSigned != DateTime.MinValue;
+            HealthCardEPCRemaining[] epcsRemaining            = !hasEPC ? new HealthCardEPCRemaining[] { } : GetEPCRemainingFromCache(epcRemainingCache, hc);
+            int                      totalServicesAllowedLeft = !hasEPC ? 0 : (MedicareMaxNbrServicesPerYear - (int)patientsMedicareCountCache[patientID]);
+
+            int totalEpcsRemaining = 0;
+            for (int j = 0; j < epcsRemaining.Length; j++)
+                totalEpcsRemaining += epcsRemaining[j].NumServicesRemaining;
+
+            DateTime referralSignedDate = !hasEPC ? DateTime.MinValue : hc.DateReferralSigned.Date;
+            DateTime hcExpiredDate      = !hasEPC ? DateTime.MinValue : referralSignedDate.AddYears(1);
+            bool     isExpired          = !hasEPC ? true              : hcExpiredDate <= DateTime.Today;
+
+            int nServicesLeft = 0;
+            if (hc != null && DateTime.Today >= referralSignedDate.Date && DateTime.Today < hcExpiredDate.Date)
+                nServicesLeft = totalEpcsRemaining;
+            if (hc != null && totalServicesAllowedLeft < nServicesLeft)
+                nServicesLeft = totalServicesAllowedLeft;
+
+            bool has_valid_epc = hasEPC && !isExpired && (hc.Organisation.OrganisationID == -2 || (hc.Organisation.OrganisationID == -1 && nServicesLeft > 0));
+            int epc_count_remaining = hasEPC && hc.Organisation.OrganisationID == -1 ? nServicesLeft : -1;
+
+            dt.Rows[i]["has_valid_epc"]       = has_valid_epc;
+            dt.Rows[i]["epc_expire_date"]     = hasEPC ? hcExpiredDate : (object)DBNull.Value;
+            dt.Rows[i]["epc_count_remaining"] = epc_count_remaining != -1 ? epc_count_remaining : (object)DBNull.Value;
+
+            dt.Rows[i]["most_recent_recall_sent"] = mostRecentRecallHashByPatientID[patientID] == null ? (object)DBNull.Value : ((LetterPrintHistory)mostRecentRecallHashByPatientID[patientID]).Date;
+
+            // remove if no valid epc and set to show only those with a valid EPC
+            if (!chkShowWithEPC.Checked && has_valid_epc)
+                dt.Rows.RemoveAt(i);
+            else if (!chkShowWithNoEPC.Checked && !has_valid_epc)
+                dt.Rows.RemoveAt(i);
+            else if (nNoRecallLettersAfterDate != DateTime.MinValue && mostRecentRecallHashByPatientID[patientID] != null && ((LetterPrintHistory)mostRecentRecallHashByPatientID[patientID]).Date.Date > nNoRecallLettersAfterDate)
+                dt.Rows.RemoveAt(i);
+            else
+                remainingPatientIDs.Add(patientID);
+        }
+
+        hiddenPatientIDs.Value = string.Join(",", (int[])remainingPatientIDs.ToArray(typeof(int)));
+      
+        Session["recallpatientinfo_data"] = dt;
+
+
+        if (dt.Rows.Count > 0)
+        {
+
+            if (IsPostBack && Session["recallpatientinfo_sortexpression"] != null && Session["recallpatientinfo_sortexpression"].ToString().Length > 0)
+            {
+                DataView dataView = new DataView(dt);
+                dataView.Sort = Session["recallpatientinfo_sortexpression"].ToString();
+                GrdPatient.DataSource = dataView;
+            }
+            else
+            {
+                GrdPatient.DataSource = dt;
+            }
+
+
+            try
+            {
+                GrdPatient.DataBind();
+                GrdPatient.PagerSettings.FirstPageText = "1";
+                GrdPatient.PagerSettings.LastPageText = GrdPatient.PageCount.ToString();
+                GrdPatient.DataBind();
+            }
+            catch (Exception ex)
+            {
+                SetErrorMessage("", ex.ToString());
+            }
+        }
+        else
+        {
+            dt.Rows.Add(dt.NewRow());
+            GrdPatient.DataSource = dt;
+            GrdPatient.DataBind();
+
+            int TotalColumns = GrdPatient.Rows[0].Cells.Count;
+            GrdPatient.Rows[0].Cells.Clear();
+            GrdPatient.Rows[0].Cells.Add(new TableCell());
+            GrdPatient.Rows[0].Cells[0].ColumnSpan = TotalColumns;
+            GrdPatient.Rows[0].Cells[0].Text = "No Record Found";
+        }
+    }
+    protected void GrdPatient_RowCreated(object sender, GridViewRowEventArgs e)
+    {
+        if (!Utilities.IsDev() && e.Row.RowType != DataControlRowType.Pager)
+            e.Row.Cells[0].CssClass = "hiddencol";
+    }
+    protected void GrdPatient_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        DataTable dt = Session["recallpatientinfo_data"] as DataTable;
+        bool tblEmpty = (dt.Rows.Count == 1 && dt.Rows[0][0] == DBNull.Value);
+        if (!tblEmpty && e.Row.RowType == DataControlRowType.DataRow)
+        {
+            Label lblId = (Label)e.Row.FindControl("lblId");
+            DataRow[] foundRows = dt.Select("patient_patient_id=" + lblId.Text);
+            DataRow thisRow = foundRows[0];
+
+            Label lblEPCExpiry = (Label)e.Row.FindControl("lblEPCExpiry");
+            Label lblEPCsRemaining = (Label)e.Row.FindControl("lblEPCsRemaining");
+            if (lblEPCExpiry != null && lblEPCsRemaining != null)
+            {
+                if (!Convert.ToBoolean(thisRow["has_valid_epc"]))
+                {
+                    lblEPCExpiry.ForeColor = System.Drawing.Color.Red;
+                    lblEPCsRemaining.ForeColor = System.Drawing.Color.Red;
+                }
+            }
+
+            Utilities.AddConfirmationBox(e);
+            if ((e.Row.RowState & DataControlRowState.Edit) > 0)
+                Utilities.SetEditRowBackColour(e, System.Drawing.Color.LightGoldenrodYellow);
+        }
+        if (e.Row.RowType == DataControlRowType.Footer)
+        {
+
+        }
+    }
+    protected void GrdPatient_RowCancelingEdit(object sender, GridViewCancelEditEventArgs e)
+    {
+        GrdPatient.EditIndex = -1;
+        FillGrid();
+    }
+    protected void GrdPatient_RowUpdating(object sender, GridViewUpdateEventArgs e)
+    {
+    }
+    protected void GrdPatient_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+    }
+    protected void GrdPatient_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+    }
+    protected void GrdPatient_RowEditing(object sender, GridViewEditEventArgs e)
+    {
+        GrdPatient.EditIndex = e.NewEditIndex;
+        FillGrid();
+    }
+    protected void GridView_Sorting(object sender, GridViewSortEventArgs e)
+    {
+        // dont allow sorting if in edit mode
+        if (GrdPatient.EditIndex >= 0)
+            return;
+
+        DataTable dataTable = Session["recallpatientinfo_data"] as DataTable;
+
+        if (dataTable != null)
+        {
+            if (Session["recallpatientinfo_sortexpression"] == null)
+                Session["recallpatientinfo_sortexpression"] = "";
+
+            DataView dataView = new DataView(dataTable);
+            string[] sortData = Session["recallpatientinfo_sortexpression"].ToString().Trim().Split(' ');
+            string newSortExpr = (e.SortExpression == sortData[0] && sortData[1] == "ASC") ? "DESC" : "ASC";
+            dataView.Sort = e.SortExpression + " " + newSortExpr;
+            Session["recallpatientinfo_sortexpression"] = e.SortExpression + " " + newSortExpr;
+
+            GrdPatient.DataSource = dataView;
+            GrdPatient.DataBind();
+        }
+    }
+    protected void GrdPatient_PageIndexChanging(object sender, GridViewPageEventArgs e)
+    {
+        GrdPatient.PageIndex = e.NewPageIndex;
+        FillGrid();
+    }
+
+    #endregion
+
+    #region GetEPCRemainingCache, GetHealthCardFromCache, GetEPCRemainingFromCache
+
+    protected Hashtable GetEPCRemainingCache(Hashtable patientHealthCardCache)
+    {
+        ArrayList healthCardIDs = new ArrayList();
+        foreach (PatientActiveHealthCards ptHCs in patientHealthCardCache.Values)
+        {
+            if (ptHCs.MedicareCard != null)
+                healthCardIDs.Add(ptHCs.MedicareCard.HealthCardID);
+            if (ptHCs.DVACard != null)
+                healthCardIDs.Add(ptHCs.DVACard.HealthCardID);
+        }
+
+        return HealthCardEPCRemainingDB.GetHashtableByHealthCardIDs((int[])healthCardIDs.ToArray(typeof(int)));
+    }
+
+    protected HealthCard GetHealthCardFromCache(Hashtable patientHealthCardCache, int patientID)
+    {
+        HealthCard hc = null;
+        if (patientHealthCardCache[patientID] != null)
+        {
+            PatientActiveHealthCards hcs = (PatientActiveHealthCards)patientHealthCardCache[patientID];
+            if (hcs.MedicareCard != null)
+                hc = hcs.MedicareCard;
+            if (hcs.DVACard != null)
+                hc = hcs.DVACard;
+        }
+
+        return hc;
+    }
+
+    protected HealthCardEPCRemaining[] GetEPCRemainingFromCache(Hashtable epcRemainingCache, HealthCard hc)
+    {
+        if (hc == null)
+            return new HealthCardEPCRemaining[] { };
+
+        HealthCardEPCRemaining[] epcsRemaining = null;
+        if (epcRemainingCache == null)
+        {
+            epcsRemaining = HealthCardEPCRemainingDB.GetByHealthCardID(hc.HealthCardID, -1);
+        }
+        else
+        {
+            epcsRemaining = (HealthCardEPCRemaining[])epcRemainingCache[hc.HealthCardID];
+        }
+
+        return epcsRemaining == null ? new HealthCardEPCRemaining[] { } : epcsRemaining;
+    }
+
+    #endregion
+
+
+    #region PopulateLettersList, LetterExists
+
+    protected void ddlLetterTypes_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        PopulateLettersList();
+    }
+
+    protected void PopulateLettersList()
+    {
+        DataTable letters = LetterDB.GetDataTable_ByOrg(0, Convert.ToInt32(Session["SiteID"]));
+
+        // remove ones that dont exists
+        for (int i = letters.Rows.Count - 1; i >= 0; i--)
+        {
+            Letter letter = LetterDB.LoadAll(letters.Rows[i]);
+            if (!letter.FileExists(Convert.ToInt32(Session["SiteID"])))
+                letters.Rows.RemoveAt(i);
+        }
+
+        lstLetters.DataSource     = letters;
+        lstLetters.DataTextField  = "letter_docname";
+        lstLetters.DataValueField = "letter_letter_id";
+        lstLetters.DataBind();
+    }
+
+    protected bool LetterExists(int letterID)
+    {
+        Letter letter = LetterDB.GetByID(letterID);
+        bool useDefaultDocs = letter.Organisation == null ? true : !LetterDB.OrgHasdocs(letter.Organisation.OrganisationID);
+
+        string dir = Letter.GetLettersDirectory();
+        return (File.Exists(dir + (useDefaultDocs ? "" : letter.Organisation.OrganisationID + @"\") + letter.Docname));
+    }
+
+
+    #endregion
+
+    #region PrintLetter
+
+    protected void btnPrint_Click(object sender, EventArgs e)
+    {
+        /*
+        try
+        {
+            // TODO: Send Letter By Email
+            int letterPrintHistorySendMethodID = 1; // send by mail
+
+
+            // make sure at least one org and one patient selected
+            string org_id   = Request.QueryString["org"];
+            int singleOrgID = (org_id != null && org_id != "0") ? Convert.ToInt32(org_id) : 0;
+            if (singleOrgID == 0 && !chkOneLetterPerPatient.Checked && lstOrgs.GetSelectedIndices().Length == 0)
+                throw new CustomMessageException("Please select at least one organisation.");
+            if (lstPatients.GetSelectedIndices().Length == 0)
+                throw new CustomMessageException("Please select at least one patient.");
+
+
+            if (lstLetters.GetSelectedIndices().Length == 0)
+                throw new CustomMessageException("Please select a letter.");
+
+
+            // get letter and make sure it exists
+            Letter letter = LetterDB.GetByID(Convert.ToInt32(lstLetters.SelectedValue));
+            string sourchTemplatePath = letter.GetFullPath(Convert.ToInt32(Session["SiteID"]));
+            if (!File.Exists(sourchTemplatePath))
+                throw new CustomMessageException("File doesn't exist.");
+
+            // get temp directory
+            string tmpLettersDirectory = System.Configuration.ConfigurationManager.AppSettings["TmpLettersDirectory"];
+            if (!tmpLettersDirectory.EndsWith(@"\"))
+                tmpLettersDirectory = tmpLettersDirectory + @"\";
+            if (!Directory.Exists(tmpLettersDirectory))
+                throw new CustomMessageException("Temp letters directory doesn't exist");
+
+            // delete old tmp files
+            FileHelper.DeleteOldFiles(tmpLettersDirectory, new TimeSpan(1, 0, 0));
+
+
+            // create hash to know if relationship exists between org and patient
+            Hashtable orgPatientHash = new Hashtable();
+            DataTable tbl = RegisterPatientDB.GetDataTable();
+            foreach(DataRow row in tbl.Rows)
+            {
+                RegisterPatient regPatient = RegisterPatientDB.Load(row);
+                orgPatientHash[regPatient.Organisation.OrganisationID + "_" + regPatient.Patient.PatientID] = 1;
+            }
+
+            // create individual merged docs and put into list of docsToMerge - only if there is an org-patient relationship
+            ArrayList docsToMerge = new ArrayList();
+
+
+
+
+
+            Site site = SiteDB.GetByID(Convert.ToInt32(Session["SiteID"]));
+
+            if (singleOrgID == 0)  // no org passed into url, so use from orgs list
+            {
+
+                if (chkOneLetterPerPatient.Checked)  // one letter per patient
+                {
+
+                    foreach (ListItem patientItem in lstPatients.Items)
+                    {
+                        if (!patientItem.Selected)
+                            continue;
+
+                        // get just one org for this patient...
+                        //
+                        // 1. get most recent booking for them .. use that org
+                        // 2. if null, get most recent org in registerpatient
+                        // 3. if has no org associated, use "site" for org (org name, org address, etc) but get from site logged into (ie the session variable)
+
+                        int orgOfPatient = 0;
+                        Booking mostRecentBooking = BookingDB.GetMostRecent(Convert.ToInt32(patientItem.Value));
+                        if (mostRecentBooking != null)
+                            orgOfPatient = mostRecentBooking.Organisation.OrganisationID;
+                        else
+                        {
+                            Organisation mostRecentOrg = RegisterPatientDB.GetMostRecentOrganisationOf(Convert.ToInt32(patientItem.Value));
+                            if (mostRecentOrg != null)
+                                orgOfPatient = mostRecentOrg.OrganisationID;
+                        }
+
+
+                        // create doc for that org-patient relation
+                        string tmpSingleFileName = Letter.CreateMergedDocument(
+                            letter.LetterID,
+                            Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["StoreLettersHistoryInDB"]),
+                            Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["StoreLettersHistoryInFlatFile"]),
+                            letterPrintHistorySendMethodID,
+                            Letter.GetLettersHistoryDirectory(orgOfPatient),
+                            letter.Docname.Replace(".dot", ".doc"),
+                            site,
+                            orgOfPatient,
+                            -1, // booking id
+                            Convert.ToInt32(patientItem.Value),
+                            -1, // register_referrer_id_to_use_instead_of_patients_reg_ref
+                            Convert.ToInt32(Session["StaffID"]),
+                            -1, //healthcardactionid
+                            sourchTemplatePath,
+                            tmpLettersDirectory + letter.Docname.Replace(".dot", ".doc"),
+                            true);
+
+                        // record name of merged doc
+                        docsToMerge.Add(tmpSingleFileName);
+                    }
+
+
+                }
+                else  // one letter per org-patient realationship
+                {
+
+                    foreach (ListItem orgItem in lstOrgs.Items)
+                    {
+                        if (!orgItem.Selected)
+                            continue;
+
+                        foreach (ListItem patientItem in lstPatients.Items)
+                        {
+                            if (!patientItem.Selected)
+                                continue;
+
+                            // check relationship that patient is in that org
+                            if (orgPatientHash[orgItem.Value + "_" + patientItem.Value] == null)
+                                continue;
+
+                            // create doc for that org-patient relation
+                            string tmpSingleFileName = Letter.CreateMergedDocument(
+                                letter.LetterID,
+                                Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["StoreLettersHistoryInDB"]),
+                                Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["StoreLettersHistoryInFlatFile"]),
+                                letterPrintHistorySendMethodID,
+                                Letter.GetLettersHistoryDirectory(Convert.ToInt32(orgItem.Value)),
+                                letter.Docname.Replace(".dot", ".doc"),
+                                site,
+                                Convert.ToInt32(orgItem.Value),
+                                -1, // booking id
+                                Convert.ToInt32(patientItem.Value),
+                                -1, // register_referrer_id_to_use_instead_of_patients_reg_ref
+                                Convert.ToInt32(Session["StaffID"]),
+                                -1, //healthcardactionid
+                                sourchTemplatePath,
+                                tmpLettersDirectory + letter.Docname.Replace(".dot", ".doc"),
+                                true);
+
+                            // record name of merged doc
+                            docsToMerge.Add(tmpSingleFileName);
+                        }
+                    }
+
+                }
+
+            }
+            else // org passsed into url
+            {
+                foreach (ListItem patientItem in lstPatients.Items)
+                {
+                    if (!patientItem.Selected)
+                        continue;
+
+                    // check relationship that patient is in that org
+                    if (orgPatientHash[singleOrgID + "_" + patientItem.Value] == null)
+                        continue;
+
+                    // create doc for that org-patient relation
+                    string tmpSingleFileName = Letter.CreateMergedDocument(
+                        letter.LetterID,
+                        Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["StoreLettersHistoryInDB"]),
+                        Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["StoreLettersHistoryInFlatFile"]),
+                        letterPrintHistorySendMethodID,
+                        Letter.GetLettersHistoryDirectory(singleOrgID),
+                        letter.Docname.Replace(".dot", ".doc"),
+                        site,
+                        singleOrgID,
+                        -1, // booking id
+                        Convert.ToInt32(patientItem.Value),
+                        -1, // register_referrer_id_to_use_instead_of_patients_reg_ref
+                        Convert.ToInt32(Session["StaffID"]),
+                        -1, //healthcardactionid
+                        sourchTemplatePath,
+                        tmpLettersDirectory + letter.Docname.Replace(".dot", ".doc"),
+                        true);
+
+                    // record name of merged doc
+                    docsToMerge.Add(tmpSingleFileName);
+                }
+            }
+
+
+            // merge all tmp files
+            string tmpFinalFileName = Letter.MergeMultipleDocuments(
+                ((string[])docsToMerge.ToArray(typeof(string))),
+                tmpLettersDirectory + letter.Docname.Replace(".dot", ".doc"));
+
+            // delete all single tmp files
+            foreach(string file in docsToMerge)
+                File.Delete(file);
+
+            // download the document
+            byte[] fileContents = File.ReadAllBytes(tmpFinalFileName);
+            System.IO.File.Delete(tmpFinalFileName);
+
+            // Nothing gets past the "DownloadDocument" method because it outputs the file 
+            // which is writing a response to the client browser and calls Response.End()
+            // So make sure any other code that functions goes before this
+            Letter.DownloadDocument(Response, fileContents, letter.Docname.Replace(".dot", ".doc"));
+        }
+        catch (CustomMessageException cmEx)
+        {
+            SetErrorMessage(cmEx.Message);
+            return;
+        }
+        */
+    }
+
+    #endregion
+
+    #region SetErrorMessage, HideErrorMessage
+
+    private void HideTableAndSetErrorMessage(string errMsg = "", string details = "")
+    {
+        SetErrorMessage(errMsg, details);
+    }
+    private void SetErrorMessage(string errMsg = "", string details = "")
+    {
+        if (errMsg.Contains(Environment.NewLine))
+            errMsg = errMsg.Replace(Environment.NewLine, "<br />");
+
+        // double escape so shows up literally on webpage for 'alert' message
+        string detailsToDisplay = (details.Length == 0 ? "" : " <a href=\"#\" onclick=\"alert('" + details.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("'", "\\'").Replace("\"", "\\'") + "'); return false;\">Details</a>");
+
+        lblErrorMessage.Visible = true;
+        if (errMsg != null && errMsg.Length > 0)
+            lblErrorMessage.Text = errMsg + detailsToDisplay + "<br />";
+        else
+            lblErrorMessage.Text = "An error has occurred. Plase contact the system administrator. " + detailsToDisplay + "<br />";
+    }
+    private void HideErrorMessage()
+    {
+        lblErrorMessage.Visible = false;
+        lblErrorMessage.Text = "";
+    }
+
+    #endregion
+
+}

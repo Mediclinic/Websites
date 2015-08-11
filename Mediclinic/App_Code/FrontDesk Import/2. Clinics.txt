@@ -1,0 +1,119 @@
+﻿
+
+****** change FROM db 0027 !!!!!!!!!!
+
+==> tell them to put address and phone numbers in ... so letters can pick these up
+-------------------------------------------------------------------------------------------
+
+SELECT * FROM FrontDesk.dbo.PGroups -- clinics!!!
+SELECT * FROM FrontDesk.dbo.Practice  -- this is register_staff ..... has staff info right in there ... and PGroup is the Clinic!!!
+
+-------------------------------------------------------------------------------------------
+
+	Declare @PGroupID   int
+	Declare @Description varchar(200)
+
+	Declare @entity_id  int
+
+
+	DECLARE DatabaseCursor CURSOR FOR 
+
+	SELECT 
+		 PGroupID
+		,Description
+	FROM FrontDesk.dbo.PGroups
+	ORDER BY PGroupID
+
+	OPEN DatabaseCursor  
+	FETCH NEXT FROM DatabaseCursor INTO @PGroupID, @Description
+
+	WHILE @@FETCH_STATUS = 0 
+	BEGIN 
+
+	    -- add entity
+        INSERT INTO Mediclinic_0027.dbo.Entity DEFAULT VALUES;
+        SET @entity_id = SCOPE_IDENTITY()
+
+		-- add referrer clinic
+		SET IDENTITY_INSERT Mediclinic_0027.dbo.Organisation ON
+		INSERT INTO Mediclinic_0027.dbo.Organisation (organisation_id,entity_id,parent_organisation_id,use_parent_offernig_prices,organisation_type_id,organisation_customer_type_id,
+								  name,acn,abn,organisation_date_added,organisation_date_modified,is_debtor,is_creditor,bpay_account,is_deleted,
+
+								  weeks_per_service_cycle,start_date,end_date,comment,free_services,excl_sun,excl_mon,excl_tue,excl_wed,excl_thu,
+								  excl_fri,excl_sat,
+								  sun_start_time,sun_end_time,mon_start_time,mon_end_time,tue_start_time,tue_end_time,wed_start_time,
+								  wed_end_time,thu_start_time,thu_end_time,fri_start_time,fri_end_time,sat_start_time,sat_end_time,
+								  sun_lunch_start_time,sun_lunch_end_time,mon_lunch_start_time,mon_lunch_end_time,tue_lunch_start_time,tue_lunch_end_time,wed_lunch_start_time,
+								  wed_lunch_end_time,thu_lunch_start_time,thu_lunch_end_time,fri_lunch_start_time,fri_lunch_end_time,sat_lunch_start_time,sat_lunch_end_time,
+								  last_batch_run)
+		VALUES
+		(
+			 @PGroupID
+			,@entity_id
+			,NULL
+			,0
+			,218
+			,0
+			,@Description
+			,''
+			,''
+			,GETDATE()
+			,NULL
+			,0
+			,1
+			,''
+			,0
+
+			,0
+			,NULL
+			,NULL
+			,''
+			,0
+			,0
+			,0
+			,0
+			,0
+			,0
+			,0
+			,0
+			,'08:00:00.0000000'
+			,'22:00:00.0000000'
+			,'08:00:00.0000000'
+			,'22:00:00.0000000'
+			,'08:00:00.0000000'
+			,'22:00:00.0000000'
+			,'08:00:00.0000000'
+			,'22:00:00.0000000'
+			,'08:00:00.0000000'
+			,'22:00:00.0000000'
+			,'08:00:00.0000000'
+			,'22:00:00.0000000'
+			,'08:00:00.0000000'
+			,'22:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,'00:00:00.0000000'
+			,NULL
+		)
+		SET IDENTITY_INSERT Mediclinic_0027.dbo.Organisation OFF
+
+
+		FETCH NEXT FROM DatabaseCursor INTO @PGroupID, @Description
+	
+	END 
+	CLOSE DatabaseCursor  
+	DEALLOCATE DatabaseCursor
+
+-------------------------------------------------------------------------------------------
+

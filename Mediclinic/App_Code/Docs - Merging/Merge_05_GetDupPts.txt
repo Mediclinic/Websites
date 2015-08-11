@@ -1,0 +1,894 @@
+﻿
+
+
+**********************************************************************************************************************
+**********************************************************************************************************************
+
+
+select dupeCount, pa.*, pe.*
+from Patient pa left join Person pe on pa.person_id = pe.person_id
+inner join (
+    SELECT   pe2.surname, pe2.firstname, pe2.person_date_added, pa2.patient_date_added, COUNT(*) AS dupeCount
+    FROM     Patient pa2 left join Person pe2 on pa2.person_id = pe2.person_id
+    --WHERE firstname <> '' AND surname <> ''
+    GROUP BY pe2.surname, pe2.firstname, pe2.person_date_added, pa2.patient_date_added
+    HAVING COUNT(*) > 1
+) oc on pe.surname            = oc.surname 
+	AND pe.firstname          = oc.firstname 
+	AND pe.person_date_added  = oc.person_date_added 
+	AND pa.patient_date_added = oc.patient_date_added
+
+order by pe.person_date_added
+
+
+==> if all info same (number and dates and prov of bookings .. and same number of invoices etc ... the de-duplicate auto)
+
+
+
+**********************************************************************************************************************
+**********************************************************************************************************************
+
+select distinct invline.patient_id
+from InvoiceLine invline
+left join Invoice inv on invline.invoice_id = inv.invoice_id
+left join Booking bk on bk.booking_id = inv.booking_id
+
+where bk.patient_id <> invline.patient_id or bk.patient_id is null
+AND invline.patient_id in (select patient_id from PatientTemp)
+
+order by patient_id
+
+--------------------------------------
+
+select patient_id from PatientTemp where patient_id < 40000
+and (patient_id = (otherPtID+40000)) or (patient_id = (otherPtID-40000))
+order by patient_id
+
+--------------------------------------
+
+select * from Patient where patient_id < 15561 AND patient_id not in
+(
+select patient_id from PatientTemp where patient_id < 40000
+and (patient_id = (otherPtID+40000)) or (patient_id = (otherPtID-40000))
+)
+
+--------------------------------------
+
+select * from PatientTemp
+
+where (patient_id <> (otherPtID+40000)) and (patient_id <> (otherPtID-40000))
+
+**********************************************************************************************************************
+**********************************************************************************************************************
+
+create TABLE PatientTemp
+(
+ dupeCount       int,
+ dupeCount2      int,
+ o_patient_id    int,
+ 
+ o_firstname       varchar(100),
+ o_surname         varchar(100),
+ 
+ bk_count        int,
+ o_bk_count      int,
+
+ acbk_count      int,
+ o_acbk_count    int,
+
+ bk1             datetime,
+ bk2             datetime,
+ bk_nbr          int,
+ 
+ person_id       int,
+ entity_id       int,
+ added_by        int,
+ title_id        int,
+ firstname       varchar(100),
+ middlename      varchar(100),
+ surname         varchar(100),
+ nickname        varchar(100),
+ gender          varchar(1),
+ dob             datetime,
+ person_date_added      datetime,
+ person_date_modified   datetime,
+ 
+ patient_id                   int,
+ person_id2                   int,
+ patient_date_added           datetime,
+ is_clinic_patient            bit,
+ is_deleted                   bit,
+ is_deceased                  bit,
+ flashing_text                varchar(max),
+ private_health_fund          varchar(100),
+ concession_card_number       varchar(100),
+ concession_card_expiry_date  datetime,
+ is_diabetic                  bit,
+ is_member_diabetes_australia bit,
+ ac_inv_offering_id           int,
+ ac_pat_offering_id           int
+)
+
+
+SELECT * FROM PatientTemp
+ORDER BY person_date_added
+		,firstname
+		,surname
+
+**********************************************************************************************************************
+**********************************************************************************************************************    
+
+DECLARE @field1 int
+DECLARE @field2 int
+DECLARE cur CURSOR LOCAL FOR
+    SELECT patient_id, o_patient_id FROM PatientTemp --where o_acbk_count = 0
+    ORDER BY person_date_added
+		    ,firstname
+		    ,surname
+
+OPEN cur
+
+FETCH NEXT FROM cur INTO @field1, @field2
+
+WHILE @@FETCH_STATUS = 0 BEGIN
+
+    --execute your sproc on each row
+    EXEC uspMerging_UpdatePatient @field1, @field2
+
+    FETCH NEXT FROM cur INTO @field1, @field2
+END
+
+CLOSE cur
+DEALLOCATE cur
+
+**********************************************************************************************************************
+**********************************************************************************************************************    
+
+DECLARE @tmptbl TABLE
+(
+ dupeCount       int,
+ dupeCount2      int,
+ o_patient_id    int,
+ 
+ o_firstname       varchar(100),
+ o_surname         varchar(100),
+ 
+ bk_count        int,
+ o_bk_count      int,
+
+ acbk_count      int,
+ o_acbk_count    int,
+
+ bk1             datetime,
+ bk2             datetime,
+ bk_nbr          int,
+ 
+ person_id       int,
+ entity_id       int,
+ added_by        int,
+ title_id        int,
+ firstname       varchar(100),
+ middlename      varchar(100),
+ surname         varchar(100),
+ nickname        varchar(100),
+ gender          varchar(1),
+ dob             datetime,
+ person_date_added      datetime,
+ person_date_modified   datetime,
+ 
+ patient_id                   int,
+ person_id2                   int,
+ patient_date_added           datetime,
+ is_clinic_patient            bit,
+ is_deleted                   bit,
+ is_deceased                  bit,
+ flashing_text                varchar(max),
+ private_health_fund          varchar(100),
+ concession_card_number       varchar(100),
+ concession_card_expiry_date  datetime,
+ is_diabetic                  bit,
+ is_member_diabetes_australia bit,
+ ac_inv_offering_id           int,
+ ac_pat_offering_id           int
+)
+    
+    
+INSERT INTO PatientTemp
+--select dupeCount, pe.firstname, pe.surname , pa.*, pe.*
+SELECT --top 50 
+ (
+ SELECT COUNT(*) 
+ FROM Patient pa2 
+	  LEFT JOIN Person pe2 ON pa2.person_id = pe2.person_id 
+ WHERE 
+        pe.surname            = pe2.surname 
+	AND pe.firstname          = pe2.firstname 
+	AND ((pe.dob IS NULL AND pe2.dob IS NULL) OR (pe.dob = pe2.dob)) 
+	AND pe.person_date_added  = pe2.person_date_added 
+	AND pa.patient_date_added = pa2.patient_date_added
+	AND pe.firstname <> '' AND pe.surname <> '' 
+ ),
+
+ (
+ SELECT COUNT(*) 
+ FROM Patient pa2 
+	  LEFT JOIN Person pe2 ON pa2.person_id = pe2.person_id 
+ WHERE 
+        pe.surname            = pe2.surname 
+	AND pe.firstname          = pe2.firstname 
+	AND ((pe.dob IS NULL AND pe2.dob IS NULL) OR (pe.dob = pe2.dob)) 
+	AND pe.person_date_added  = pe2.person_date_added 
+	AND pa.patient_date_added = pa2.patient_date_added
+	
+	--AND ((pa.patient_id > 40000 AND pa2.patient_id = (pa.patient_id - 40000)) OR (pa.patient_id < 40000 AND pa2.patient_id = (pa.patient_id + 40000)))
+	AND (pa.patient_id < 40000 AND pa2.patient_id = (pa.patient_id + 40000))
+	
+	AND (  (SELECT COUNT(*) from Booking WHERE patient_id = pa.patient_id) = (SELECT COUNT(*) from Booking WHERE patient_id = pa2.patient_id)  )
+	AND (  (SELECT COUNT(*) from Booking WHERE booking_status_id = 187 AND patient_id = pa.patient_id) = (SELECT COUNT(*) from Booking WHERE booking_status_id = 187 AND patient_id = pa2.patient_id)  )
+	AND (  (SELECT COUNT(*) from Booking WHERE booking_status_id = 0   AND patient_id = pa.patient_id) = (SELECT COUNT(*) from Booking WHERE booking_status_id = 0   AND patient_id = pa2.patient_id)  )
+	AND (  (SELECT COUNT(*) from Booking WHERE booking_status_id = 187 AND patient_id = pa.patient_id) = (SELECT COUNT(*) from Booking WHERE booking_status_id = 187 AND patient_id = pa2.patient_id)  )
+	AND (
+	        (
+	         (SELECT COUNT(*) from Booking WHERE patient_id = pa.patient_id)  = 0 
+	         AND 
+	         (SELECT COUNT(*) from Booking WHERE patient_id = pa2.patient_id) = 0
+	        )
+	        OR
+	        (
+		     (SELECT top 1 date_start from Booking WHERE patient_id = pa.patient_id order by date_start desc) = (SELECT top 1 date_start from Booking WHERE patient_id = pa2.patient_id order by date_start desc)
+		     AND
+		     (SELECT top 1 date_start from Booking WHERE patient_id = pa.patient_id order by date_start asc)  = (SELECT top 1 date_start from Booking WHERE patient_id = pa2.patient_id order by date_start asc)
+		    )
+		)
+ ),
+ 
+ (
+ SELECT TOP 1 pa2.patient_id
+ FROM Patient pa2 
+	  LEFT JOIN Person pe2 ON pa2.person_id = pe2.person_id 
+ WHERE 
+        pe.surname            = pe2.surname 
+	AND pe.firstname          = pe2.firstname 
+	AND ((pe.dob IS NULL AND pe2.dob IS NULL) OR (pe.dob = pe2.dob)) 
+	AND pe.person_date_added  = pe2.person_date_added 
+	AND pa.patient_date_added = pa2.patient_date_added
+	
+	--AND ((pa.patient_id > 40000 AND pa2.patient_id = (pa.patient_id - 40000)) OR (pa.patient_id < 40000 AND pa2.patient_id = (pa.patient_id + 40000)))
+	AND (pa.patient_id < 40000 AND pa2.patient_id = (pa.patient_id + 40000))
+	
+	AND (  (SELECT COUNT(*) from Booking WHERE patient_id = pa.patient_id) = (SELECT COUNT(*) from Booking WHERE patient_id = pa2.patient_id)  )
+	AND (  (SELECT COUNT(*) from Booking WHERE booking_status_id = 187 AND patient_id = pa.patient_id) = (SELECT COUNT(*) from Booking WHERE booking_status_id = 187 AND patient_id = pa2.patient_id)  )
+	AND (  (SELECT COUNT(*) from Booking WHERE booking_status_id = 0   AND patient_id = pa.patient_id) = (SELECT COUNT(*) from Booking WHERE booking_status_id = 0   AND patient_id = pa2.patient_id)  )
+	AND (  (SELECT COUNT(*) from Booking WHERE booking_status_id = 187 AND patient_id = pa.patient_id) = (SELECT COUNT(*) from Booking WHERE booking_status_id = 187 AND patient_id = pa2.patient_id)  )
+	AND (
+	        (
+	         (SELECT COUNT(*) from Booking WHERE patient_id = pa.patient_id)  = 0 
+	         AND 
+	         (SELECT COUNT(*) from Booking WHERE patient_id = pa2.patient_id) = 0
+	        )
+	        OR
+	        (
+		     (SELECT top 1 date_start from Booking WHERE patient_id = pa.patient_id order by date_start desc) = (SELECT top 1 date_start from Booking WHERE patient_id = pa2.patient_id order by date_start desc)
+		     AND
+		     (SELECT top 1 date_start from Booking WHERE patient_id = pa.patient_id order by date_start asc)  = (SELECT top 1 date_start from Booking WHERE patient_id = pa2.patient_id order by date_start asc)
+		    )
+		)
+ ),
+ 
+ NULL,
+ NULL,
+ 
+ NULL,
+ NULL,
+ 
+ NULL,
+ NULL,
+
+ (SELECT top 1 date_start from Booking WHERE patient_id = pa.patient_id order by date_start asc),
+ (SELECT top 1 date_start from Booking WHERE patient_id = pa.patient_id order by date_start desc),
+
+ (SELECT COUNT(*) from Booking WHERE patient_id = pa.patient_id),
+ 
+ pe.person_id,
+ pe.entity_id,
+ pe.added_by,
+ pe.title_id,
+ pe.firstname,
+ pe.middlename,
+ pe.surname,
+ pe.nickname,
+ pe.gender,
+ pe.dob,
+ pe.person_date_added,
+ pe.person_date_modified,
+
+ pa.patient_id,
+ pa.person_id as person_id2,
+ pa.patient_date_added,
+ pa.is_clinic_patient,
+ pa.is_deleted,
+ pa.is_deceased,
+ pa.flashing_text,
+ pa.private_health_fund,
+ pa.concession_card_number,
+ pa.concession_card_expiry_date,
+ pa.is_diabetic,
+ pa.is_member_diabetes_australia,
+ pa.ac_inv_offering_id,
+ pa.ac_pat_offering_id
+
+FROM Patient pa 
+     left join Person pe on pa.person_id = pe.person_id
+WHERE 
+	pe.firstname <> '' AND pe.surname <> '' 
+ORDER BY 
+		--person_date_added
+		surname
+		,firstname
+
+
+DELETE PatientTemp where dupeCount <> 2
+DELETE PatientTemp where dupeCount2 <> 1
+
+
+UPDATE
+    tmptbl
+SET
+    o_firstname = pe.firstname,
+    o_surname = pe.surname
+FROM
+    PatientTemp tmptbl
+    LEFT JOIN Patient pa ON tmptbl.o_patient_id = pa.patient_id
+    LEFT JOIN Person  pe ON pa.person_id        = pe.person_id
+
+UPDATE
+    tmptbl
+SET
+     bk_count     = (SELECT COUNT(*) FROM Booking bk WHERE bk.patient_id = tmptbl.patient_id)
+    ,o_bk_count   = (SELECT COUNT(*) FROM Booking bk WHERE bk.patient_id = tmptbl.o_patient_id)
+    ,acbk_count   = (SELECT COUNT(*)  FROM InvoiceLine LEFT JOIN Invoice ON InvoiceLine.invoice_id = Invoice.invoice_id LEFT JOIN Booking ON Invoice.booking_id = Booking.booking_id WHERE (Booking.patient_id IS NULL OR Booking.patient_id <> tmptbl.patient_id)   AND InvoiceLine.patient_id = tmptbl.patient_id)
+    ,o_acbk_count = (SELECT COUNT(*)  FROM InvoiceLine LEFT JOIN Invoice ON InvoiceLine.invoice_id = Invoice.invoice_id LEFT JOIN Booking ON Invoice.booking_id = Booking.booking_id WHERE (Booking.patient_id IS NULL OR Booking.patient_id <> tmptbl.o_patient_id) AND InvoiceLine.patient_id = tmptbl.o_patient_id)
+FROM
+    PatientTemp tmptbl
+
+
+SELECT * FROM PatientTemp
+WHERE o_acbk_count = 0
+--ORDER BY 
+		--person_date_added
+		--,surname
+		--,firstname
+
+
+
+**********************************************************************************************************************
+**********************************************************************************************************************
+
+==> put it into normal table, not temp table
+==> then run a stored proc on the 2 pt ids as arguments
+    in stored proc,
+	  if last mod date both null or both same, choose lower ID and delete higher ID
+	  else if one null and other not null, choose which has not null last mod date
+	  else choose most recent last mod date
+
+
+	in stored proc:
+	1. if both ids exist in real patient table
+	   2. get which id to keep
+	   3. get id to chuck
+	   4. delete id to chuck and all data associated with it
+
+
+possibly in table put field processed bit = 0
+  as process in below query, set to both to 1
+make query be:
+  select top 1000 from new temp table where processed = 0
+
+
+
+**********************************************************
+**********************************************************
+
+
+NB!
+CHANGE TO ONLY SET AS DELETED ... DON'T ACTUALLY DELETE IT!!
+
+
+**********************************************************
+**********************************************************
+
+
+--DROP PROCEDURE uspMerging_UpdatePatient;
+CREATE PROCEDURE uspMerging_UpdatePatient
+
+     @patient_id1          int
+    ,@patient_id2          int
+
+AS
+
+Declare @patient1_is_deleted  bit
+Declare @patient2_is_deleted  bit
+Declare @patient_id_to_delete int
+Declare @patient_id_to_keep   int
+
+BEGIN TRAN
+
+    IF (SELECT COUNT(*) FROM Patient WHERE patient_id = @patient_id1) = 1 AND (SELECT COUNT(*) FROM Patient WHERE patient_id = @patient_id2) = 1
+    BEGIN
+
+		SET @patient1_is_deleted = (SELECT is_deleted FROM Patient WHERE patient_id = @patient_id1)
+		SET @patient2_is_deleted = (SELECT is_deleted FROM Patient WHERE patient_id = @patient_id2)
+
+		-- if both deleted, or one deleted, do nothing
+		-- only need to set one as deleted if both active (ie both not deleted)
+		IF (@patient1_is_deleted = 0 AND @patient2_is_deleted = 0)
+		BEGIN
+
+			SET @patient_id_to_keep   = CASE WHEN @patient_id1 < @patient_id2 THEN @patient_id1 END
+			SET @patient_id_to_delete = CASE WHEN @patient_id1 < @patient_id2 THEN @patient_id2 END
+			UPDATE Patient SET is_deleted = 1 WHERE patient_id = @patient_id_to_delete
+			PRINT 'Del '  + right('         '+ CAST(@patient_id_to_delete AS VARCHAR(10)), 5) + ' --- ' + 'Keep ' + right('         '+ CAST(@patient_id_to_keep   AS VARCHAR(10)), 5)
+
+		END
+
+    END
+
+COMMIT TRAN
+
+
+**********************************************************
+**********************************************************
+
+
+--DROP PROCEDURE uspMerging_UpdatePatient;
+CREATE PROCEDURE uspMerging_UpdatePatient
+
+     @patient_id1      int
+    ,@patient_id2      int
+
+AS
+
+Declare @person_id1                  int
+Declare @person_id2                  int
+Declare @dt_mod1                     datetime
+Declare @dt_mod2                     datetime
+Declare @patient_id_to_delete        int
+Declare @patient_id_to_keep          int
+
+Declare @health_card_id_to_delete    int
+Declare @booking_id_to_delete        int
+Declare @booking_entity_id_to_delete int
+Declare @invoice_id_to_delete        int
+Declare @receipt_id_to_delete        int
+
+Declare @entity_id_to_delete         int
+Declare @person_id_to_delete         int
+Declare @count_referrer              int
+Declare @count_staff                 int
+
+
+BEGIN TRAN
+
+    IF (SELECT COUNT(*) FROM Patient WHERE patient_id = @patient_id1) = 1 AND (SELECT COUNT(*) FROM Patient WHERE patient_id = @patient_id2) = 1
+    BEGIN
+
+		SET @person_id1  = (SELECT person_id            FROM Patient WHERE patient_id = @patient_id1)
+		SET @person_id2  = (SELECT person_id            FROM Patient WHERE patient_id = @patient_id2)
+		SET @dt_mod1     = (SELECT person_date_modified FROM Person  WHERE person_id  = @person_id1)
+		SET @dt_mod2     = (SELECT person_date_modified FROM Person  WHERE person_id  = @person_id2)
+
+
+		--SET @patient_id_to_keep = 
+		--	CASE WHEN @dt_mod1 IS NULL     AND @dt_mod2 IS NULL                              THEN (Select Case When @patient_id1  < @patient_id2  Then @patient_id1 Else @patient_id2 End)
+		--		 WHEN @dt_mod1 IS NOT NULL AND @dt_mod2 IS NOT NULL AND @dt_mod1 = @dt_mod2  THEN (Select Case When @patient_id1  < @patient_id2  Then @patient_id1 Else @patient_id2 End)
+		--		 WHEN @dt_mod1 IS NOT NULL AND @dt_mod2 IS NOT NULL                          THEN (Select Case When @dt_mod1 > @dt_mod2           Then @patient_id1 Else @patient_id2 End)
+		--																					 ELSE (Select Case When @dt_mod2 IS NULL              Then @patient_id1 Else @patient_id2 End)
+		--		 END
+
+		--SET @patient_id_to_delete = 
+		--	CASE WHEN @dt_mod1 IS NULL     AND @dt_mod2 IS NULL                              THEN (Select Case When @patient_id1  < @patient_id2  Then @patient_id2 Else @patient_id1 End)
+		--		 WHEN @dt_mod1 IS NOT NULL AND @dt_mod2 IS NOT NULL AND @dt_mod1 = @dt_mod2  THEN (Select Case When @patient_id1  < @patient_id2  Then @patient_id2 Else @patient_id1 End)
+		--		 WHEN @dt_mod1 IS NOT NULL AND @dt_mod2 IS NOT NULL                          THEN (Select Case When @dt_mod1 > @dt_mod2           Then @patient_id2 Else @patient_id1 End)
+		--																					 ELSE (Select Case When @dt_mod2 IS NULL              Then @patient_id2 Else @patient_id1 End)
+		--		 END
+
+
+		SET @patient_id_to_keep = 
+			CASE WHEN @patient_id1 < @patient_id2 THEN @patient_id1 END
+
+		SET @patient_id_to_delete = 
+			CASE WHEN @patient_id1 < @patient_id2 THEN @patient_id2 END
+
+
+
+
+		IF @patient_id_to_delete = @patient_id1
+		BEGIN
+			SET @person_id_to_delete  = @person_id1
+		END
+
+		IF @patient_id_to_delete = @patient_id2
+		BEGIN
+			SET @person_id_to_delete  = @person_id2
+		END
+
+		SET @entity_id_to_delete  = (SELECT entity_id FROM Person   WHERE person_id = @person_id_to_delete)
+		SET @count_referrer       = (SELECT count(*)  FROM Referrer WHERE person_id = @person_id_to_delete)
+		SET @count_staff          = (SELECT count(*)  FROM Staff    WHERE person_id = @person_id_to_delete)
+
+
+
+		PRINT 'Del '  + right('         '+ CAST(@patient_id_to_delete AS VARCHAR(10)), 5) + ' --- ' + 'Keep ' + right('         '+ CAST(@patient_id_to_keep   AS VARCHAR(10)), 5)
+
+
+
+
+
+		IF @count_referrer = 0 AND @count_staff = 0
+		BEGIN
+
+
+
+-- PatientHistory
+-- RegisterPatient
+-- PatientReferrer
+-- HealthCard ==>>> and all associated 
+-- 
+--   healthcardid:
+--     HealthCardAction
+--     HealthCardEPCChangeHistory
+--     HealthCardEPCRemaining
+-- 
+-- 
+-- Booking ==>>> all associated
+-- 
+--   bookingid:
+-- 
+--     BookingChangeHistory 
+--     BookingPatient
+--     Invoice
+-- 
+--     invoiceid:
+--       InvoiceLine
+--       Receipt
+-- 
+--       receiptid:
+--         Overpayment 
+-- 
+--       CreditNote
+--       Refund
+-- 
+--     LetterPrintHistory
+--     SMSHistory
+--     EmailHistory
+-- 
+-- 
+-- BookingPatient
+-- BookingPatientOffering
+-- InvoiceLine ===>>>>>>>>>>>>>>>>> might be a fucking problem......... prob need to find if invoice line has this pt .. and if bk is not for this pt .. then dont del
+-- 
+-- LetterPrintHistory
+-- LetterBestPrintHistory
+-- SMSHistory
+-- EmailHistory
+
+
+
+			DELETE PatientHistory   WHERE patient_id = @patient_id_to_delete;
+			DELETE RegisterPatient  WHERE patient_id = @patient_id_to_delete;
+			DELETE PatientReferrer  WHERE patient_id = @patient_id_to_delete;
+
+			WHILE (SELECT COUNT (*) FROM HealthCard WHERE patient_id = @patient_id_to_delete) > 0
+			BEGIN
+
+				SET @health_card_id_to_delete = (SELECT TOP 1 health_card_id FROM HealthCard WHERE patient_id = @patient_id_to_delete)
+
+				DELETE HealthCardAction            WHERE health_card_id = @health_card_id_to_delete;
+				DELETE HealthCardEPCChangeHistory  WHERE health_card_id = @health_card_id_to_delete;
+				DELETE HealthCardEPCRemaining      WHERE health_card_id = @health_card_id_to_delete;
+				DELETE HealthCard                  WHERE health_card_id = @health_card_id_to_delete;
+
+			END
+
+
+
+			WHILE (SELECT COUNT (*) FROM Booking WHERE patient_id = @patient_id_to_delete) > 0
+			BEGIN
+
+				SET @booking_id_to_delete = (SELECT TOP 1 booking_id FROM Booking WHERE patient_id = @patient_id_to_delete)
+
+				DELETE BookingChangeHistory WHERE booking_id = @booking_id_to_delete;
+				DELETE BookingPatient       WHERE booking_id = @booking_id_to_delete;
+
+				WHILE (SELECT COUNT (*) FROM Invoice WHERE booking_id = @booking_id_to_delete) > 0
+				BEGIN
+
+					SET @invoice_id_to_delete = (SELECT TOP 1 invoice_id FROM Invoice WHERE booking_id = @booking_id_to_delete)
+
+					DELETE InvoiceLine     WHERE invoice_id = @invoice_id_to_delete;
+
+					WHILE (SELECT COUNT (*) FROM Receipt WHERE invoice_id = @invoice_id_to_delete) > 0
+					BEGIN
+
+						SET @receipt_id_to_delete = (SELECT TOP 1 receipt_id FROM Receipt WHERE invoice_id = @invoice_id_to_delete)
+						DELETE Overpayment            WHERE receipt_id = @receipt_id_to_delete;
+						DELETE Receipt                WHERE receipt_id = @receipt_id_to_delete;
+
+					END
+
+					DELETE CreditNote     WHERE invoice_id = @invoice_id_to_delete;
+					DELETE Refund         WHERE invoice_id = @invoice_id_to_delete;
+					DELETE Invoice        WHERE invoice_id = @invoice_id_to_delete;
+
+				END
+
+				DELETE LetterPrintHistory WHERE booking_id = @booking_id_to_delete;
+				DELETE SMSHistory         WHERE booking_id = @booking_id_to_delete;
+				DELETE EmailHistory       WHERE booking_id = @booking_id_to_delete;
+
+				SET @booking_entity_id_to_delete = (SELECT entity_id FROM Booking WHERE booking_id = @booking_id_to_delete)
+				DELETE Booking            WHERE booking_id = @booking_id_to_delete;
+				DELETE Note               WHERE entity_id = @booking_entity_id_to_delete;
+				DELETE Entity             WHERE entity_id = @booking_entity_id_to_delete;
+
+			END
+
+			WHILE (SELECT COUNT (*) FROM Invoice WHERE payer_patient_id = @patient_id_to_delete) > 0
+			BEGIN
+
+				SET @invoice_id_to_delete = (SELECT TOP 1 invoice_id FROM Invoice WHERE payer_patient_id = @patient_id_to_delete)
+
+				DELETE InvoiceLine     WHERE invoice_id = @invoice_id_to_delete;
+
+				WHILE (SELECT COUNT (*) FROM Receipt WHERE invoice_id = @invoice_id_to_delete) > 0
+				BEGIN
+
+					SET @receipt_id_to_delete = (SELECT TOP 1 receipt_id FROM Receipt WHERE invoice_id = @invoice_id_to_delete)
+					DELETE Overpayment            WHERE receipt_id = @receipt_id_to_delete;
+					DELETE Receipt                WHERE receipt_id = @receipt_id_to_delete;
+
+				END
+
+				DELETE CreditNote     WHERE invoice_id = @invoice_id_to_delete;
+				DELETE Refund         WHERE invoice_id = @invoice_id_to_delete;
+				DELETE Invoice        WHERE invoice_id = @invoice_id_to_delete;
+
+			END
+
+			DELETE BookingPatient         WHERE patient_id = @patient_id_to_delete;
+			DELETE InvoiceLine            WHERE patient_id = @patient_id_to_delete;
+
+			DELETE LetterPrintHistory     WHERE patient_id = @patient_id_to_delete;
+			DELETE LetterBestPrintHistory WHERE patient_id = @patient_id_to_delete;
+			DELETE SMSHistory             WHERE patient_id = @patient_id_to_delete;
+			DELETE EmailHistory           WHERE patient_id = @patient_id_to_delete;
+
+
+			-- delete them
+			DELETE Patient WHERE patient_id = @patient_id_to_delete;
+			DELETE Person  WHERE person_id  = @person_id_to_delete;
+
+			DELETE ContactAus WHERE entity_id = @entity_id_to_delete;
+			DELETE ContactOld WHERE entity_id = @entity_id_to_delete;
+			DELETE Note       WHERE entity_id = @entity_id_to_delete;
+			DELETE Entity     WHERE entity_id = @entity_id_to_delete;
+
+		END
+
+
+		PRINT 'Deleted'
+
+    END
+
+COMMIT TRAN
+
+**********************************************************************************************************************
+**********************************************************************************************************************
+
+--DROP PROCEDURE uspMerging_DeletePatient;
+CREATE PROCEDURE uspMerging_DeletePatient
+
+     @patient_id_to_delete      int
+
+AS
+
+Declare @health_card_id_to_delete    int
+Declare @booking_id_to_delete        int
+Declare @booking_entity_id_to_delete int
+Declare @invoice_id_to_delete        int
+Declare @receipt_id_to_delete        int
+
+Declare @entity_id_to_delete         int
+Declare @person_id_to_delete         int
+Declare @count_referrer              int
+Declare @count_staff                 int
+
+
+BEGIN TRAN
+
+    IF (SELECT COUNT(*) FROM Patient WHERE patient_id = @patient_id_to_delete) = 1
+    BEGIN
+
+		SET @person_id_to_delete  = (SELECT person_id            FROM Patient WHERE patient_id = @patient_id_to_delete)
+		SET @entity_id_to_delete  = (SELECT entity_id FROM Person   WHERE person_id = @person_id_to_delete)
+		SET @count_referrer       = (SELECT count(*)  FROM Referrer WHERE person_id = @person_id_to_delete)
+		SET @count_staff          = (SELECT count(*)  FROM Staff    WHERE person_id = @person_id_to_delete)
+
+		IF @count_referrer = 0 AND @count_staff = 0
+		BEGIN
+
+
+-- PatientHistory
+-- RegisterPatient
+-- PatientReferrer
+-- HealthCard ==>>> and all associated 
+-- 
+--   healthcardid:
+--     HealthCardAction
+--     HealthCardEPCChangeHistory
+--     HealthCardEPCRemaining
+-- 
+-- 
+-- Booking ==>>> all associated
+-- 
+--   bookingid:
+-- 
+--     BookingChangeHistory 
+--     BookingPatient
+--     Invoice
+-- 
+--     invoiceid:
+--       InvoiceLine
+--       Receipt
+-- 
+--       receiptid:
+--         Overpayment 
+-- 
+--       CreditNote
+--       Refund
+-- 
+--     LetterPrintHistory
+--     SMSHistory
+--     EmailHistory
+-- 
+-- 
+-- BookingPatient
+-- BookingPatientOffering
+-- InvoiceLine ===>>>>>>>>>>>>>>>>> might be a fucking problem......... prob need to find if invoice line has this pt .. and if bk is not for this pt .. then dont del
+-- 
+-- LetterPrintHistory
+-- LetterBestPrintHistory
+-- SMSHistory
+-- EmailHistory
+
+
+
+			DELETE PatientHistory   WHERE patient_id = @patient_id_to_delete;
+			DELETE RegisterPatient  WHERE patient_id = @patient_id_to_delete;
+			DELETE PatientReferrer  WHERE patient_id = @patient_id_to_delete;
+
+			WHILE (SELECT COUNT (*) FROM HealthCard WHERE patient_id = @patient_id_to_delete) > 0
+			BEGIN
+
+				SET @health_card_id_to_delete = (SELECT TOP 1 health_card_id FROM HealthCard WHERE patient_id = @patient_id_to_delete)
+
+				DELETE HealthCardAction            WHERE health_card_id = @health_card_id_to_delete;
+				DELETE HealthCardEPCChangeHistory  WHERE health_card_id = @health_card_id_to_delete;
+				DELETE HealthCardEPCRemaining      WHERE health_card_id = @health_card_id_to_delete;
+				DELETE HealthCard                  WHERE health_card_id = @health_card_id_to_delete;
+
+			END
+
+
+
+			WHILE (SELECT COUNT (*) FROM Booking WHERE patient_id = @patient_id_to_delete) > 0
+			BEGIN
+
+				SET @booking_id_to_delete = (SELECT TOP 1 booking_id FROM Booking WHERE patient_id = @patient_id_to_delete)
+
+				DELETE BookingChangeHistory WHERE booking_id = @booking_id_to_delete;
+				DELETE BookingPatient       WHERE booking_id = @booking_id_to_delete;
+
+				WHILE (SELECT COUNT (*) FROM Invoice WHERE booking_id = @booking_id_to_delete) > 0
+				BEGIN
+
+					SET @invoice_id_to_delete = (SELECT TOP 1 invoice_id FROM Invoice WHERE booking_id = @booking_id_to_delete)
+
+					DELETE InvoiceLine     WHERE invoice_id = @invoice_id_to_delete;
+
+					WHILE (SELECT COUNT (*) FROM Receipt WHERE invoice_id = @invoice_id_to_delete) > 0
+					BEGIN
+
+						SET @receipt_id_to_delete = (SELECT TOP 1 receipt_id FROM Receipt WHERE invoice_id = @invoice_id_to_delete)
+						DELETE Overpayment            WHERE receipt_id = @receipt_id_to_delete;
+						DELETE Receipt                WHERE receipt_id = @receipt_id_to_delete;
+
+					END
+
+					DELETE CreditNote     WHERE invoice_id = @invoice_id_to_delete;
+					DELETE Refund         WHERE invoice_id = @invoice_id_to_delete;
+					DELETE Invoice        WHERE invoice_id = @invoice_id_to_delete;
+
+				END
+
+				DELETE LetterPrintHistory WHERE booking_id = @booking_id_to_delete;
+				DELETE SMSHistory         WHERE booking_id = @booking_id_to_delete;
+				DELETE EmailHistory       WHERE booking_id = @booking_id_to_delete;
+
+				SET @booking_entity_id_to_delete = (SELECT entity_id FROM Booking WHERE booking_id = @booking_id_to_delete)
+				DELETE Booking            WHERE booking_id = @booking_id_to_delete;
+				DELETE Note               WHERE entity_id = @booking_entity_id_to_delete;
+				DELETE Entity             WHERE entity_id = @booking_entity_id_to_delete;
+
+			END
+
+			WHILE (SELECT COUNT (*) FROM Invoice WHERE payer_patient_id = @patient_id_to_delete) > 0
+			BEGIN
+
+				SET @invoice_id_to_delete = (SELECT TOP 1 invoice_id FROM Invoice WHERE payer_patient_id = @patient_id_to_delete)
+
+				DELETE InvoiceLine     WHERE invoice_id = @invoice_id_to_delete;
+
+				WHILE (SELECT COUNT (*) FROM Receipt WHERE invoice_id = @invoice_id_to_delete) > 0
+				BEGIN
+
+					SET @receipt_id_to_delete = (SELECT TOP 1 receipt_id FROM Receipt WHERE invoice_id = @invoice_id_to_delete)
+					DELETE Overpayment            WHERE receipt_id = @receipt_id_to_delete;
+					DELETE Receipt                WHERE receipt_id = @receipt_id_to_delete;
+
+				END
+
+				DELETE CreditNote     WHERE invoice_id = @invoice_id_to_delete;
+				DELETE Refund         WHERE invoice_id = @invoice_id_to_delete;
+				DELETE Invoice        WHERE invoice_id = @invoice_id_to_delete;
+
+			END
+
+			DELETE BookingPatient         WHERE patient_id = @patient_id_to_delete;
+			DELETE InvoiceLine            WHERE patient_id = @patient_id_to_delete;
+
+			DELETE LetterPrintHistory     WHERE patient_id = @patient_id_to_delete;
+			DELETE LetterBestPrintHistory WHERE patient_id = @patient_id_to_delete;
+			DELETE SMSHistory             WHERE patient_id = @patient_id_to_delete;
+			DELETE EmailHistory           WHERE patient_id = @patient_id_to_delete;
+
+
+			-- delete them
+			DELETE Patient WHERE patient_id = @patient_id_to_delete;
+			DELETE Person  WHERE person_id  = @person_id_to_delete;
+
+			DELETE ContactAus WHERE entity_id = @entity_id_to_delete;
+			DELETE ContactOld WHERE entity_id = @entity_id_to_delete;
+			DELETE Note       WHERE entity_id = @entity_id_to_delete;
+			DELETE Entity     WHERE entity_id = @entity_id_to_delete;
+
+		END
+
+
+		PRINT 'Deleted'
+
+    END
+
+COMMIT TRAN
+
+**********************************************************************************************************************
+**********************************************************************************************************************
+
+
+ 22344  [regardless of bookings same or not]
+
+ 19420  [same nbr bookings]
+
+ 16856 = 0 (no bookings)
+  2564 > 0 (has bookings)
+
+
+ 19304 ... same nbr of incomplete and same nbr of completed bookings
+
+ 19262 ... same first and last booking dates
+ 19262 ... same first and last booking dates ... and all before 1/1/2012
+ 19262 ... same first and last booking dates ... and all before 1/1/2012 ... and also with any first and last name (inc blank)
+
+
+**********************************************************************************************************************
+**********************************************************************************************************************

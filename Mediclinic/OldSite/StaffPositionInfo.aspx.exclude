@@ -1,0 +1,111 @@
+﻿<%@ Page Title="StaffPositionInfo" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true"
+    CodeFile="StaffPositionInfo.aspx.cs" Inherits="StaffPositionInfo" %>
+<%@ Register TagPrefix="UC" TagName="IconKeyControl" Src="~/Controls/IconKeyControl.ascx" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+            <td>
+                <h2>
+                   Staff Positions
+                </h2>
+            </td>
+            <td align="right">
+                <UC:IconKeyControl ID="iconKeyControl" runat="server" />
+            </td>
+        </tr>
+    </table>
+
+
+    <br />
+    <asp:ValidationSummary ID="EditStaffPositionValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditStaffPositionValidationSummary"/>
+    <asp:ValidationSummary ID="AddStaffPositionValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="AddStaffPositionValidationGroup"/>
+    <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+
+    <p>
+    <asp:GridView ID="GrdStaffPosition" runat="server" 
+         AutoGenerateColumns="False" DataKeyNames="staff_position_id" 
+         OnRowCancelingEdit="GrdStaffPosition_RowCancelingEdit" 
+         OnRowDataBound="GrdStaffPosition_RowDataBound" 
+         OnRowEditing="GrdStaffPosition_RowEditing" 
+         OnRowUpdating="GrdStaffPosition_RowUpdating" ShowFooter="True" 
+         OnRowCommand="GrdStaffPosition_RowCommand" 
+         OnRowDeleting="GrdStaffPosition_RowDeleting" 
+         OnRowCreated="GrdStaffPosition_RowCreated"
+         AllowSorting="True" 
+         OnSorting="GridView_Sorting"
+         ClientIDMode="Predictable">
+
+        <Columns> 
+
+            <asp:TemplateField HeaderText="ID"  HeaderStyle-HorizontalAlign="Left" SortExpression="staff_position_id"> 
+                <EditItemTemplate> 
+                    <asp:Label ID="lblId" runat="server" Text='<%# Bind("staff_position_id") %>'></asp:Label>
+                </EditItemTemplate> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblId" runat="server" Text='<%# Bind("staff_position_id") %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Descr" HeaderStyle-HorizontalAlign="Left" SortExpression="descr" ItemStyle-Width="250"> 
+                <EditItemTemplate> 
+                    <asp:TextBox Width="75%" ID="txtDescr" runat="server" Text='<%# Bind("descr") %>'></asp:TextBox> 
+                    <asp:RequiredFieldValidator ID="txtValidateDescrRequired" runat="server" CssClass="failureNotification"  
+                        ControlToValidate="txtDescr" 
+                        ErrorMessage="Descr is required."
+                        Display="Dynamic"
+                        ValidationGroup="EditStaffPositionValidationSummary">*</asp:RequiredFieldValidator>
+                    <asp:RegularExpressionValidator ID="txtValidateDescrRegex" runat="server" CssClass="failureNotification" 
+                        ControlToValidate="txtDescr"
+                        ValidationExpression="^[a-zA-Z0-9]+$"
+                        ErrorMessage="Descr can only be letters, numbers, and underscore."
+                        Display="Dynamic"
+                        ValidationGroup="EditStaffPositionValidationSummary">*</asp:RegularExpressionValidator>
+                </EditItemTemplate> 
+                <FooterTemplate>
+                    <asp:TextBox Width="75%" ID="txtNewDescr" runat="server" ></asp:TextBox>
+                    <asp:RequiredFieldValidator ID="txtValidateNewDescrRequired" runat="server" CssClass="failureNotification"  
+                        ControlToValidate="txtNewDescr" 
+                        ErrorMessage="Descr is required."
+                        Display="Dynamic"
+                        ValidationGroup="AddStaffPositionValidationGroup">*</asp:RequiredFieldValidator>
+                    <asp:RegularExpressionValidator ID="txtValidateNewDescrRegex" runat="server" CssClass="failureNotification" 
+                        ControlToValidate="txtNewDescr"
+                        ValidationExpression="^[a-zA-Z0-9]+$"
+                        ErrorMessage="Descr can only be letters, numbers, and underscore."
+                        Display="Dynamic"
+                        ValidationGroup="AddStaffPositionValidationGroup">*</asp:RegularExpressionValidator>
+                </FooterTemplate> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblDescr" runat="server" Text='<%# Bind("descr") %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="" ShowHeader="False" HeaderStyle-HorizontalAlign="Left" FooterStyle-VerticalAlign="Top"> 
+                <EditItemTemplate> 
+                    <asp:LinkButton ID="lnkUpdate" runat="server" CausesValidation="True" CommandName="Update" Text="Update" ValidationGroup="EditStaffPositionValidationSummary"></asp:LinkButton> 
+                    <asp:LinkButton ID="lnkCancel" runat="server" CausesValidation="False" CommandName="Cancel" Text="Cancel"></asp:LinkButton> 
+                </EditItemTemplate> 
+                <FooterTemplate> 
+                    <asp:LinkButton ID="lnkAdd" runat="server" CausesValidation="True" CommandName="Insert" Text="Insert" ValidationGroup="AddStaffPositionValidationGroup"></asp:LinkButton> 
+                </FooterTemplate> 
+                <ItemTemplate> 
+                   <asp:ImageButton ID="lnkEdit" runat="server" CommandName="Edit" ImageUrl="~/images/Inline-edit-icon-20.png"  AlternateText="Inline Edit" ToolTip="Inline Edit"/>
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+        </Columns> 
+
+    </asp:GridView>
+
+    </p>
+    <p>
+        <asp:Label ID="Label1" runat="server"></asp:Label>
+    </p>
+
+    <p>
+    </p>
+</asp:Content>

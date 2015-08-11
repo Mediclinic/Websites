@@ -1,0 +1,105 @@
+﻿<%@ Page Title="RegistrationInfo" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true"
+    CodeFile="RegisterReferrersToPatient.aspx.cs" Inherits="RegisterReferrersToPatient" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+    <h2 id="heading" runat="server">
+       Manage Referrer For 
+    </h2>
+
+        <br />
+        <asp:ValidationSummary ID="EditRegistrationValidationSummary" runat="server" CssClass="failureNotification" 
+             ValidationGroup="EditRegistrationValidationSummary"/>
+        <asp:ValidationSummary ID="AddRegistrationValidationSummary" runat="server" CssClass="failureNotification" 
+             ValidationGroup="AddRegistrationValidationGroup"/>
+        <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+
+    <p>
+    <asp:GridView ID="GrdRegistration" runat="server" 
+         AutoGenerateColumns="False" DataKeyNames="pr_patient_referrer_id" 
+         OnRowCancelingEdit="GrdRegistration_RowCancelingEdit" 
+         OnRowDataBound="GrdRegistration_RowDataBound" 
+         OnRowEditing="GrdRegistration_RowEditing" 
+         OnRowUpdating="GrdRegistration_RowUpdating" ShowFooter="False" 
+         OnRowCommand="GrdRegistration_RowCommand" 
+         OnRowDeleting="GrdRegistration_RowDeleting" 
+         OnRowCreated="GrdRegistration_RowCreated"
+         AllowSorting="True" 
+         OnSorting="GridView_Sorting"
+         ClientIDMode="Predictable">
+
+        <Columns> 
+
+            <asp:TemplateField HeaderText="ID"  HeaderStyle-HorizontalAlign="Left" SortExpression="pr_patient_referrer_id"> 
+                <EditItemTemplate> 
+                    <asp:Label ID="lblId" runat="server" Text='<%# Bind("pr_patient_referrer_id") %>'></asp:Label>
+                </EditItemTemplate> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblId" runat="server" Text='<%# Bind("pr_patient_referrer_id") %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Referrer" HeaderStyle-HorizontalAlign="Left" SortExpression="referrer_person_surname" FooterStyle-VerticalAlign="Top"> 
+                <EditItemTemplate> 
+                    <asp:DropDownList ID="ddlReferrer" runat="server" DataTextField="name" DataValueField="register_referrer_id"> </asp:DropDownList> 
+                </EditItemTemplate> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblReferrer" runat="server" Text='<%# Eval("referrer_person_surname") + ", " + Eval("referrer_person_firstname") + " [" + Eval("organisation_name") + "]" %>'></asp:Label> 
+                </ItemTemplate> 
+                <FooterTemplate> 
+                    <asp:DropDownList ID="ddlNewReferrer" runat="server" DataTextField="name" DataValueField="referrer_id"> </asp:DropDownList>
+                </FooterTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Debtor" SortExpression="pr_is_debtor" FooterStyle-VerticalAlign="Top"> 
+                <EditItemTemplate> 
+                    <asp:CheckBox ID="chkPatientReferrerIsDebtor" runat="server"  Checked='<%# Eval("pr_is_debtor").ToString()=="True"?true:false %>' />
+                </EditItemTemplate> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblPatientReferrerIsDebtor" runat="server" Text='<%# Eval("pr_is_debtor").ToString()=="True"?"Yes":"No" %>'></asp:Label> 
+                </ItemTemplate> 
+                <FooterTemplate> 
+                    <asp:CheckBox ID="chkNewPatientReferrerIsDebtor" runat="server" TextAlign="Left" />
+                </FooterTemplate> 
+            </asp:TemplateField>
+
+            <asp:TemplateField HeaderText="Date Added"  HeaderStyle-HorizontalAlign="Left" SortExpression="pr_patient_referrer_date_added"> 
+                <EditItemTemplate> 
+                    <asp:Label ID="lblDateAdded" runat="server" Text='<%# Eval("pr_patient_referrer_date_added", "{0:dd-MM-yyyy}") %>'></asp:Label>
+                </EditItemTemplate> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblDateAdded" runat="server" Text='<%# Eval("pr_patient_referrer_date_added", "{0:dd-MM-yyyy}") %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+
+            <asp:TemplateField HeaderText="Edit" ShowHeader="False" HeaderStyle-HorizontalAlign="Left" FooterStyle-VerticalAlign="Top"> 
+                <EditItemTemplate> 
+                    <asp:LinkButton ID="lnkUpdate" runat="server" CausesValidation="True" CommandName="Update" Text="Update" ValidationGroup="EditRegistrationValidationSummary"></asp:LinkButton> 
+                    <asp:LinkButton ID="lnkCancel" runat="server" CausesValidation="False" CommandName="Cancel" Text="Cancel"></asp:LinkButton> 
+                </EditItemTemplate> 
+                <FooterTemplate> 
+                    <asp:LinkButton ID="lnkAdd" runat="server" CausesValidation="True" CommandName="Insert" Text="Insert" ValidationGroup="AddRegistrationValidationGroup"></asp:LinkButton> 
+                </FooterTemplate> 
+                <ItemTemplate> 
+                    <asp:LinkButton ID="lnkEdit" runat="server" CausesValidation="False" CommandName="Edit" Text="Edit"></asp:LinkButton> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:CommandField HeaderText="Delete" ShowDeleteButton="True" ShowHeader="True" /> 
+        </Columns> 
+
+    </asp:GridView>
+
+    </p>
+    <p>
+        <asp:Label ID="Label1" runat="server"></asp:Label>
+        <br />
+        <br />
+        <asp:HyperLink ID="lnkThisPatient" runat="server" NavigateUrl="~/PatientInfo.aspx?id=">Edit</asp:HyperLink> 
+    </p>
+
+    <p>
+    </p>
+</asp:Content>

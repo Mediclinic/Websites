@@ -1,0 +1,105 @@
+﻿<%@ Page Title="RegistrationInfo" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="RegisterPatientsToOrganisation.aspx.cs" Inherits="RegisterPatientToOrganisation" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script type="text/javascript">
+
+        function open_new_window(URL) {
+            NewWindow = window.open(URL, "_blank", "toolbar=no,menubar=0,status=0,copyhistory=0,scrollbars=yes,resizable=1,location=0,height=" + screen.height + ',width=' + screen.width);
+            NewWindow.location = URL;
+        }
+
+    </script>
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+    <h2 id="heading" runat="server">
+       Manage Registrations For 
+    </h2>
+
+    <br />
+    <asp:ValidationSummary ID="EditRegistrationValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditRegistrationValidationSummary"/>
+    <asp:ValidationSummary ID="AddRegistrationValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="AddRegistrationValidationGroup"/>
+    <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+    
+    <br />
+    <asp:GridView ID="GrdRegistration" runat="server" 
+         AutoGenerateColumns="False" DataKeyNames="register_patient_id" 
+         OnRowCancelingEdit="GrdRegistration_RowCancelingEdit" 
+         OnRowDataBound="GrdRegistration_RowDataBound" 
+         OnRowEditing="GrdRegistration_RowEditing" 
+         OnRowUpdating="GrdRegistration_RowUpdating" ShowFooter="False" 
+         OnRowCommand="GrdRegistration_RowCommand" 
+         OnRowDeleting="GrdRegistration_RowDeleting" 
+         OnRowCreated="GrdRegistration_RowCreated"
+         AllowSorting="True" 
+         OnSorting="GridView_Sorting"
+         AllowPaging="True"
+         OnPageIndexChanging="GrdRegistration_PageIndexChanging"
+         PageSize="25"
+         ClientIDMode="Predictable">
+         <PagerSettings Mode="NumericFirstLast" FirstPageText="First" PreviousPageText="Previous" NextPageText="Next" LastPageText="Last" />
+
+        <Columns> 
+
+            <asp:TemplateField HeaderText="ID"  HeaderStyle-HorizontalAlign="Left" SortExpression="register_patient_id"> 
+                <EditItemTemplate> 
+                    <asp:Label ID="lblId" runat="server" Text='<%# Bind("register_patient_id") %>'></asp:Label>
+                </EditItemTemplate> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblId" runat="server" Text='<%# Bind("register_patient_id") %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Patient" HeaderStyle-HorizontalAlign="Left" SortExpression="surname,firstname,middlename" FooterStyle-VerticalAlign="Top"> 
+                <EditItemTemplate> 
+                    <asp:DropDownList ID="ddlPatient" runat="server"> </asp:DropDownList> 
+                </EditItemTemplate> 
+                <ItemTemplate> 
+                    <asp:Label ID="lnkPatient" runat="server" Text='<%# Eval("surname") + ", " + Eval("firstname") + " " + Eval("middlename") %>'></asp:Label> 
+                </ItemTemplate> 
+                <FooterTemplate> 
+                    <asp:DropDownList ID="ddlNewPatient" runat="server"> </asp:DropDownList>
+                </FooterTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Date Added"  HeaderStyle-HorizontalAlign="Left" SortExpression="register_patient_date_added"> 
+                <EditItemTemplate> 
+                    <asp:Label ID="lblDateAdded" runat="server" Text='<%# Eval("register_patient_date_added", "{0:dd-MM-yyyy}") %>'></asp:Label>
+                </EditItemTemplate> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblDateAdded" runat="server" Text='<%# Eval("register_patient_date_added", "{0:dd-MM-yyyy}") %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Booking" HeaderStyle-HorizontalAlign="Left" ItemStyle-HorizontalAlign="Center" SortExpression="num_registered_orgs"> 
+                <EditItemTemplate> 
+                </EditItemTemplate> 
+                <ItemTemplate> 
+                    <asp:HyperLink ID="lnkBookings" runat="server" NavigateUrl='<%#  String.Format("~/BookingScreenGetPatientOrgs.aspx?patient_id={0}",Eval("patient_id")) %>' ImageUrl="~/images/Calendar-icon-24px.png" AlternateText="Bookings" ToolTip="Bookings" />
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Edit" ShowHeader="False" HeaderStyle-HorizontalAlign="Left" FooterStyle-VerticalAlign="Top" Visible="false"> 
+                <EditItemTemplate> 
+                    <asp:LinkButton ID="lnkUpdate" runat="server" CausesValidation="True" CommandName="Update" Text="Update" ValidationGroup="EditRegistrationValidationSummary"></asp:LinkButton> 
+                    <asp:LinkButton ID="lnkCancel" runat="server" CausesValidation="False" CommandName="Cancel" Text="Cancel"></asp:LinkButton> 
+                </EditItemTemplate> 
+                <FooterTemplate> 
+                    <asp:LinkButton ID="lnkAdd" runat="server" CausesValidation="True" CommandName="Insert" Text="Insert" ValidationGroup="AddRegistrationValidationGroup"></asp:LinkButton> 
+                </FooterTemplate> 
+                <ItemTemplate> 
+                    <asp:LinkButton ID="lnkEdit" runat="server" CausesValidation="False" CommandName="Edit" Text="Edit"></asp:LinkButton> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:CommandField HeaderText="Delete" ShowDeleteButton="True" ShowHeader="True" /> 
+        </Columns> 
+
+    </asp:GridView>
+
+    <p>
+        <asp:Label ID="Label1" runat="server"></asp:Label>
+        <br />
+        <asp:HyperLink ID="lnkThisOrg" runat="server" NavigateUrl="~/OrganisationInfo.aspx?id=">Edit</asp:HyperLink> 
+    </p>
+
+</asp:Content>

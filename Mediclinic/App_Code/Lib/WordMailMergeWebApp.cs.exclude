@@ -1,0 +1,161 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Data;
+using System.IO;
+//using TMMC.CommonLibrary;
+using Microsoft.Office;
+using Word = Microsoft.Office.Interop.Word;
+
+
+
+// this file is not used
+// it is only if i want an example how to merge multiple datarows ...
+
+namespace WordMailMergeWebApp
+{
+    public class MailMerge
+    {
+        public static bool MergeDataWithWordTemplate(string sourceTemplatePath, string outputDocPath, DataSet sourceData, out string errorString)
+        {
+            #region Declares
+            errorString = "";
+            Object oMissing = System.Reflection.Missing.Value; //null value
+            Object oTrue = true;
+            Object oFalse = false;
+            Object oTemplatePath = sourceTemplatePath;
+            Object oOutputPath = outputDocPath;
+            Object oOutputPathTemp = outputDocPath.Substring(0, outputDocPath.IndexOf(".doc")) + "_temp.doc";
+            Object sectionStart = (Object)Microsoft.Office.Interop.Word.WdSectionStart.wdSectionNewPage;
+
+            Word.Application oWord = null;
+            Word.Document oWordDoc = null; //the document to load into word application
+            Word.Document oFinalWordDoc = null; //the document to load into word application
+            #endregion
+
+            try
+            {
+                oWord = new Word.Application(); //starts an instance of word
+                oWord.Visible = false; //don't show the UI
+
+                //create an empty document that we will insert all the merge docs into
+                oFinalWordDoc = oWord.Documents.Add(ref oMissing, ref oMissing, ref oMissing, ref oMissing);
+
+                //for each record in the dataset
+                int count = 1;
+                foreach (DataRow dr in sourceData.Tables[0].Rows)
+                {
+                    //Log.Out("MailMerge:CreateMergeDoc() adding a document for this record");
+
+                    //insert a document for each record
+                    oWordDoc = oWord.Documents.Add(ref oTemplatePath, ref oMissing, ref oMissing, ref oMissing);
+                    if (oWordDoc.Fields.Count == 0)
+                    {
+                        //Log.Out("MailMerge:CreateMergeDoc() No template fields found in document:" + sourceTemplatePath);
+                        return false;
+                    }
+                    oWordDoc.Activate(); //make current
+
+                    // Perform mail merge field
+                    foreach (Word.Field myMergeField in oWordDoc.Fields)
+                    {
+                        Word.Range rngFieldCode = myMergeField.Code;
+                        String fieldText = rngFieldCode.Text;
+
+                        // ONLY GET THE MAILMERGE FIELDS
+                        if (fieldText.StartsWith(" MERGEFIELD"))
+                        {
+                            // THE TEXT COMES IN THE FORMAT OF
+                            // MERGEFIELD MyFieldName \\* MERGEFORMAT
+                            // THIS HAS TO BE EDITED TO GET ONLY THE FIELDNAME "MyFieldName"
+                            Int32 endMerge = fieldText.IndexOf("\\");
+                            Int32 fieldNameLength = fieldText.Length - endMerge;
+                            String fieldName = fieldText.Substring(11, endMerge - 11);
+
+                            // GIVES THE FIELDNAMES AS THE USER HAD ENTERED IN .dot FILE
+                            //field names with spaces in them have quotes on either end, so strip those
+                            fieldName = fieldName.Trim().Replace("\"", "");
+
+                            //Log.Out(Log.LOGLEVEL_STANDARD, "DeviceLabelPrinter:SendAndReceive() found word template field: " + fieldName);
+
+                            //find a matching dataset column
+                            foreach (DataColumn col in sourceData.Tables[0].Columns)
+                            {
+                                string key = col.ColumnName;
+                                string value = dr[key].ToString();
+
+                                // **** FIELD REPLACEMENT IMPLEMENTATION GOES HERE ****//
+                                // THE PROGRAMMER CAN HAVE HIS OWN IMPLEMENTATIONS HERE
+                                if (fieldName == key)
+                                {
+                                    //Log.Out(Log.LOGLEVEL_STANDARD, "DeviceLabelPrinter:SendAndReceive() setting value: " + value);
+
+                                    myMergeField.Select();
+                                    oWord.Selection.TypeText(value);
+                                }
+                            }
+                        }
+                    }
+
+                    //Log.Out(Log.LOGLEVEL_STANDARD, "DeviceLabelPrinter:SendAndReceive() saving the doc");
+
+                    //SAVE THE DOCUMENT as temp
+                    oWordDoc.SaveAs(ref oOutputPathTemp, ref oMissing, ref oMissing, ref oMissing
+                    , ref oMissing, ref oMissing, ref oMissing, ref oMissing
+                    , ref oMissing, ref oMissing, ref oMissing, ref oMissing
+                    , ref oMissing, ref oMissing, ref oMissing, ref oMissing);
+
+                    //Log.Out(Log.LOGLEVEL_STANDARD, "DeviceLabelPrinter:SendAndReceive() closing the doc");
+
+                    //CLOSE THE DOCUMENT
+                    oWordDoc.Close(ref oFalse, ref oMissing, ref oMissing);
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(oWordDoc);
+                    oWordDoc = null;
+
+                    //NOW ADD THE NEW DOC TO THE MAIN DOC
+                    oFinalWordDoc.Activate(); //make current
+                    oWord.Selection.InsertFile(oOutputPathTemp.ToString(), ref oMissing, ref oMissing, ref oMissing, ref oMissing);
+
+                    if (count < sourceData.Tables[0].Rows.Count)
+                        oWord.Selection.InsertBreak(ref sectionStart);
+
+                    count++;
+                }
+
+                //SAVE THE FINAL DOC
+                oFinalWordDoc.SaveAs(ref oOutputPath, ref oMissing, ref oMissing, ref oMissing
+                , ref oMissing, ref oMissing, ref oMissing, ref oMissing
+                , ref oMissing, ref oMissing, ref oMissing, ref oMissing
+                , ref oMissing, ref oMissing, ref oMissing, ref oMissing);
+
+                //CLOSE THE FINAL DOC
+                oFinalWordDoc.Close(ref oFalse, ref oMissing, ref oMissing);
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(oFinalWordDoc);
+                oFinalWordDoc = null;
+
+                //now delete the temp file
+                File.Delete(oOutputPathTemp.ToString());
+
+                //Log.Out(Log.LOGLEVEL_STANDARD, "DeviceLabelPrinter:SendAndReceive() Merge complete, printing document");
+
+                return true;
+            }
+            catch (System.Exception ex)
+            {
+                errorString = ex.Message;
+            }
+            finally
+            {
+                //RELEASE WORD ITSELF
+                oWord.Quit(ref oMissing, ref oMissing, ref oMissing);
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(oWord);
+                oWord = null;
+
+                GC.Collect();
+            }
+
+            return false;
+        }
+    }
+}
+

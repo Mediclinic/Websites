@@ -1,0 +1,320 @@
+﻿<%@ Page Title="AddressInfo" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="StreetAndSuburbInfo.aspx.cs" Inherits="StreetAndSuburbInfo" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script type="text/javascript">
+
+        function quick_add(fromTxtBox, toTxtBox, focusToTxtbox) {
+            document.getElementById(toTxtBox).value = document.getElementById(fromTxtBox).value.trim();
+            if (focusToTxtbox)
+                document.getElementById(toTxtBox).focus();
+        }
+
+    </script>
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <h2></h2>
+
+    <asp:ValidationSummary ID="EditSuburbValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditSuburbValidationSummary"/>
+    <asp:ValidationSummary ID="AddSuburbValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="AddSuburbValidationGroup"/>
+
+    <asp:ValidationSummary ID="EditChannelValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditChannelValidationSummary"/>
+    <asp:ValidationSummary ID="AddChannelValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="AddChannelValidationGroup"/>
+
+    <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+
+    <table>
+
+        <tr>
+            <td valign="top">
+                <asp:LinkButton ID="btnHoverToolTip1" runat="server" Text="?" ToolTip="Display only those channels starting with the entered text" />
+            </td>
+            <td valign="top">
+                <asp:Label ID="lblSearch1" runat="server">Search By Street: </asp:Label>
+            </td>
+            <td valign="top">
+                <asp:TextBox ID="txtSearchChannel" runat="server"></asp:TextBox>
+            </td>
+            <td valign="top">
+                <asp:Button ID="btnSearchChannel" runat="server" Text="Search" onclick="btnSearchChannel_Click" />
+                <asp:Button ID="btnClearChannelSearch" runat="server" Text="Clear" onclick="btnClearChannelSearch_Click" />
+                <asp:Button ID="btnQuickAddChannel" runat="server" Text="Add" OnClientClick="quick_add('txtSearchChannel','MainContent_GrdAddressChannel_txtNewChannelDescr', true); return false;" />
+            </td>
+
+            <td style="width:60px"></td>
+
+            <td valign="top">
+                <asp:LinkButton ID="btnHoverToolTip" runat="server" Text="?" ToolTip="Display only those suburbs starting with the entered text" />
+            </td>
+            <td valign="top">
+                <asp:Label ID="lblSearchSuburb" runat="server">Search By Suburb: </asp:Label>
+            </td>
+            <td valign="top">
+                <asp:TextBox ID="txtSearchSuburb" runat="server"></asp:TextBox>
+            </td>
+            <td>
+                <asp:Button ID="btnSearchSuburb" runat="server" Text="Search" onclick="btnSearchSuburb_Click" />
+                <asp:Button ID="btnClearSuburbSearch" runat="server" Text="Clear" onclick="btnClearSuburbSearch_Click" />
+                <asp:Button ID="btnQuickAddSuburb" runat="server" Text="Add" OnClientClick="quick_add('txtSearchSuburb','MainContent_GrdSuburb_txtNewName', true); return false;" />
+            </td>
+        </tr>
+
+        <tr>
+            <td colspan="4"></td>
+
+            <td style="width:60px"></td>
+
+            <td valign="top">
+                <asp:LinkButton ID="btnHoverToolTip2" runat="server" Text="?" ToolTip="Display only those suburbs with a postcode containing the entered text" />
+            </td>
+            <td>
+                <asp:Label ID="lblSearchPostcode" runat="server">Search By Postcode: </asp:Label>
+            </td>
+            <td valign="top">
+                <asp:TextBox ID="txtSearchPostcode" runat="server"></asp:TextBox>
+            </td>
+            <td valign="top">
+                <asp:Button ID="btnSearchPostcode" runat="server" Text="Search" onclick="btnSearchPostcode_Click" />
+                <asp:Button ID="btnClearPostcodeSearch" runat="server" Text="Clear" onclick="btnClearPostcodeSearch_Click" />
+                <asp:Button ID="btnQuickAddPostcode" runat="server" Text="Add" OnClientClick="quick_add('txtSearchPostcode','MainContent_GrdSuburb_txtNewPostcode', true); return false;" />
+            </td>
+        </tr>
+
+        <tr style="height:16px"></tr>
+
+        <tr>
+            <td valign="top" align="center" colspan="4">
+                <asp:GridView ID="GrdAddressChannel" runat="server" 
+                     AutoGenerateColumns="False" DataKeyNames="ac_address_channel_id" 
+                     OnRowCancelingEdit="GrdAddressChannel_RowCancelingEdit" 
+                     OnRowDataBound="GrdAddressChannel_RowDataBound" 
+                     OnRowEditing="GrdAddressChannel_RowEditing" 
+                     OnRowUpdating="GrdAddressChannel_RowUpdating" ShowFooter="True" 
+                     OnRowCommand="GrdAddressChannel_RowCommand" 
+                     OnRowDeleting="GrdAddressChannel_RowDeleting" 
+                     OnRowCreated="GrdAddressChannel_RowCreated"
+                     AllowSorting="True" 
+                     OnSorting="GrdAddressChannel_Sorting"
+                     RowStyle-VerticalAlign="top"
+                     AllowPaging="True"
+                     OnPageIndexChanging="GrdAddressChannel_PageIndexChanging"
+                     PageSize="22"
+                     ClientIDMode="Predictable">
+                    <PagerSettings Mode="NumericFirstLast" FirstPageText="First" PreviousPageText="Previous" NextPageText="Next" LastPageText="Last" />
+                     
+                    <Columns> 
+
+                        <asp:TemplateField HeaderText="ID"  HeaderStyle-HorizontalAlign="Left" SortExpression="ac_address_channel_id"> 
+                            <EditItemTemplate> 
+                                <asp:Label ID="lblId" runat="server" Text='<%# Bind("ac_address_channel_id") %>'></asp:Label>
+                            </EditItemTemplate> 
+                            <ItemTemplate> 
+                                <asp:Label ID="lblId" runat="server" Text='<%# Bind("ac_address_channel_id") %>'></asp:Label> 
+                            </ItemTemplate> 
+                        </asp:TemplateField>
+                
+                        <asp:TemplateField HeaderText="Name" HeaderStyle-HorizontalAlign="Left" SortExpression="ac_descr" FooterStyle-VerticalAlign="Top"> 
+                            <EditItemTemplate> 
+                                <asp:TextBox Width="90%" ID="txtChannelDescr" runat="server" Text='<%# Bind("ac_descr") %>'></asp:TextBox> 
+                                <asp:RequiredFieldValidator ID="txtValidateChannelDescrRequired" runat="server" CssClass="failureNotification"  
+                                    ControlToValidate="txtChannelDescr" 
+                                    ErrorMessage="Channel Descr is required."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditChannelValidationSummary">*</asp:RequiredFieldValidator>
+                            </EditItemTemplate> 
+                            <FooterTemplate>
+                                <asp:TextBox Width="90%" ID="txtNewChannelDescr" runat="server" ></asp:TextBox>
+                                <asp:RequiredFieldValidator ID="txtValidateNewChannelDescrRequired" runat="server" CssClass="failureNotification"  
+                                    ControlToValidate="txtNewChannelDescr" 
+                                    ErrorMessage="ChannelDescr is required."
+                                    Display="Dynamic"
+                                    ValidationGroup="AddChannelValidationGroup">*</asp:RequiredFieldValidator>
+                            </FooterTemplate> 
+                            <ItemTemplate> 
+                                <asp:Label ID="lblChannelDescr" runat="server" Text='<%# Bind("ac_descr") %>'></asp:Label> 
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                        <asp:TemplateField HeaderText="Street" HeaderStyle-HorizontalAlign="Left" SortExpression="ac_descr" FooterStyle-VerticalAlign="Top"> 
+                            <EditItemTemplate> 
+                                <asp:DropDownList ID="ddlAddressChannelType" runat="server" DataTextField="act_descr" DataValueField="ac_address_channel_type_id"> </asp:DropDownList> 
+                            </EditItemTemplate> 
+                            <ItemTemplate> 
+                                <asp:Label ID="lblAddressChannelType" runat="server" Text='<%# Eval("act_descr") %>'></asp:Label> 
+                            </ItemTemplate> 
+                            <FooterTemplate> 
+                                <asp:DropDownList ID="ddlNewAddressChannelType" runat="server" DataTextField="descr" DataValueField="address_channel_type_id"> </asp:DropDownList>
+                            </FooterTemplate> 
+                        </asp:TemplateField> 
+
+
+                        <asp:TemplateField HeaderText="" ShowHeader="False" HeaderStyle-HorizontalAlign="Left" FooterStyle-VerticalAlign="Top"> 
+                            <EditItemTemplate> 
+                                <asp:LinkButton ID="lnkUpdate" runat="server" CausesValidation="True" CommandName="Update" Text="Update" ValidationGroup="EditChannelValidationSummary"></asp:LinkButton> 
+                                <asp:LinkButton ID="lnkCancel" runat="server" CausesValidation="False" CommandName="Cancel" Text="Cancel"></asp:LinkButton> 
+                            </EditItemTemplate> 
+                            <FooterTemplate> 
+                                <asp:LinkButton ID="lnkAdd" runat="server" CausesValidation="True" CommandName="Insert" Text="Insert" ValidationGroup="AddChannelValidationGroup"></asp:LinkButton> 
+                            </FooterTemplate> 
+                            <ItemTemplate> 
+                               <asp:ImageButton ID="lnkEdit" runat="server" CommandName="Edit" ImageUrl="~/images/Inline-edit-icon-24.png"  AlternateText="Inline Edit" ToolTip="Inline Edit"/>
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                        <%--
+                        <asp:CommandField HeaderText="" ShowDeleteButton="True" ShowHeader="True" ButtonType="Image"  DeleteImageUrl="~/images/Delete-icon-24.png" /> 
+                        --%>
+
+                    </Columns> 
+                </asp:GridView>
+            </td>
+            <td></td>
+            <td valign="top" align="center" colspan="4">
+                <asp:GridView ID="GrdSuburb" runat="server" 
+                     AutoGenerateColumns="False" DataKeyNames="suburb_id" 
+                     OnRowCancelingEdit="GrdSuburb_RowCancelingEdit" 
+                     OnRowDataBound="GrdSuburb_RowDataBound" 
+                     OnRowEditing="GrdSuburb_RowEditing" 
+                     OnRowUpdating="GrdSuburb_RowUpdating" ShowFooter="True" 
+                     OnRowCommand="GrdSuburb_RowCommand" 
+                     OnRowDeleting="GrdSuburb_RowDeleting" 
+                     OnRowCreated="GrdSuburb_RowCreated"
+                     AllowSorting="True" 
+                     OnSorting="GrdSuburb_Sorting"
+                     RowStyle-VerticalAlign="top"
+                     AllowPaging="True"
+                     OnPageIndexChanging="GrdSuburb_PageIndexChanging"
+                     PageSize="22"
+                     ClientIDMode="Predictable">
+                    <PagerSettings Mode="NumericFirstLast" FirstPageText="First" PreviousPageText="Previous" NextPageText="Next" LastPageText="Last" />
+
+                    <Columns> 
+
+                        <asp:TemplateField HeaderText="ID"  HeaderStyle-HorizontalAlign="Left" SortExpression="suburb_id"> 
+                            <EditItemTemplate> 
+                                <asp:Label ID="lblSuburbId" runat="server" Text='<%# Bind("suburb_id") %>'></asp:Label>
+                            </EditItemTemplate> 
+                            <ItemTemplate> 
+                                <asp:Label ID="lblSuburbId" runat="server" Text='<%# Bind("suburb_id") %>'></asp:Label> 
+                            </ItemTemplate> 
+                        </asp:TemplateField>
+                
+                        <asp:TemplateField HeaderText="Name" HeaderStyle-HorizontalAlign="Left" SortExpression="name" FooterStyle-VerticalAlign="Top"> 
+                            <EditItemTemplate> 
+                                <asp:TextBox Width="90%" ID="txtName" runat="server" Text='<%# Bind("name") %>'></asp:TextBox> 
+                                <asp:RequiredFieldValidator ID="txtValidateNameRequired" runat="server" CssClass="failureNotification"  
+                                    ControlToValidate="txtName" 
+                                    ErrorMessage="Name is required."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditSuburbValidationSummary">*</asp:RequiredFieldValidator>
+                                <asp:RegularExpressionValidator ID="txtValidateNameRegex" runat="server" CssClass="failureNotification" 
+                                    ControlToValidate="txtName"
+                                    ValidationExpression="^[a-zA-Z\-\s]+$"
+                                    ErrorMessage="Name can only be letters or hyphens."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditSuburbValidationSummary">*</asp:RegularExpressionValidator>
+                            </EditItemTemplate> 
+                            <FooterTemplate>
+                                <asp:TextBox Width="90%" ID="txtNewName" runat="server" ></asp:TextBox>
+                                <asp:RequiredFieldValidator ID="txtValidateNewNameRequired" runat="server" CssClass="failureNotification"  
+                                    ControlToValidate="txtNewName" 
+                                    ErrorMessage="Name is required."
+                                    Display="Dynamic"
+                                    ValidationGroup="AddSuburbValidationGroup">*</asp:RequiredFieldValidator>
+                                <asp:RegularExpressionValidator ID="txtValidateNewNameRegex" runat="server" CssClass="failureNotification" 
+                                    ControlToValidate="txtNewName"
+                                    ValidationExpression="^[a-zA-Z\-\s]+$"
+                                    ErrorMessage="Name can only be letters or hyphens."
+                                    Display="Dynamic"
+                                    ValidationGroup="AddSuburbValidationGroup">*</asp:RegularExpressionValidator>
+                            </FooterTemplate> 
+                            <ItemTemplate> 
+                                <asp:Label ID="lblName" runat="server" Text='<%# Bind("name") %>'></asp:Label> 
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                        <asp:TemplateField HeaderText="Postcode" HeaderStyle-HorizontalAlign="Left" SortExpression="postcode" FooterStyle-VerticalAlign="Top"> 
+                            <EditItemTemplate> 
+                                <asp:TextBox Width="40" ID="txtPostcode" runat="server" Text='<%# Bind("postcode") %>'></asp:TextBox> 
+                                <asp:RequiredFieldValidator ID="txtValidatePostcodeRequired" runat="server" CssClass="failureNotification"  
+                                    ControlToValidate="txtPostcode" 
+                                    ErrorMessage="Postcode is required."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditSuburbValidationSummary">*</asp:RequiredFieldValidator>
+                                <asp:RegularExpressionValidator ID="txtValidatePostcodeRegex" runat="server" CssClass="failureNotification" 
+                                    ControlToValidate="txtPostcode"
+                                    ValidationExpression="^\d{4,5}$"
+                                    ErrorMessage="Postcode must be exactly 4-5 digits and no other characters."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditSuburbValidationSummary">*</asp:RegularExpressionValidator>
+                                <asp:CustomValidator ID="txtValidatePostcodeUnique" runat="server"  CssClass="failureNotification"  
+                                    ControlToValidate="txtPostcode"
+                                    OnServerValidate="PostcodeUniqueCheck"
+                                    ErrorMessage="Postcode already exists."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditSuburbValidationSummary">*</asp:CustomValidator>
+                            </EditItemTemplate> 
+                            <FooterTemplate>
+                                <asp:TextBox Width="40" ID="txtNewPostcode" runat="server" ></asp:TextBox>
+                                <asp:RequiredFieldValidator ID="txtValidateNewPostcodeRequired" runat="server" CssClass="failureNotification"  
+                                    ControlToValidate="txtNewPostcode" 
+                                    ErrorMessage="Postcode is required."
+                                    Display="Dynamic"
+                                    ValidationGroup="AddSuburbValidationGroup">*</asp:RequiredFieldValidator>
+                                <asp:RegularExpressionValidator ID="txtValidateNewPostcodeRegex" runat="server" CssClass="failureNotification" 
+                                    ControlToValidate="txtNewPostcode"
+                                    ValidationExpression="^\d{4,5}$"
+                                    ErrorMessage="Postcode must be exactly 4-5 digits and no other characters."
+                                    Display="Dynamic"
+                                    ValidationGroup="AddSuburbValidationGroup">*</asp:RegularExpressionValidator>
+                                <asp:CustomValidator ID="txtValidateNewPostcodeUnique" runat="server"  CssClass="failureNotification"  
+                                    ControlToValidate="txtNewPostcode"
+                                    OnServerValidate="NewPostcodeUniqueCheck"
+                                    ErrorMessage="Postcode already exists."
+                                    Display="Dynamic"
+                                    ValidationGroup="AddSuburbValidationGroup">*</asp:CustomValidator>                            </FooterTemplate> 
+                            <ItemTemplate> 
+                                <asp:Label ID="lblPostcode" runat="server" Text='<%# Bind("postcode") %>'></asp:Label> 
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                         <asp:TemplateField HeaderText="State" HeaderStyle-HorizontalAlign="Left" SortExpression="state" FooterStyle-VerticalAlign="Top"> 
+                            <EditItemTemplate> 
+                                <asp:DropDownList ID="ddlState" runat="server"> 
+                                </asp:DropDownList> 
+                            </EditItemTemplate> 
+                            <ItemTemplate> 
+                                <asp:Label ID="lblState2" runat="server" Text='<%# Eval("state") %>'></asp:Label> 
+                            </ItemTemplate> 
+                            <FooterTemplate> 
+                                <asp:DropDownList ID="ddlNewState" runat="server">
+                                </asp:DropDownList>
+                            </FooterTemplate> 
+                        </asp:TemplateField> 
+
+
+                        <asp:TemplateField HeaderText="" ShowHeader="False" HeaderStyle-HorizontalAlign="Left" FooterStyle-VerticalAlign="Top"> 
+                            <EditItemTemplate> 
+                                <asp:LinkButton ID="lnkUpdate" runat="server" CausesValidation="True" CommandName="Update" Text="Update" ValidationGroup="EditSuburbValidationSummary"></asp:LinkButton> 
+                                <asp:LinkButton ID="lnkCancel" runat="server" CausesValidation="False" CommandName="Cancel" Text="Cancel"></asp:LinkButton> 
+                            </EditItemTemplate> 
+                            <FooterTemplate> 
+                                <asp:LinkButton ID="lnkAdd" runat="server" CausesValidation="True" CommandName="Insert" Text="Insert" ValidationGroup="AddSuburbValidationGroup"></asp:LinkButton> 
+                            </FooterTemplate> 
+                            <ItemTemplate> 
+                               <asp:ImageButton ID="lnkEdit" runat="server" CommandName="Edit" ImageUrl="~/images/Inline-edit-icon-24.png"  AlternateText="Inline Edit" ToolTip="Inline Edit"/>
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                        <%--
+                        <asp:CommandField HeaderText="" ShowDeleteButton="True" ShowHeader="True" ButtonType="Image"  DeleteImageUrl="~/images/Delete-icon-24.png" /> 
+                        --%>
+
+                    </Columns> 
+                </asp:GridView>
+            </td>
+        </tr>
+
+    </table>
+
+</asp:Content>

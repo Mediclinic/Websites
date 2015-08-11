@@ -1,0 +1,307 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Configuration;
+using System.Text.RegularExpressions;
+using System.Collections;
+
+public partial class AddReceiptsAndCreditNotes : System.Web.UI.Page
+{
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        try
+        {
+
+            HideErrorMessage();
+            Utilities.UpdatePageHeader(Page.Master, true, true);
+
+            if (!IsPostBack)
+            {
+                if (IsValidFormID())
+                {
+                    FillEmptyAddForm();
+                    SetupGUI(); // in this form, grid must be created first
+                }
+                else
+                    HideTableAndSetErrorMessage("", "Invalid URL Parameters");
+            }
+        }
+        catch (CustomMessageException ex)
+        {
+            if (IsPostBack) SetErrorMessage(ex.Message);
+            else HideTableAndSetErrorMessage(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            if (IsPostBack) SetErrorMessage("", ex.ToString());
+            else HideTableAndSetErrorMessage("", ex.ToString());
+        }
+    }
+
+
+    #region IsValidFormID(), GetFormID()
+
+    private bool IsValidFormID()
+    {
+        string id = Request.QueryString["id"];
+        return id != null && Regex.IsMatch(id, @"^\d+$");
+    }
+    private int GetFormID()
+    {
+        if (!IsValidFormID())
+            throw new Exception("Invalid url id");
+
+        string id = Request.QueryString["id"];
+        return Convert.ToInt32(id);
+    }
+
+    #endregion
+
+    #region SetupGUI()
+
+    public void SetupGUI()
+    {
+        if (Request.QueryString["window_size"] != null && Regex.IsMatch(Request.QueryString["window_size"], @"\d+_\d+"))
+        {
+            string[] size = Request.QueryString["window_size"].Split('_');
+            Page.ClientScript.RegisterStartupScript(this.GetType(), "resize_window", "<script language=javascript>window.resizeTo(" + size[0] + ", " + size[1] + ");</script>");
+        }
+
+        // if this popup is called from anotehr page that needs to send back a return value to the opening page, then set the value
+        if (Request.QueryString["returnValue"] != null)
+        {
+            string returnValue = Request.QueryString["returnValue"] != null ? Request.QueryString["returnValue"] : "false";
+
+            btnCancel.OnClientClick = "window.returnValue=" + returnValue + ";self.close();";
+
+            // make sure if user clicks "x" to close the window, this value is passed on so the other page gets this value passed on too
+            Page.ClientScript.RegisterStartupScript(this.GetType(), "on_close_window", "<script language=javascript>window.onbeforeunload = function(){ " + "window.returnValue=" + returnValue + ";" + " }</script>");
+        }
+    }
+
+    #endregion
+
+
+    private void FillEmptyAddForm()
+    {
+        Invoice invoice = InvoiceDB.GetByID(GetFormID());
+        if (invoice == null)
+        {
+            HideTableAndSetErrorMessage("Invalid invoice ID");
+            return;
+        }
+
+        lblInvoiceNbr.Text  = invoice.InvoiceID.ToString();
+        lblAmountOwing.Text = "$" + invoice.TotalDue.ToString();
+
+
+        DataTable dt = DBBase.GetGenericDataTable("ReceiptPaymentType", "receipt_payment_type_id", "descr");
+
+        // add column for displaying data in first few rows with invoice id and invoice amount owing
+        dt.Columns.Add("text");
+        dt.Columns.Add("tab_index");
+        for (int i = 0; i < dt.Rows.Count; i++)
+            dt.Rows[i]["text"] = "";
+
+        lstPayments.DataSource = dt;
+        lstPayments.DataBind();
+
+        for (int i = lstPayments.Items.Count-1; i >= 0; i--)
+        {
+            Label   lblReceiptPaymentTypeID     = (Label)lstPayments.Items[i].FindControl("lblTypeID");
+            TextBox txtReceiptPaymentTypeAmount = (TextBox)lstPayments.Items[i].FindControl("txtAmount");
+
+            Utilities.SetEditControlBackColour(txtReceiptPaymentTypeAmount,  true, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+
+            DropDownList ddlPosMachine               = (DropDownList)lstPayments.Items[i].FindControl("ddlPosMachine");
+            Label        lblPosMachineText           = (Label)lstPayments.Items[i].FindControl("lblPosMachineText");
+            Label        lnkPopupAddEditPOSMachines  = (Label)lstPayments.Items[i].FindControl("lnkPopupAddEditPOSMachines");
+            if (lblReceiptPaymentTypeID != null && ddlPosMachine != null && lnkPopupAddEditPOSMachines != null)
+            {
+                if (Convert.ToInt32(lblReceiptPaymentTypeID.Text) != 130 && Convert.ToInt32(lblReceiptPaymentTypeID.Text) != 133)
+                {
+                    ddlPosMachine.Visible = false;
+                    lblPosMachineText.Visible = false;
+                    lnkPopupAddEditPOSMachines.Visible = false;
+                }
+                else
+                {
+                    int entityID = Convert.ToBoolean(Session["IsAdmin"]) ? SiteDB.GetByID(Convert.ToInt32(Session["SiteID"])).EntityID : OrganisationDB.GetByID(Convert.ToInt32(Session["OrgID"])).EntityID;
+                    DataTable posMachinesThisOrg = POSMachineDB.GetDataTableByEntityID(entityID);
+                    ddlPosMachine.DataValueField = "pos_machine_id";
+                    ddlPosMachine.DataTextField  = "pos_id";
+                    ddlPosMachine.DataSource     = posMachinesThisOrg;
+                    ddlPosMachine.DataBind();
+
+
+                    // set the link to update pos machines popup
+                    bool isStakeholder = Session["IsStakeholder"] != null && Convert.ToBoolean(Session["IsStakeholder"]);
+                    bool isMasterAdmin = Session["IsMasterAdmin"] != null && Convert.ToBoolean(Session["IsMasterAdmin"]);
+                    bool isAdmin       = Session["IsAdmin"] != null && Convert.ToBoolean(Session["IsAdmin"]);
+                    bool isAdminView   = isStakeholder || isMasterAdmin || isAdmin;
+
+                    string allFeatures = "dialogWidth:1400px;dialogHeight:550px;center:yes;resizable:no; scroll:no";
+                    string onclick = "onclick=\"javascript:window.showModalDialog('POSMachineInfo.aspx?show_header=0', '', '" + allFeatures + "');document.getElementById('btnUpdatePOSMachineList').click();return false;\"";
+                    string href = "<a style=\"text-decoration: none\" title=\"Edit\" AlternateText=\"Edit\" " + onclick + " href=\"\" tabindex=\"-1\">Add/Edit</a>";
+                    lnkPopupAddEditPOSMachines.Text = href;
+                    lnkPopupAddEditPOSMachines.Visible = isAdminView;
+
+                    Utilities.SetEditControlBackColour(ddlPosMachine, true, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+                }
+            }
+        }
+
+        if (lstPayments.Items.Count > 0)
+        {
+            TextBox txtReceiptPaymentTypeAmount = (TextBox)lstPayments.Items[0].FindControl("txtAmount");
+            SetFocus(txtReceiptPaymentTypeAmount);
+        }
+
+
+        Utilities.SetEditControlBackColour(txtCreditNoteTotal,  true, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(txtCreditCardReason, true, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+
+        btnSubmit.Text = "Add Receipt(s)";
+        btnCancel.Visible = true;
+    }
+
+    protected void btnUpdatePOSMachineList_Click(object sender, EventArgs e)
+    {
+        for (int i = 0; i < lstPayments.Items.Count; i++)
+        {
+            Label   lblReceiptPaymentTypeID     = (Label)lstPayments.Items[i].FindControl("lblTypeID");
+            TextBox txtReceiptPaymentTypeAmount = (TextBox)lstPayments.Items[i].FindControl("txtAmount");
+
+            DropDownList ddlPosMachine               = (DropDownList)lstPayments.Items[i].FindControl("ddlPosMachine");
+            Label        lblPosMachineText           = (Label)lstPayments.Items[i].FindControl("lblPosMachineText");
+            Label        lnkPopupAddEditPOSMachines  = (Label)lstPayments.Items[i].FindControl("lnkPopupAddEditPOSMachines");
+            if (lblReceiptPaymentTypeID != null && ddlPosMachine != null && lnkPopupAddEditPOSMachines != null)
+            {
+                if (Convert.ToInt32(lblReceiptPaymentTypeID.Text) == 130 || Convert.ToInt32(lblReceiptPaymentTypeID.Text) == 133)
+                {
+                    int entityID = Convert.ToBoolean(Session["IsAdmin"]) ? SiteDB.GetByID(Convert.ToInt32(Session["SiteID"])).EntityID : OrganisationDB.GetByID(Convert.ToInt32(Session["OrgID"])).EntityID;
+                    DataTable posMachinesThisOrg = POSMachineDB.GetDataTableByEntityID(entityID);
+                    ddlPosMachine.DataValueField = "pos_machine_id";
+                    ddlPosMachine.DataTextField  = "pos_id";
+                    ddlPosMachine.DataSource     = posMachinesThisOrg;
+                    ddlPosMachine.DataBind();
+                }
+            }
+        }
+     }
+
+
+
+
+    protected void btnCancel_Click(object sender, EventArgs e)
+    {
+        // close this window
+        Page.ClientScript.RegisterStartupScript(this.GetType(), "close", "<script language=javascript>window.returnValue=false;self.close();</script>");
+    }
+    protected void btnSubmit_Click(object sender, EventArgs e)
+    {
+        if (!IsValidFormID())
+        {
+            HideTableAndSetErrorMessage();
+            return;
+        }
+        Invoice invoice = InvoiceDB.GetByID(GetFormID());
+        if (invoice == null)
+        {
+            HideTableAndSetErrorMessage("Invalid invoice ID");
+            return;
+        }
+
+
+        ArrayList receipts = new ArrayList();
+        decimal total = 0;
+        for (int i = 0; i < lstPayments.Items.Count; i++)
+        {
+            Label        lblTypeID     = (Label)       lstPayments.Items[i].FindControl("lblTypeID");
+            TextBox      txtAmount     = (TextBox)     lstPayments.Items[i].FindControl("txtAmount");
+            DropDownList ddlPosMachine = (DropDownList)lstPayments.Items[i].FindControl("ddlPosMachine");
+
+            txtAmount.Text = txtAmount.Text.Trim();
+            if (txtAmount.Text.Length > 0 && lblTypeID != null && ddlPosMachine != null)
+            {
+
+                if ((Convert.ToInt32(lblTypeID.Text) == 130 || Convert.ToInt32(lblTypeID.Text) == 133) && ddlPosMachine.Items.Count == 0)
+                {
+                    string name = Convert.ToBoolean(Session["IsAdmin"]) ? SiteDB.GetByID(Convert.ToInt32(Session["SiteID"])).Name : OrganisationDB.GetByID(Convert.ToInt32(Session["OrgID"])).Name;
+                    SetErrorMessage("No POS machine allocated to " + name + ".<br />Until an admin adds this, EFT/HICAPS receipts can not be added.");
+                    return;
+                }
+
+                int posMachine = Convert.ToInt32(lblTypeID.Text) == 130 || Convert.ToInt32(lblTypeID.Text) == 133 ? Convert.ToInt32(ddlPosMachine.SelectedValue) : -1;
+                receipts.Add(new Tuple<int, decimal, int>(Convert.ToInt32(lblTypeID.Text), Convert.ToDecimal(txtAmount.Text), posMachine));
+                total += Convert.ToDecimal(txtAmount.Text);
+            }
+        }
+
+
+        if (txtCreditNoteTotal.Text == string.Empty)
+            txtCreditNoteTotal.Text = "0";
+        total += Convert.ToDecimal(txtCreditNoteTotal.Text);
+
+        decimal totalOwed  = invoice.TotalDue - total;
+        bool    isOverPaid = totalOwed <  0;
+        bool    isPaid     = totalOwed <= 0;
+
+        if (isOverPaid)
+        {
+            SetErrorMessage("Total can not be more than the amount owing.");
+            return;
+        }
+
+        foreach (Tuple<int, decimal, int> item in receipts)
+            ReceiptDB.Insert(item.Item1, invoice.InvoiceID, item.Item3, item.Item2, Convert.ToDecimal(0.00), false, isOverPaid, DateTime.MinValue, Convert.ToInt32(Session["StaffID"]));
+
+        if (Convert.ToDecimal(txtCreditNoteTotal.Text) > 0)
+            CreditNoteDB.Insert(invoice.InvoiceID, Convert.ToDecimal(txtCreditNoteTotal.Text), txtCreditCardReason.Text, Convert.ToInt32(Session["StaffID"]));
+
+        if (isPaid)
+            InvoiceDB.UpdateIsPaid(invoice.InvoiceID, true);
+
+
+        // close this window
+        string returnValue = Request.QueryString["returnValue"] != null ? Request.QueryString["returnValue"] : "false";
+        Page.ClientScript.RegisterStartupScript(this.GetType(), "close", "<script language=javascript>window.returnValue=" + returnValue + ";self.close();</script>");
+    }
+
+
+
+    #region HideTableAndSetErrorMessage, SetErrorMessage, HideErrorMessag
+
+    private void HideTableAndSetErrorMessage(string errMsg = "", string details = "")
+    {
+        maintable.Visible    = false;
+        header_table.Visible = false;
+        SetErrorMessage(errMsg, details);
+    }
+    private void SetErrorMessage(string errMsg = "", string details = "")
+    {
+        if (errMsg.Contains(Environment.NewLine))
+            errMsg = errMsg.Replace(Environment.NewLine, "<br />");
+
+        // double escape so shows up literally on webpage for 'alert' message
+        string detailsToDisplay = (details.Length == 0 ? "" : " <a href=\"#\" onclick=\"alert('" + details.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("'", "\\'").Replace("\"", "\\'") + "'); return false;\">Details</a>");
+
+        lblErrorMessage.Visible = true;
+        if (errMsg != null && errMsg.Length > 0)
+            lblErrorMessage.Text = errMsg + detailsToDisplay + "<br />";
+        else
+            lblErrorMessage.Text = "An error has occurred. Plase contact the system administrator. " + detailsToDisplay + "<br />";
+    }
+    private void HideErrorMessage()
+    {
+        lblErrorMessage.Visible = false;
+        lblErrorMessage.Text = "";
+    }
+
+    #endregion
+
+}

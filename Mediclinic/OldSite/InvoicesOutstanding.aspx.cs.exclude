@@ -1,0 +1,518 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Configuration;
+using System.Collections;
+
+public partial class InvoicesOutstanding : System.Web.UI.Page
+{
+
+    #region Page_Load
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        try
+        {
+
+            if (!IsPostBack)
+                Utilities.SetNoCache(Response);
+            HideErrorMessage();
+            this.iconKeyControl.ShowBookingIcon = false;
+
+            if (!IsPostBack)
+            {
+                Session.Remove("ptinvoicesoutstanding_sortexpression");
+                Session.Remove("ptinvoicesoutstanding_data");
+                Session.Remove("orginvoicesoutstanding_sortexpression");
+                Session.Remove("orginvoicesoutstanding_data");
+
+                for (int i = 0; i < GrdPtInvoicesOutstanding.Columns.Count; i++)
+                    if (GrdPtInvoicesOutstanding.Columns[i].HeaderText == "Organisation")
+                        GrdPtInvoicesOutstanding.Columns[i].HeaderText = Convert.ToBoolean(Session["SiteIsAgedCare"]) ? "Facility" : "Clinic";
+
+                GrdPtInvoicesOutstanding_FillGrid();
+                lblPtHeading.Text = Convert.ToBoolean(Session["SiteIsAgedCare"]) ? "Outstanding By Resident&nbsp;&nbsp;&nbsp;&nbsp;" : "Outstanding By Patient&nbsp;&nbsp;&nbsp;&nbsp;";
+
+                if (Convert.ToBoolean(Session["SiteIsAgedCare"]))
+                {
+                    GrdOrgInvoicesOutstanding_FillGrid();
+                }
+                else
+                {
+                    GrdOrgInvoicesOutstanding.Visible = false;
+                    lblPtHeading.Visible = false;
+                    lblFacHeading.Visible = false;
+                    btnPrintAllFacs.Visible = false;
+                }
+            }
+
+            if (!Utilities.IsDev())
+            {
+                PagePermissions.EnforcePermissions_RequireAny(Session, Response, true, true, true, false, false, false);
+                this.Label1.Visible = false;
+            }
+
+            this.GrdPtInvoicesOutstanding.EnableViewState = true;
+            this.GrdOrgInvoicesOutstanding.EnableViewState = true;
+
+        }
+        catch (CustomMessageException ex)
+        {
+            if (IsPostBack) SetErrorMessage(ex.Message);
+            else HideTableAndSetErrorMessage(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            if (IsPostBack) SetErrorMessage("", ex.ToString());
+            else HideTableAndSetErrorMessage("", ex.ToString());
+        }
+    }
+
+    #endregion
+
+    #region GrdPtInvoicesOutstanding
+
+    protected void GrdPtInvoicesOutstanding_FillGrid()
+    {
+        DataTable dt = InvoiceDB.GetAllOutstandingByPatientAsReport(Convert.ToInt32(Session["SiteID"]));
+        dt.DefaultView.Sort = "patient_surname";
+        dt = dt.DefaultView.ToTable();
+        Session["ptinvoicesoutstanding_data"] = dt;
+
+        if (dt.Rows.Count > 0)
+        {
+            GrdPtInvoicesOutstanding.DataSource = dt;
+            try
+            {
+                GrdPtInvoicesOutstanding.DataBind();
+                GrdPtInvoicesOutstanding.PagerSettings.FirstPageText = "1";
+                GrdPtInvoicesOutstanding.PagerSettings.LastPageText = GrdPtInvoicesOutstanding.PageCount.ToString();
+                GrdPtInvoicesOutstanding.DataBind();
+
+            }
+            catch (Exception ex)
+            {
+                Label1.Text = ex.ToString();
+            }
+        }
+        else
+        {
+            dt.Rows.Add(dt.NewRow());
+            GrdPtInvoicesOutstanding.DataSource = dt;
+            GrdPtInvoicesOutstanding.DataBind();
+
+            int TotalColumns = GrdPtInvoicesOutstanding.Rows[0].Cells.Count;
+            GrdPtInvoicesOutstanding.Rows[0].Cells.Clear();
+            GrdPtInvoicesOutstanding.Rows[0].Cells.Add(new TableCell());
+            GrdPtInvoicesOutstanding.Rows[0].Cells[0].ColumnSpan = TotalColumns;
+            GrdPtInvoicesOutstanding.Rows[0].Cells[0].Text = "No Record Found";
+        }
+    }
+    protected void GrdPtInvoicesOutstanding_RowCreated(object sender, GridViewRowEventArgs e)
+    {
+        if (!Utilities.IsDev() && e.Row.RowType != DataControlRowType.Pager)
+            e.Row.Cells[0].CssClass = "hiddencol";
+    }
+    protected void GrdPtInvoicesOutstanding_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        DataTable dt = Session["ptinvoicesoutstanding_data"] as DataTable;
+        if (e.Row.RowType == DataControlRowType.DataRow)
+        {
+            Utilities.AddConfirmationBox(e);
+            if ((e.Row.RowState & DataControlRowState.Edit) > 0)
+                Utilities.SetEditRowBackColour(e, System.Drawing.Color.LightGoldenrodYellow);
+        }
+        if (e.Row.RowType == DataControlRowType.Footer)
+        {
+            Label lblTotalSumDue = (Label)e.Row.FindControl("lblTotalSumDue");
+            lblTotalSumDue.Text = String.Format("{0:C}", dt.Compute("Sum(total_due)", ""));
+            if (lblTotalSumDue.Text == "") lblTotalSumDue.Text = System.Globalization.RegionInfo.CurrentRegion.CurrencySymbol + "0.00";
+        }
+    }
+    protected void GrdPtInvoicesOutstanding_RowCancelingEdit(object sender, GridViewCancelEditEventArgs e)
+    {
+        GrdPtInvoicesOutstanding.EditIndex = -1;
+        GrdPtInvoicesOutstanding_FillGrid();
+    }
+    protected void GrdPtInvoicesOutstanding_RowUpdating(object sender, GridViewUpdateEventArgs e)
+    {
+    }
+    protected void GrdPtInvoicesOutstanding_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+    }
+    protected void GrdPtInvoicesOutstanding_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+        if (e.CommandName == "Print")
+        {
+            int patientID = Convert.ToInt32(e.CommandArgument);
+
+            DataTable dt = Session["ptinvoicesoutstanding_data"] as DataTable;
+            DataRow row = dt.Select("patient_id = " + patientID)[0];
+
+            SetErrorMessage("PT ID: " + row["patient_id"] + "<br />Invoices: " + row["invoice_ids_comma_sep"]);
+
+            string invoiceIDsCommaSep = (string)row["invoice_ids_comma_sep"];
+            int[] invoiceIDs = Array.ConvertAll<string, int>(invoiceIDsCommaSep.Split(','), Convert.ToInt32);
+
+            Letter.GenerateOutstandingInvoicesToPrint(Response, invoiceIDs, patientID, -1, Convert.ToBoolean(Session["SiteIsClinic"]));
+        }
+
+        if (e.CommandName == "SetAllPaid" || e.CommandName == "SetAllWiped")
+        {
+
+            try
+            {
+
+                int patientID = Convert.ToInt32(e.CommandArgument);
+
+                DataTable dt = Session["ptinvoicesoutstanding_data"] as DataTable;
+                DataRow row = dt.Select("patient_id = " + patientID)[0];
+
+                string invoiceIDsCommaSep = (string)row["invoice_ids_comma_sep"];
+                int[] invoiceIDs = Array.ConvertAll<string, int>(invoiceIDsCommaSep.Split(','), Convert.ToInt32);
+
+
+                foreach (int invoiceID in invoiceIDs)
+                {
+                    Invoice invoice = InvoiceDB.GetByID(invoiceID);
+                    if (invoice == null || invoice.IsPaID)
+                        continue;
+
+                    if (e.CommandName.Equals("SetAllPaid"))
+                    {
+                        ReceiptDB.Insert(129, invoice.InvoiceID, -1, invoice.TotalDue, Convert.ToDecimal(0.00), false, false, DateTime.MinValue, Convert.ToInt32(Session["StaffID"]));
+                        InvoiceDB.UpdateIsPaid(invoice.InvoiceID, true);
+                    }
+                    else if (e.CommandName.Equals("SetAllWiped"))
+                    {
+                        CreditNoteDB.Insert(invoice.InvoiceID, invoice.TotalDue, string.Empty, Convert.ToInt32(Session["StaffID"]));
+                        InvoiceDB.UpdateIsPaid(invoice.InvoiceID, true);
+                    }
+                }
+
+                SetErrorMessage("Invoices Set As Paid : " + row["invoice_ids_comma_sep"]);
+
+                GrdPtInvoicesOutstanding_FillGrid();
+
+            }
+            catch (CustomMessageException cmEx)
+            {
+                SetErrorMessage(cmEx.Message);
+            }
+            catch (Exception ex)
+            {
+                SetErrorMessage("", ex.ToString());
+            }
+
+        }
+
+    }
+    protected void GrdPtInvoicesOutstanding_RowEditing(object sender, GridViewEditEventArgs e)
+    {
+        GrdPtInvoicesOutstanding.EditIndex = e.NewEditIndex;
+        GrdPtInvoicesOutstanding_FillGrid();
+    }
+    protected void GrdPtInvoicesOutstanding_Sorting(object sender, GridViewSortEventArgs e)
+    {
+        // dont allow sorting if in edit mode
+        if (GrdPtInvoicesOutstanding.EditIndex >= 0)
+            return;
+
+        GrdPtInvoicesOutstanding_Sort(e.SortExpression);
+    }
+    protected void GrdPtInvoicesOutstanding_PageIndexChanging(object sender, GridViewPageEventArgs e)
+    {
+        GrdPtInvoicesOutstanding.PageIndex = e.NewPageIndex;
+        GrdPtInvoicesOutstanding_FillGrid();
+    }
+    protected void GrdPtInvoicesOutstanding_Sort(string sortExpression, params string[] sortExpr)
+    {
+        DataTable dataTable = Session["ptinvoicesoutstanding_data"] as DataTable;
+
+        if (dataTable != null)
+        {
+            if (Session["ptinvoicesoutstanding_sortexpression"] == null)
+                Session["ptinvoicesoutstanding_sortexpression"] = "";
+
+            DataView dataView = new DataView(dataTable);
+            string[] sortData = Session["ptinvoicesoutstanding_sortexpression"].ToString().Trim().Split(' ');
+
+            string newSortExpr = (sortExpr.Length == 0) ?
+                (sortExpression == sortData[0] && sortData[1] == "ASC") ? "DESC" : "ASC" :
+                sortExpr[0];
+
+            dataView.Sort = sortExpression + " " + newSortExpr;
+            Session["ptinvoicesoutstanding_sortexpression"] = sortExpression + " " + newSortExpr;
+
+            GrdPtInvoicesOutstanding.DataSource = dataView;
+            GrdPtInvoicesOutstanding.DataBind();
+        }
+    }
+
+    #endregion
+
+    #region GrdOrgInvoicesOutstanding
+
+    protected void GrdOrgInvoicesOutstanding_FillGrid()
+    {
+
+        DataTable dt = InvoiceDB.GetAllOutstandingByOrgAsReport(Convert.ToInt32(Session["SiteID"]));
+        dt.DefaultView.Sort = "name";
+        dt = dt.DefaultView.ToTable();
+        Session["orginvoicesoutstanding_data"] = dt;
+
+        if (dt.Rows.Count > 0)
+        {
+            GrdOrgInvoicesOutstanding.DataSource = dt;
+            try
+            {
+                GrdOrgInvoicesOutstanding.DataBind();
+                GrdOrgInvoicesOutstanding.PagerSettings.FirstPageText = "1";
+                GrdOrgInvoicesOutstanding.PagerSettings.LastPageText = GrdOrgInvoicesOutstanding.PageCount.ToString();
+                GrdOrgInvoicesOutstanding.DataBind();
+
+            }
+            catch (Exception ex)
+            {
+                Label1.Text = ex.ToString();
+            }
+        }
+        else
+        {
+            dt.Rows.Add(dt.NewRow());
+            GrdOrgInvoicesOutstanding.DataSource = dt;
+            GrdOrgInvoicesOutstanding.DataBind();
+
+            int TotalColumns = GrdOrgInvoicesOutstanding.Rows[0].Cells.Count;
+            GrdOrgInvoicesOutstanding.Rows[0].Cells.Clear();
+            GrdOrgInvoicesOutstanding.Rows[0].Cells.Add(new TableCell());
+            GrdOrgInvoicesOutstanding.Rows[0].Cells[0].ColumnSpan = TotalColumns;
+            GrdOrgInvoicesOutstanding.Rows[0].Cells[0].Text = "No Record Found";
+        }
+    }
+    protected void GrdOrgInvoicesOutstanding_RowCreated(object sender, GridViewRowEventArgs e)
+    {
+        if (!Utilities.IsDev() && e.Row.RowType != DataControlRowType.Pager)
+            e.Row.Cells[0].CssClass = "hiddencol";
+    }
+    protected void GrdOrgInvoicesOutstanding_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        DataTable dt = Session["orginvoicesoutstanding_data"] as DataTable;
+        if (e.Row.RowType == DataControlRowType.DataRow)
+        {
+            Utilities.AddConfirmationBox(e);
+            if ((e.Row.RowState & DataControlRowState.Edit) > 0)
+                Utilities.SetEditRowBackColour(e, System.Drawing.Color.LightGoldenrodYellow);
+        }
+        if (e.Row.RowType == DataControlRowType.Footer)
+        {
+            Label lblTotalSumDue = (Label)e.Row.FindControl("lblTotalSumDue");
+            lblTotalSumDue.Text = String.Format("{0:C}", dt.Compute("Sum(total_due)", ""));
+            if (lblTotalSumDue.Text == "") lblTotalSumDue.Text = System.Globalization.RegionInfo.CurrentRegion.CurrencySymbol + "0.00";
+        }
+    }
+    protected void GrdOrgInvoicesOutstanding_RowCancelingEdit(object sender, GridViewCancelEditEventArgs e)
+    {
+        GrdOrgInvoicesOutstanding.EditIndex = -1;
+        GrdOrgInvoicesOutstanding_FillGrid();
+    }
+    protected void GrdOrgInvoicesOutstanding_RowUpdating(object sender, GridViewUpdateEventArgs e)
+    {
+    }
+    protected void GrdOrgInvoicesOutstanding_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+    }
+    protected void GrdOrgInvoicesOutstanding_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+        if (e.CommandName == "Print")
+        {
+            int organisationID = Convert.ToInt32(e.CommandArgument);
+
+            DataTable dt = Session["orginvoicesoutstanding_data"] as DataTable;
+            DataRow row = dt.Select("organisation_id = " + organisationID)[0];
+
+            SetErrorMessage("Org ID: " + row["organisation_id"] + "<br />Invoices: " + row["invoice_ids_comma_sep"]);
+
+            string invoiceIDsCommaSep = (string)row["invoice_ids_comma_sep"];
+            int[] invoiceIDs = Array.ConvertAll<string, int>(invoiceIDsCommaSep.Split(','), Convert.ToInt32);
+
+            Letter.GenerateOutstandingInvoicesToPrint(Response, invoiceIDs, -1, organisationID, Convert.ToBoolean(Session["SiteIsClinic"]));
+        }
+
+        if (e.CommandName == "SetAllPaid" || e.CommandName == "SetAllWiped")
+        {
+
+            try
+            {
+
+                int organisationID = Convert.ToInt32(e.CommandArgument);
+
+                DataTable dt = Session["orginvoicesoutstanding_data"] as DataTable;
+                DataRow row = dt.Select("organisation_id = " + organisationID)[0];
+
+                string invoiceIDsCommaSep = (string)row["invoice_ids_comma_sep"];
+                int[] invoiceIDs = Array.ConvertAll<string, int>(invoiceIDsCommaSep.Split(','), Convert.ToInt32);
+
+
+                foreach (int invoiceID in invoiceIDs)
+                {
+                    Invoice invoice = InvoiceDB.GetByID(invoiceID);
+                    if (invoice == null || invoice.IsPaID)
+                        continue;
+
+                    if (e.CommandName.Equals("SetAllPaid"))
+                    {
+                        ReceiptDB.Insert(129, invoice.InvoiceID, -1, invoice.TotalDue, Convert.ToDecimal(0.00), false, false, DateTime.MinValue, Convert.ToInt32(Session["StaffID"]));
+                        InvoiceDB.UpdateIsPaid(invoice.InvoiceID, true);
+                    }
+                    else if (e.CommandName.Equals("SetAllWiped"))
+                    {
+                        CreditNoteDB.Insert(invoice.InvoiceID, invoice.TotalDue, string.Empty, Convert.ToInt32(Session["StaffID"]));
+                        InvoiceDB.UpdateIsPaid(invoice.InvoiceID, true);
+                    }
+                }
+
+                SetErrorMessage("Invoices Set As Paid : " + row["invoice_ids_comma_sep"]);
+
+                GrdOrgInvoicesOutstanding_FillGrid();
+
+            }
+            catch (CustomMessageException cmEx)
+            {
+                SetErrorMessage(cmEx.Message);
+            }
+            catch (Exception ex)
+            {
+                SetErrorMessage("", ex.ToString());
+            }
+
+        }
+
+    }
+    protected void GrdOrgInvoicesOutstanding_RowEditing(object sender, GridViewEditEventArgs e)
+    {
+        GrdOrgInvoicesOutstanding.EditIndex = e.NewEditIndex;
+        GrdOrgInvoicesOutstanding_FillGrid();
+    }
+    protected void GrdOrgInvoicesOutstanding_Sorting(object sender, GridViewSortEventArgs e)
+    {
+        // dont allow sorting if in edit mode
+        if (GrdOrgInvoicesOutstanding.EditIndex >= 0)
+            return;
+
+        GrdOrgInvoicesOutstanding_Sort(e.SortExpression);
+    }
+    protected void GrdOrgInvoicesOutstanding_PageIndexChanging(object sender, GridViewPageEventArgs e)
+    {
+        GrdOrgInvoicesOutstanding.PageIndex = e.NewPageIndex;
+        GrdOrgInvoicesOutstanding_FillGrid();
+    }
+    protected void GrdOrgInvoicesOutstanding_Sort(string sortExpression, params string[] sortExpr)
+    {
+        DataTable dataTable = Session["orginvoicesoutstanding_data"] as DataTable;
+
+        if (dataTable != null)
+        {
+            if (Session["orginvoicesoutstanding_sortexpression"] == null)
+                Session["orginvoicesoutstanding_sortexpression"] = "";
+
+            DataView dataView = new DataView(dataTable);
+            string[] sortData = Session["orginvoicesoutstanding_sortexpression"].ToString().Trim().Split(' ');
+
+            string newSortExpr = (sortExpr.Length == 0) ?
+                (sortExpression == sortData[0] && sortData[1] == "ASC") ? "DESC" : "ASC" :
+                sortExpr[0];
+
+            dataView.Sort = sortExpression + " " + newSortExpr;
+            Session["orginvoicesoutstanding_sortexpression"] = sortExpression + " " + newSortExpr;
+
+            GrdOrgInvoicesOutstanding.DataSource = dataView;
+            GrdOrgInvoicesOutstanding.DataBind();
+        }
+    }
+
+    #endregion
+
+    #region btnPrintAllPatients_Command, btnPrintAllFacs_Command
+
+    protected void btnPrintAllPatients_Command(object sender, CommandEventArgs e)
+    {
+        DataTable dt = Session["ptinvoicesoutstanding_data"] as DataTable;
+
+        Tuple<int[], int, int>[] list = new Tuple<int[],int,int>[dt.Rows.Count];
+        for (int i = 0; i < dt.Rows.Count; i++)
+        {
+            int    patientID          = Convert.ToInt32(dt.Rows[i]["patient_id"]);
+            string invoiceIDsCommaSep = (string)dt.Rows[i]["invoice_ids_comma_sep"];
+            int[]  invoiceIDs         = Array.ConvertAll<string, int>(invoiceIDsCommaSep.Split(','), Convert.ToInt32);
+
+            list[i] = new Tuple<int[], int, int>(invoiceIDs, patientID, -1);
+        }
+
+        Letter.GenerateOutstandingInvoicesToPrint_Multiple(Response, list, Convert.ToBoolean(Session["SiteIsClinic"]));
+    }
+    protected void btnPrintAllFacs_Command(object sender, CommandEventArgs e)
+    {
+        DataTable dt = Session["orginvoicesoutstanding_data"] as DataTable;
+
+        Tuple<int[], int, int>[] list = new Tuple<int[],int,int>[dt.Rows.Count];
+        for (int i = 0; i < dt.Rows.Count; i++)
+        {
+            int    organisationID     = Convert.ToInt32(dt.Rows[i]["organisation_id"]);
+            string invoiceIDsCommaSep = (string)dt.Rows[i]["invoice_ids_comma_sep"];
+            int[]  invoiceIDs         = Array.ConvertAll<string, int>(invoiceIDsCommaSep.Split(','), Convert.ToInt32);
+
+            list[i] = new Tuple<int[], int, int>(invoiceIDs, -1, organisationID);
+        }
+
+        Letter.GenerateOutstandingInvoicesToPrint_Multiple(Response, list, Convert.ToBoolean(Session["SiteIsClinic"]));
+    }
+
+    #endregion
+
+    #region chkUsePaging_CheckedChanged
+
+    protected void chkUsePaging_CheckedChanged(object sender, EventArgs e)
+    {
+        this.GrdPtInvoicesOutstanding.AllowPaging = chkUsePaging.Checked;
+        GrdPtInvoicesOutstanding_FillGrid();
+
+        this.GrdOrgInvoicesOutstanding.AllowPaging = chkUsePaging.Checked;
+        GrdOrgInvoicesOutstanding_FillGrid();
+    }
+
+    #endregion
+
+    #region SetErrorMessage, HideErrorMessage
+
+    private void HideTableAndSetErrorMessage(string errMsg = "", string details = "")
+    {
+        SetErrorMessage(errMsg, details);
+    }
+    private void SetErrorMessage(string errMsg = "", string details = "")
+    {
+        if (errMsg.Contains(Environment.NewLine))
+            errMsg = errMsg.Replace(Environment.NewLine, "<br />");
+
+        // double escape so shows up literally on webpage for 'alert' message
+        string detailsToDisplay = (details.Length == 0 ? "" : " <a href=\"#\" onclick=\"alert('" + details.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("'", "\\'").Replace("\"", "\\'") + "'); return false;\">Details</a>");
+
+        lblErrorMessage.Visible = true;
+        if (errMsg != null && errMsg.Length > 0)
+            lblErrorMessage.Text = errMsg + detailsToDisplay + "<br />";
+        else
+            lblErrorMessage.Text = "An error has occurred. Plase contact the system administrator. " + detailsToDisplay + "<br />";
+    }
+    private void HideErrorMessage()
+    {
+        lblErrorMessage.Visible = false;
+        lblErrorMessage.Text = "";
+    }
+
+    #endregion
+
+}

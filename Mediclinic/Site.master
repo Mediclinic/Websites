@@ -1,0 +1,186 @@
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeFile="Site.master.cs" Inherits="SiteMaster"  %>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" style="height:100%;">
+<head runat="server">
+    <title></title>
+    <link href="~/Styles/Site.css" rel="stylesheet" type="text/css" />
+    <%--<link rel="shortcut icon" href="/images/favicon.png" />--%>
+    <script type="text/javascript" src="Scripts/set_focus_color.js"></script>
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server">
+    </asp:ContentPlaceHolder>
+    <script type="text/javascript">
+
+        // http://www.webreference.com/programming/javascript/onloads/index.html
+        function addLoadEvent(func) {
+            var oldonload = window.onload;
+            if (typeof window.onload != 'function') {
+                window.onload = func;
+            } else {
+                window.onload = function () {
+                    if (oldonload) {
+                        oldonload();
+                    }
+                    func();
+                }
+            }
+        }
+
+
+        //addLoadEvent(show_menu);
+        addLoadEvent(function () {
+            document.getElementById("div_menu").style.display = "block";
+        });
+
+
+        function is_aged_care() {
+            return document.getElementById("lblSiteIsAgedCare").value == "1";
+        }
+        function is_clinics() {
+            return document.getElementById("lblSiteIsClinic").value == "1";
+        }
+
+    </script>
+</head>
+<body runat="server" id="masterBody">
+    <form runat="server">
+    <asp:HiddenField ID="lblSiteIsClinic" runat="server" />
+    <asp:HiddenField ID="lblSiteIsAgedCare" runat="server" />
+    <div class="page" runat="server" ID="PageDiv">
+        <div class="header" runat="server" ID="headerContent">
+            <div class="title">
+                <h1>
+                    <asp:Label ID="SiteName" runat="server"></asp:Label> &nbsp;&nbsp;&nbsp;<span style="color:yellow;"><asp:Label ID="lblBannerMessage" runat="server"/></span>
+                </h1>
+            </div>
+
+            <div class="loginDisplay">
+                <span id="spn_login_display_not_loged_in" runat="server">
+                    [ <a href="~/Account/Login.aspx" ID="lnkLogin" runat="server">Log In</a> ]
+                </span>
+                <span id="spn_login_display_loged_in" runat="server">
+                    <span class="nowrap"><asp:Label ID="lblUsername" runat="server" Font-Bold="True" /> at <asp:Label ID="lblSiteOrOrg" runat="server" Font-Bold="True"></asp:Label></span>
+                    <br />
+                    <asp:Label ID="lblPageLoadTime" runat="server" Font-Size="Smaller"/>
+                    &nbsp;&nbsp;&nbsp;
+                    <asp:Label ID="lblLastBuildTime" runat="server"  Font-Size="Smaller"/>
+                    <span class="nowrap">
+                    &nbsp;&nbsp;&nbsp;
+                    <asp:Label ID="lblSupportContactMessage" runat="server"/>
+                    <br />
+                    [ <asp:HyperLink ID="lnkSelectSiteOrOrg" runat="server" NavigateUrl="~/Account/SelectSite.aspx">Change Site</asp:HyperLink> ]
+                    <asp:Label ID="lnkChangePwd_OpenBracket" runat="server">[ </asp:Label>
+                    <asp:HyperLink ID="lnkChangePwd" runat="server" NavigateUrl="~/Account/ChangePassword.aspx">Change Password</asp:HyperLink>
+                    <asp:Label ID="lnkChangePwd_CloseBracket" runat="server"> ]</asp:Label>
+                    [ <a href="~/Account/Logout.aspx" ID="HeadLoginStatus" runat="server">Log Out</a> ]
+                    </span>
+                </span>
+            </div>
+            <div runat="server" id="menu_row" class="menu_row">
+            <div id="div_menu" runat="server" style="display:none;" class="clear hideSkiplink">
+                <asp:Menu ID="NavigationMenu" runat="server" CssClass="menu" EnableViewState="false" IncludeStyleBlock="false" Orientation="Horizontal" RenderingMode="List">
+                    <Items>
+                        <asp:MenuItem Text="Staff" NavigateUrl="javascript:return false;">
+                            <asp:MenuItem NavigateUrl="~/StaffInfo.aspx" Text="Staff List"/>
+                            <asp:MenuItem NavigateUrl="~/AddEditStaff.aspx?type=add" Text="Add Staff Member"/>
+                            <asp:MenuItem NavigateUrl="~/UserLogins.aspx" Text="User Logins"/>
+                            <%--
+                            <asp:MenuItem NavigateUrl="~/StaffPositionInfo.aspx" Text="Staff Positions"/>
+                            --%>
+                            <asp:MenuItem NavigateUrl="~/CostCentreInfo.aspx" Text="Cost Centres"/>
+                        </asp:MenuItem>
+                        <asp:MenuItem Text="Organisations" NavigateUrl="javascript:return false;">
+                            <asp:MenuItem NavigateUrl="~/OrganisationInfo.aspx?type=clinic" Text="Clinics List"/>
+                            <asp:MenuItem NavigateUrl="~/AddEditOrganisation.aspx?type=add&orgtype=clinic" Text="Add Clinic"/>
+                            <asp:MenuItem NavigateUrl="~/OrganisationInfo.aspx?type=ac" Text="Facilities List"/>
+                            <asp:MenuItem NavigateUrl="~/AddEditOrganisation.aspx?type=add&orgtype=ac" Text="Add Facility"/>
+                            <asp:MenuItem NavigateUrl="~/OrganisationInfo.aspx?type=ext" Text="External Organisations - All"/>
+                            <asp:MenuItem NavigateUrl="~/OrganisationInfo.aspx?type=ext&org_type_ids=191" Text="External Organisations - Medical Practices"/>
+                            <asp:MenuItem NavigateUrl="~/Stats.aspx" Text="Stats"/>
+                        </asp:MenuItem>
+                        <asp:MenuItem Text="Patients" NavigateUrl="javascript:return false;">
+                            <asp:MenuItem NavigateUrl="~/PatientInfo.aspx" Text="Patient List"/>
+                            <asp:MenuItem NavigateUrl="~/AddEditPatient.aspx?type=add" Text="Add Patient"/>
+                        </asp:MenuItem>
+                        <asp:MenuItem Text="Referrers" NavigateUrl="javascript:return false;">
+                            <asp:MenuItem NavigateUrl="~/ReferrerPersonInfo.aspx" Text="Referrer List (Doctors)"/>
+                            <asp:MenuItem NavigateUrl="~/ReferrerClinicInfo.aspx" Text="Referrer List (Clinics)"/>
+                            <asp:MenuItem NavigateUrl="~/ReferrerInfoList.aspx" Text="Referrer List (Doctor-Clinic)"/>
+                            <asp:MenuItem NavigateUrl="~/AddReferrer.aspx?type=add" Text="Add Referrer"/>
+                            <asp:MenuItem NavigateUrl="~/ReferrerEPCLetters_GenerateUnsent.aspx" Text="EPC Letters - Generate Unsent"/>
+                            <asp:MenuItem NavigateUrl="~/ReferrerEPCLetters_Reprint.aspx" Text="EPC Letters - Re-Print"/>
+                        </asp:MenuItem>
+                        <asp:MenuItem Text="Bookings" NavigateUrl="~/BookingsForClinic.aspx?orgs=2301_1579&date=2012_06_27">
+                            <asp:MenuItem Text="Bookings" NavigateUrl="~/BookingsForClinic.aspx?orgs=2301_1579&date=2012_06_27"/>
+                            <asp:MenuItem Text="Bookings List" NavigateUrl="~/BookingsList.aspx"/>
+                            <asp:MenuItem Text="Bookings Report" NavigateUrl="~/Report_Bookings.aspx"/>
+                            <asp:MenuItem Text="Schedule Report" NavigateUrl="~/Report_Schedule.aspx"/>
+                            <asp:MenuItem Text="Booking Edit Reason List" NavigateUrl="~/BookingChangeHistoryReasonInfo.aspx"/>
+                            <asp:MenuItem Text="Booking Unavailability Reason List" NavigateUrl="~/BookingUnavailabilityReasonInfo.aspx"/>
+                        </asp:MenuItem>
+                        <asp:MenuItem Text="Products & Services" NavigateUrl="javascript:return false;">
+                            <asp:MenuItem NavigateUrl="~/OfferingInfo.aspx?inv_type=" Text="Products & Services List"/>
+                            <asp:MenuItem NavigateUrl="~/RegisterOfferingToOrganisation.aspx" Text="Set Specific Prices Per Clinic"/>
+                            <asp:MenuItem Text="Cash Sale"/>
+                        </asp:MenuItem>
+                        <asp:MenuItem Text="Sales" NavigateUrl="javascript:return false;">
+                            <asp:MenuItem Text="Cash Sale"/>
+                        </asp:MenuItem>
+                        <asp:MenuItem Text="Financials" NavigateUrl="javascript:return false;">
+                            <asp:MenuItem Text="All Invoices" NavigateUrl="~/InvoiceInfo.aspx" />
+                            <asp:MenuItem Text="Medicare Invoices" NavigateUrl="~/InvoiceInfo.aspx?inc_medicare=1&inc_dva=0&inc_private=0" />
+                            <asp:MenuItem Text="DVA Invoices" NavigateUrl="~/InvoiceInfo.aspx?inc_medicare=0&inc_dva=1&inc_private=0" />
+                            <asp:MenuItem Text="Rejected Invoices" NavigateUrl="~/InvoiceInfo.aspx?only_rejected=1" />
+                            <asp:MenuItem Text="Outstanding Invoices" NavigateUrl="~/InvoicesOutstanding.aspx" />
+                            <asp:MenuItem Text="Staff Commission" NavigateUrl="~/StaffOfferingsInfo.aspx"/>
+                            <asp:MenuItem Text="Invoices Report" NavigateUrl="~/Report_Invoices.aspx" />
+                            <asp:MenuItem Text="Receipts Report" NavigateUrl="~/Report_Receipts.aspx" />
+                            <asp:MenuItem Text="Claim Numbers Allocation" NavigateUrl="~/ClaimNumbersAllocation.aspx"/>
+                            <asp:MenuItem Text="HINX Files" NavigateUrl="~/HinxGeneration.aspx"/>
+                        </asp:MenuItem>
+                        <asp:MenuItem Text="Letters" NavigateUrl="javascript:return false;">
+                            <asp:MenuItem Text="Maintain Letters" NavigateUrl="~/MaintainLetters.aspx?org=0" />
+                            <asp:MenuItem Text="Treatment Letters" NavigateUrl="~/MaintainTreatmentLetters.aspx" />
+                            <asp:MenuItem Text="Print Letter" NavigateUrl="~/PrintLetter.aspx" />
+                            <asp:MenuItem Text="Print Batch Letters" NavigateUrl="~/PrintBatchLetters.aspx" />
+                            <asp:MenuItem Text="Print Batch Letters - Referrers" NavigateUrl="~/PrintBatchLetters_Referrer.aspx" />
+                            <asp:MenuItem Text="Recall Letters" NavigateUrl="~/RecallLetters.aspx" />
+                            <asp:MenuItem Text="Service-Specific Booking Reminder Letters To Send" NavigateUrl="~/ServiceSpecificBookingReminderLettersToSend.aspx" />
+                            <asp:MenuItem Text="Letters Sent History" NavigateUrl="~/LetterPrintHistory.aspx" />
+                        </asp:MenuItem>
+                        <asp:MenuItem Text="SMS & Email" NavigateUrl="javascript:return false;">
+                            <asp:MenuItem Text="SMS Credit" NavigateUrl="~/SMSCredit.aspx" />
+                            <asp:MenuItem Text="SMS Reminders History" NavigateUrl="~/SMSReminderHistory.aspx" />
+                            <asp:MenuItem Text="Email Reminders History" NavigateUrl="~/EmailReminderHistory.aspx" />
+                            <asp:MenuItem Text="Reminders To Send" NavigateUrl="~/SmsAndEmailReminders.aspx" />
+                            <asp:MenuItem Text="Staff SMS Reminders History" NavigateUrl="~/SMSReminderHistory_ForStaff.aspx" />
+                            <asp:MenuItem Text="Staff Email Reminders History" NavigateUrl="~/EmailReminderHistory_ForStaff.aspx" />
+                            <asp:MenuItem Text="SMS Birthdays History" NavigateUrl="~/SMSBirthdayHistory.aspx" />
+                            <asp:MenuItem Text="Email Birthdays History" NavigateUrl="~/EmailBirthdayHistory.aspx" />
+                            <asp:MenuItem Text="Birthdays To Send" NavigateUrl="~/SmsAndEmailBirthdays.aspx" />
+                            <asp:MenuItem Text="Weekly Birthdays List Auto Emailing" NavigateUrl="~/BirthdaysWithoutSMSorEmail.aspx" />
+                        </asp:MenuItem>
+                        <asp:MenuItem Text="Site & Settings" NavigateUrl="javascript:return false;">
+                            <asp:MenuItem Text="Website Settings" NavigateUrl="~/Settings.aspx" />
+                            <asp:MenuItem Text="Sites" NavigateUrl="~/SiteInfo.aspx" />
+                            <asp:MenuItem Text="POS Machines" NavigateUrl="~/POSMachineInfo.aspx" />
+                            <asp:MenuItem Text="System-Wide Unavailabilities" NavigateUrl="~/BookingSheetBlockout.aspx?is_popup=0" />
+                        </asp:MenuItem>
+                        <asp:MenuItem Text="Create New Website" NavigateUrl="~/CreateNewSite.aspx" />
+                    </Items>
+                </asp:Menu>
+            </div>
+            </div>
+        </div>
+        <div class="main" id="main" runat="server">
+            <asp:ContentPlaceHolder ID="MainContent" runat="server"/>
+        </div>
+        <div class="clear">
+        </div>
+    </div>
+    <div class="footer">
+        
+    </div>
+    </form>
+</body>
+</html>

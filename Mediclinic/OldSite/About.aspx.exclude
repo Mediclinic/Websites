@@ -1,0 +1,25 @@
+﻿<%@ Page Title="About Us" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true"
+    CodeFile="About.aspx.cs" Inherits="About" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script type="text/javascript">
+    </script>
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+    <h2>
+        About
+    </h2>
+    <p>
+        Invoice ID: <asp:TextBox ID="txtInvoiceIDs" runat="server"></asp:TextBox>
+        <asp:Button ID="btnTest" runat="server" Text="Test" OnClick="btnTest_Click" />
+        <br /><br />
+        <asp:Label ID="lblError" runat="server" ForeColor="Red" ></asp:Label><br />
+    </p>
+
+    <br />
+    <br />
+
+
+
+
+</asp:Content>

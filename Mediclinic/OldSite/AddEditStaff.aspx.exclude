@@ -1,0 +1,510 @@
+﻿<%@ Page Title="Add Edit Staff" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="AddEditStaff.aspx.cs" Inherits="AddEditStaff" %>
+<%@ Register TagPrefix="UC" TagName="DuplicatePersonModalElementControl" Src="~/Controls/DuplicatePersonModalElementControl.ascx" %>
+<%@ Register TagPrefix="UC" TagName="AddressControl" Src="~/Controls/AddressControl.ascx" %>
+<%@ Register TagPrefix="UC" TagName="AddressAusControl" Src="~/Controls/AddressAusControl.ascx" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script src="Scripts/check_future_bookings_provider.js" type="text/javascript"></script>
+    <script src="Scripts/check_future_bookings.js" type="text/javascript"></script>
+
+    <link href="Styles/duplicate_person_modal_box.css" rel="stylesheet" type="text/css" />
+    <script type="text/javascript" src="Scripts/provider_nbr_check.js"></script>
+    <script type="text/javascript" src="Scripts/check_duplicate_persons.js"></script>
+    <script type="text/javascript">
+
+        function create_username() {
+
+            if (document.getElementById('txtLogin').value.length > 0 ||
+                document.getElementById('txtPwd').value.length   > 0)
+                return; // dont update if already set
+
+            var firstname = document.getElementById('txtFirstname').value.trim();
+            var surname = document.getElementById('txtSurname').value.trim();
+            document.getElementById('txtLogin').value = firstname.toLowerCase() + surname.toLowerCase();
+            document.getElementById('txtPwd').value = firstname.toLowerCase() + surname.toLowerCase();
+        }
+        function duplicate_person_check(obj) {
+            var firstname = document.getElementById('txtFirstname').value.trim();
+            var surname = document.getElementById('txtSurname').value.trim();
+
+            var result = ajax_duplicate_persons("staff", firstname, surname);
+
+            if (result.length == 0) {
+                alert("Error retreiving records for duplicate person check.");
+            }
+            else if (result == "NONE") {
+                return;
+            }
+            else {
+                var result_list = create_result_array(result);
+                create_table(result_list, "ctable", "AddEditStaff.aspx?type=view&id=");
+                reveal_modal('modalPopupDupicatePerson');
+            }
+        }
+        String.prototype.trim = function () {
+            return this.replace(/^\s+|\s+$/g, "");
+        }
+
+        function capitalize_first(txtbox) {
+            txtbox.value = txtbox.value.charAt(0).toUpperCase() + txtbox.value.slice(1);
+        }
+
+        function title_changed_reset_gender() {
+            var selValue = ddlTitle.options[ddlTitle.selectedIndex].value
+            if (selValue == 6 || selValue == 265 || selValue == 266)
+                setSelectedValue(document.getElementById("ddlGender"), "M");
+            if (selValue == 7 || selValue == 26)
+                setSelectedValue(document.getElementById("ddlGender"), "F");
+        }
+        function setSelectedValue(selectObj, valueToSet) {
+            for (var i = 0; i < selectObj.options.length; i++) {
+                if (selectObj.options[i].value == valueToSet) {
+                    selectObj.options[i].selected = true;
+                    return;
+                }
+            }
+        }
+
+    </script>
+
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+    <h2>
+        <asp:Label ID="lblHeading" runat="server" Text="Staff Information" />
+    </h2>
+
+    <UC:DuplicatePersonModalElementControl ID="duplicatePersonModalElementControl" runat="server" />
+
+    <br />
+    <asp:Label ID="lblErrorMessage" runat="server" CssClass="failureNotification"></asp:Label>
+
+
+    <table ID="maintable" runat="server">
+
+        <tr>
+            <td valign="top">
+                <table>
+                    <tr id="idRow" runat="server">
+                        <td class="nowrap">ID</td>
+                        <td style="width:5px"></td>
+                        <td class="nowrap" style="width:220px"><asp:Label ID="lblId" runat="server"></asp:Label></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Title</td>
+                        <td></td>
+                        <td class="nowrap" style="width:220px"><asp:DropDownList ID="ddlTitle" runat="server" DataTextField="descr" DataValueField="title_id" onchange='title_changed_reset_gender();' ></asp:DropDownList><asp:Label ID="lblTitle" runat="server" Font-Bold="True"/></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">First Name</td>
+                        <td></td>
+                        <td class="nowrap"><asp:TextBox ID="txtFirstname" runat="server" onkeyup="capitalize_first(this);"></asp:TextBox><asp:Label ID="lblFirstname" runat="server" Font-Bold="True"/></td>
+                        <td><asp:RequiredFieldValidator ID="txtValidateFirstnameRequired" runat="server" CssClass="failureNotification"  
+                                    ControlToValidate="txtFirstname" 
+                                    ErrorMessage="Firstname is required."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditStaffValidationSummary">*</asp:RequiredFieldValidator>
+                                <asp:RegularExpressionValidator ID="txtValidateFirstnameRegex" runat="server" CssClass="failureNotification" 
+                                    ControlToValidate="txtFirstname"
+                                    ValidationExpression="^[0-9a-zA-Z\-\.\s']+$"
+                                    ErrorMessage="Firstname can only be letters, hyphens, or fullstops."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditStaffValidationSummary">*</asp:RegularExpressionValidator>
+                        </td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Middle Name</td>
+                        <td></td>
+                        <td class="nowrap"><asp:TextBox ID="txtMiddlename" runat="server" onkeyup="capitalize_first(this);"></asp:TextBox><asp:Label ID="lblMiddlename" runat="server" Font-Bold="True"/></td>
+                        <td><asp:RegularExpressionValidator ID="txtValidateMiddlenameRegex" runat="server" CssClass="failureNotification" 
+                                    ControlToValidate="txtMiddlename"
+                                    ValidationExpression="^[0-9a-zA-Z\-\.\s']+$"
+                                    ErrorMessage="Middlename can only be letters, hyphens, or fullstops."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditStaffValidationSummary">*</asp:RegularExpressionValidator>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Surname</td>
+                        <td></td>
+                        <td class="nowrap"><asp:TextBox ID="txtSurname" runat="server" onblur="create_username();duplicate_person_check(this);" onkeyup="capitalize_first(this);"/><asp:Label ID="lblSurname" runat="server" Font-Bold="True"/></td>
+                        <td><asp:RequiredFieldValidator ID="txtValidateSurnameRequired" runat="server" CssClass="failureNotification"  
+                                    ControlToValidate="txtSurname" 
+                                    ErrorMessage="Surname is required."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditStaffValidationSummary">*</asp:RequiredFieldValidator>
+                                <asp:RegularExpressionValidator ID="txtValidateSurnameNameRegex" runat="server" CssClass="failureNotification" 
+                                    ControlToValidate="txtSurname"
+                                    ValidationExpression="^[0-9a-zA-Z\-\.\s']+$"
+                                    ErrorMessage="Surname can only be letters, hyphens, or fullstops."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditStaffValidationSummary">*</asp:RegularExpressionValidator>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Gender</td>
+                        <td></td>
+                        <td class="nowrap"><asp:DropDownList ID="ddlGender" runat="server"> 
+                                <asp:ListItem Value="M" Text="Male"></asp:ListItem>
+                                <asp:ListItem Value="F" Text="Female"></asp:ListItem>
+                            </asp:DropDownList>
+                            <asp:Label ID="lblGender" runat="server" Font-Bold="True"/>
+                        </td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">D.O.B.</td>
+                        <td></td>
+                        <td class="nowrap">
+                            <asp:DropDownList ID="ddlDOB_Day" runat="server"></asp:DropDownList>
+                            <asp:DropDownList ID="ddlDOB_Month" runat="server"></asp:DropDownList>
+                            <asp:DropDownList ID="ddlDOB_Year" runat="server"></asp:DropDownList>
+                            <asp:Label ID="lblDOB" runat="server" Font-Bold="True"/>
+                        </td>
+                        <td><asp:CustomValidator ID="ddlDOBValidateAllOrNoneSet" runat="server"  CssClass="failureNotification"  
+                                    ControlToValidate="ddlDOB_Day"
+                                    OnServerValidate="DOBAllOrNoneCheck"
+                                    ErrorMessage="DOB must have each of day/month/year selected, or all set to '--'"
+                                    Display="Dynamic"
+                                    ValidationGroup="EditStaffValidationSummary">*</asp:CustomValidator>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Username</td>
+                        <td></td>
+                        <td class="nowrap"><asp:TextBox ID="txtLogin" runat="server"></asp:TextBox><asp:Label ID="lblLogin" runat="server" Font-Bold="True"/></td>
+                        <td><asp:RequiredFieldValidator ID="txtValidateLoginRequired" runat="server" CssClass="failureNotification"  
+                                    ControlToValidate="txtLogin" 
+                                    ErrorMessage="Login is required."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditStaffValidationSummary">*</asp:RequiredFieldValidator>
+                                <asp:RegularExpressionValidator ID="txtValidateLoginRegex" runat="server" CssClass="failureNotification" 
+                                    ControlToValidate="txtLogin"
+                                    ValidationExpression="^[0-9a-zA-Z\-_]+$"
+                                    ErrorMessage="Login can only be letters and numbers."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditStaffValidationSummary">*</asp:RegularExpressionValidator>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Password</td>
+                        <td></td>
+                        <td class="nowrap"><asp:TextBox ID="txtPwd" runat="server"></asp:TextBox><asp:Label ID="lblPwd" runat="server" Font-Bold="True"/></td>
+                        <td><asp:RequiredFieldValidator ID="txtValidatePwdRequired" runat="server" CssClass="failureNotification"  
+                                    ControlToValidate="txtPwd" 
+                                    ErrorMessage="Password is required."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditStaffValidationSummary">*</asp:RequiredFieldValidator>
+                            <asp:RegularExpressionValidator ID="txtValidatePwdRegex" runat="server" CssClass="failureNotification" 
+                                    ControlToValidate="txtPwd"
+                                    ValidationExpression="^[0-9a-zA-Z\-_]+$"
+                                    ErrorMessage="Password can only be letters, numbers, and underscore."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditStaffValidationSummary">*</asp:RegularExpressionValidator>
+                        </td>
+                    </tr>
+                    <tr class="hiddencol">
+                        <td class="nowrap">Position</td>
+                        <td></td>
+                        <td class="nowrap"><asp:DropDownList ID="ddlStaffPosition" runat="server" DataTextField="descr" DataValueField="staff_position_id"></asp:DropDownList><asp:Label ID="lblStaffPosition" runat="server" Font-Bold="True"/></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Role</td>
+                        <td></td>
+                        <td class="nowrap"><asp:DropDownList ID="ddlField" runat="server" DataTextField="descr" DataValueField="field_id"></asp:DropDownList><asp:Label ID="lblField" runat="server" Font-Bold="True"/></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>Contractor</td>
+                        <td></td>
+                        <td><asp:CheckBox ID="chkContractor" runat="server" /><asp:Label ID="lblContractor" runat="server" Font-Bold="True"/></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">T.F.N.</td>
+                        <td></td>
+                        <td class="nowrap"><asp:TextBox ID="txtTFN" runat="server"></asp:TextBox><asp:Label ID="lblTFN" runat="server" Font-Bold="True"/></td>
+                        <td><asp:RegularExpressionValidator ID="txtValidateTFNRegex" runat="server" CssClass="failureNotification" 
+                                    ControlToValidate="txtTFN"
+                                    ValidationExpression="^[0-9\-]+$"
+                                    ErrorMessage="TFN can only be numbers and hyphens."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditStaffValidationSummary">*</asp:RegularExpressionValidator>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Cost Centre</td>
+                        <td></td>
+                        <td class="nowrap"><asp:DropDownList ID="ddlCostCentre" runat="server" DataTextField="descr" DataValueField="costcentre_id"> </asp:DropDownList><asp:Label ID="lblCostCentre" runat="server" Font-Bold="True"/></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Aged Care Provider No.</td>
+                        <td></td>
+                        <td class="nowrap"><asp:TextBox ID="txtProviderNumber" runat="server" onblur="provider_check(this);"></asp:TextBox><asp:Label ID="lblProviderNumber" runat="server" Font-Bold="True"/></td>
+                        <td><asp:RegularExpressionValidator ID="txtValidateProviderNumberRegex" runat="server" CssClass="failureNotification" 
+                                    ControlToValidate="txtProviderNumber"
+                                    ValidationExpression="^[a-zA-Z0-9]+$"
+                                    ErrorMessage="ProviderNumber can only be letters, numbers, and underscore."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditStaffValidationSummary">*</asp:RegularExpressionValidator>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Commission Based</td>
+                        <td></td>
+                        <td class="nowrap"><asp:CheckBox ID="chkIsCommission" runat="server" /><asp:Label ID="lblIsCommission" runat="server" Font-Bold="True"/></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Commission Percent</td>
+                        <td></td>
+                        <td class="nowrap"><asp:TextBox ID="txtCommissionPercent" runat="server"></asp:TextBox><asp:Label ID="lblCommissionPercent" runat="server" Font-Bold="True"/></td>
+                        <td><asp:RequiredFieldValidator ID="txtValidateCommissionPercentRequired" runat="server" CssClass="failureNotification"  
+                                    ControlToValidate="txtCommissionPercent" 
+                                    ErrorMessage="Commission percent is required."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditStaffValidationSummary">*</asp:RequiredFieldValidator>
+                                <asp:RegularExpressionValidator ID="txtValidateCommissionPercentRegex" runat="server" CssClass="failureNotification" 
+                                    ControlToValidate="txtCommissionPercent"
+                                    ValidationExpression="^\d+(\.\d{1,2})?$"
+                                    ErrorMessage="Commission percent can only be numbers and option decimal place with 1 or 2 digits following."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditStaffValidationSummary">*</asp:RegularExpressionValidator>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Fired</td>
+                        <td></td>
+                        <td class="nowrap"><asp:CheckBox ID="chkIsFired" runat="server" /><asp:Label ID="lblIsFired" runat="server" Font-Bold="True"/></td>
+                        <td></td>
+                    </tr>
+
+                    <tr style="height:8px;">
+                        <td colspan="4"></td>
+                    </tr>
+
+                    <tr>
+                        <td class="nowrap">SMS BKs</td>
+                        <td></td>
+                        <td class="nowrap"><asp:CheckBox ID="chkSMSBKs" runat="server" Checked="true" /><asp:Label ID="lblSMSBKs" runat="server" Font-Bold="True"/></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Email BKs</td>
+                        <td></td>
+                        <td class="nowrap"><asp:CheckBox ID="chkEmailBKs" runat="server" Checked="true" /><asp:Label ID="lblEmailBKs" runat="server" Font-Bold="True"/></td>
+                        <td></td>
+                    </tr>
+
+
+                    <tr style="height:8px;">
+                        <td colspan="4"></td>
+                    </tr>
+
+                    <tr>
+                        <td class="nowrap">Provider</td>
+                        <td></td>
+                        <td class="nowrap"><asp:CheckBox ID="chkIsProvider" runat="server" /><asp:Label ID="lblIsProvider" runat="server" Font-Bold="True"/></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Principal</td>
+                        <td></td>
+                        <td class="nowrap"><asp:CheckBox ID="chkIsPrincipal" runat="server" /><asp:Label ID="lblIsPrincipal" runat="server" Font-Bold="True"/></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Admin</td>
+                        <td></td>
+                        <td class="nowrap"><asp:CheckBox ID="chkIsAdmin" runat="server" /><asp:Label ID="lblIsAdmin" runat="server" Font-Bold="True"/></td>
+                        <td></td>
+                    </tr>
+                    <tr id="isMasterAdminRow" runat="server">
+                        <td class="nowrap">Master Admin</td>
+                        <td></td>
+                        <td class="nowrap"><asp:CheckBox ID="chkIsMasterAdmin" runat="server" /><asp:Label ID="lblIsMasterAdmin" runat="server" Font-Bold="True"/></td>
+                        <td></td>
+                    </tr>
+                    <tr id="isStakeholderRow" runat="server">
+                        <td class="nowrap">Stakeholder</td>
+                        <td></td>
+                        <td class="nowrap"><asp:CheckBox ID="chkIsStakeholder" runat="server" /><asp:Label ID="lblIsStakeholder" runat="server" Font-Bold="True"/></td>
+                        <td></td>
+                    </tr>
+
+                    <tr style="height:8px;">
+                        <td colspan="4"></td>
+                    </tr>
+
+                    <tr id="addbyRow" runat="server">
+                        <td class="nowrap">Added By</td>
+                        <td></td>
+                        <td class="nowrap"><asp:Label ID="lblAddedBy" runat="server"></asp:Label></td>
+                        <td></td>
+                    </tr>
+                    <tr id="staffDateAddedRow" runat="server">
+                        <td class="nowrap">Date Added</td>
+                        <td></td>
+                        <td class="nowrap"><asp:Label ID="lblStaffDateAdded" runat="server"></asp:Label></td>
+                        <td></td>
+                    </tr>
+                    <tr id="startDateRow">
+                        <td class="nowrap">Start Date</td>
+                        <td></td>
+                        <td class="nowrap">
+                            <asp:DropDownList ID="ddlStartDate_Day" runat="server"></asp:DropDownList>
+                            <asp:DropDownList ID="ddlStartDate_Month" runat="server"></asp:DropDownList>
+                            <asp:DropDownList ID="ddlStartDate_Year" runat="server"></asp:DropDownList>
+                            <asp:Label ID="lblStartDate" runat="server" Font-Bold="True"/>
+                        </td>
+                        <td><asp:CustomValidator ID="ddlStartDateValidateAllOrNoneSet" runat="server"  CssClass="failureNotification"  
+                                    ControlToValidate="ddlStartDate_Day"
+                                    OnServerValidate="StartDateAllOrNoneCheck"
+                                    ErrorMessage="Start Date must have each of day/month/year selected, or all set to '--'"
+                                    Display="Dynamic"
+                                    ValidationGroup="EditStaffValidationSummary">*</asp:CustomValidator>
+                        </td>
+                    </tr>
+                    <tr id="endDateRow">
+                        <td class="nowrap">End Date</td>
+                        <td></td>
+                        <td class="nowrap">
+                            <asp:DropDownList ID="ddlEndDate_Day" runat="server"></asp:DropDownList>
+                            <asp:DropDownList ID="ddlEndDate_Month" runat="server"></asp:DropDownList>
+                            <asp:DropDownList ID="ddlEndDate_Year" runat="server"></asp:DropDownList>
+                            <asp:Label ID="lblEndDate" runat="server" Font-Bold="True"/>
+                        </td>
+                        <td><asp:CustomValidator ID="ddlEndDateValidateAllOrNoneSet" runat="server"  CssClass="failureNotification"  
+                                    ControlToValidate="ddlEndDate_Day"
+                                    OnServerValidate="EndDateAllOrNoneCheck"
+                                    ErrorMessage="End Date must have each of day/month/year selected, or all set to '--'"
+                                    Display="Dynamic"
+                                    ValidationGroup="EditStaffValidationSummary">*</asp:CustomValidator>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+
+            <td style="width:20px"></td>
+
+            <td valign="top">
+
+                <span id="spnElementsToEdit" runat="server">
+                    <asp:HyperLink ID="lnkBookingList" runat="server" NavigateUrl="~/BookingsList.aspx?id=">Booking List</asp:HyperLink>
+                    <br />
+                    <asp:HyperLink ID="lnkUnavailabilities" runat="server">Maintain Unavailabilities</asp:HyperLink>
+                    <br />
+                    Bookings yet to generate system letters: <asp:Label ID="lblBookingsYetToGenerateSystemLetters" runat="server" />&nbsp;&nbsp;&nbsp;<asp:Button ID="btnGenerateSystemLetters" runat="server" OnClick="btnGenerateSystemLetters_Click" Text="Generate" />
+                    <br />
+                    <br />
+                    <asp:HyperLink ID="lnkStaffOfferings" runat="server" NavigateUrl="~/StaffOfferingsInfo.aspx?id=">Set Comissions/Fixed Rates</asp:HyperLink>
+                    <br />
+                    <br />
+                </span>
+
+                <table cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td id="tblClinicsList"      runat="server" valign="top">
+                            <table>
+                                <tr>
+                                    <td class="nowrap"><b>Clinics Registered To:</b>  &nbsp;&nbsp;&nbsp;&nbsp;(<asp:HyperLink ID="lnkThisStaff" runat="server" NavigateUrl="~/StaffInfo.aspx?id=">Edit</asp:HyperLink>)</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <asp:Panel ID="pnlOrgsList" runat="server" ScrollBars="Auto" style="max-height:140px;" >
+                                            <asp:BulletedList ID="lstClinics" runat="server"></asp:BulletedList>
+                                        </asp:Panel>
+                                    </td>
+                                </tr>
+
+                                <tr style="height:15px">
+                                    <td></td>
+                                </tr>
+
+                                <tr>
+                                    <td class="nowrap"><b>Sites Registered To:</b></td>
+                                </tr>
+                                <tr style="height:3px">
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>
+
+                                        <asp:Repeater id="lstSites" runat="server">
+                                            <HeaderTemplate>
+                                                <table border="0" cellpadding="0" cellspacing="0">
+                                            </HeaderTemplate>
+                                            <ItemTemplate>
+                                                <tr>
+                                                    <td><asp:Label ID="lblSiteName" runat="server" Text='<%# Eval("name") %>' CssClass="nowrap"></asp:Label></td>
+                                                    <td style="width:12px"></td>
+                                                    <td><asp:ImageButton ID="imgStatus" runat="server" ImageUrl='<%# Convert.ToBoolean(Eval("has_access")) ? "~/images/tick-12.png" : "~/images/Delete-icon-12.png" %>'></asp:ImageButton></td>
+                                                    <td style="width:12px"></td>
+                                                    <td><asp:LinkButton ID="btnToggleSiteRestriction" runat="server" OnCommand="btnToggleSiteRestriction_Click" CommandName='<%#  Convert.ToBoolean(Eval("has_access")) ? "TurnOff" : "TurnOn" %>' CommandArgument='<%# Eval("site_id") %>' Text="Toggle"></asp:LinkButton></td>
+                                                </tr>
+                                            </ItemTemplate>
+                                            <FooterTemplate>
+                                                </table>
+                                            </FooterTemplate>
+                                        </asp:Repeater>
+
+                                        <asp:Label ID="lblNoSitesExist" runat="server" Text="No sites exist yet. Go to the Sites table to create a site."></asp:Label>
+                                        
+
+                                    </td>
+                                </tr>
+
+                                <tr style="height:15px">
+                                    <td></td>
+                                </tr>
+
+                             </table>
+                        </td>
+                        <td style="width:45px"></td>
+                        <td valign="top">
+                        <asp:ValidationSummary ID="EditStaffValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditStaffValidationSummary"/>
+                        </td>
+                    </tr>
+                    <tr id="addressListRow" runat="server">
+                        <td colspan="5">
+                            <UC:AddressControl ID="addressControl" runat="server" Visible="False" />
+                            <UC:AddressAusControl ID="addressAusControl" runat="server" Visible="False" />
+                        </td>
+                    </tr>
+                    <tr id="belowAddressListRow" runat="server">
+                        <td>
+                            <br />
+                            <br />
+                        </td>
+                    </tr>
+                </table>
+                <table>
+                    <tr>
+                        <td>    
+                            Comments<br />
+                            <div style="line-height:7px;">&nbsp;</div>
+                            <asp:TextBox ID="txtComments" TextMode="multiline" rows="10" style="width:400px" runat="server" />
+                        </td>
+                    </tr>
+                </table>
+
+            </td>
+        </tr>
+        <tr>
+            <td align="center">
+                <br />  
+                <asp:Button ID="btnSubmit" runat="server" Text="Button" onclick="btnSubmit_Click" CausesValidation="True" ValidationGroup="EditStaffValidationSummary" />
+                <asp:Button ID="btnCancel" runat="server" Text="Cancel" onclick="btnCancel_Click" Visible="False" />
+                <br />              
+            </td>
+        </tr>
+    </table>
+
+    <p>
+        <asp:Label ID="Label1" runat="server"></asp:Label>
+    </p>
+</asp:Content>

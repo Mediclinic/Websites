@@ -1,0 +1,343 @@
+﻿<%@ Page Title="Invoices Report" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="Report_Invoices.aspx.cs" Inherits="Report_Invoices" %>
+<%@ Register TagPrefix="UC" TagName="IconKeyControl" Src="~/Controls/IconKeyControl.ascx" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script type="text/javascript" src="Scripts/date_picker.js"></script>
+    <link href="Styles/date_picker.css" rel="stylesheet" type="text/css" />
+    <script type="text/javascript">
+
+        function get_organisation() {
+            var retVal = window.showModalDialog("OrganisationListPopup.aspx", 'Show Popup Window', "dialogHeight:700px;dialogWidth:750px;resizable:yes;center:yes;");
+            if (typeof retVal === "undefined")
+                return;
+
+            var index = retVal.indexOf(":");
+            document.getElementById('organisationID').value = retVal.substring(0, index);
+            document.getElementById('btnOrganisationSelectionUpdate').click();
+        }
+
+        function clear_organisation() {
+            document.getElementById('organisationID').value = '-1';
+            document.getElementById('btnOrganisationSelectionUpdate').click();  // call button press to let the code behind use this id and update accordingly
+        }
+
+        function get_provider() {
+            var retVal = window.showModalDialog("StaffListPopup.aspx", 'Show Popup Window', "dialogHeight:700px;dialogWidth:750px;resizable:yes;center:yes;");
+            if (typeof retVal === "undefined")
+                return;
+
+            var index = retVal.indexOf(":");
+            document.getElementById('providerID').value = retVal.substring(0, index);
+            document.getElementById('btnProviderSelectionUpdate').click();
+        }
+
+        function clear_provider() {
+            document.getElementById('providerID').value = '-1';
+            document.getElementById('btnProviderSelectionUpdate').click();  // call button press to let the code behind use this id and update accordingly
+        }
+
+        function get_offering() {
+            var retVal = window.showModalDialog("OfferingListPopup.aspx", 'Show Popup Window', "dialogHeight:700px;dialogWidth:750px;resizable:yes;center:yes;");
+            if (typeof retVal === "undefined")
+                return;
+
+            var index = retVal.indexOf(":");
+            document.getElementById('offeringID').value = retVal.substring(0, index);
+            document.getElementById('btnOfferingSelectionUpdate').click();
+        }
+
+        function clear_offering() {
+            document.getElementById('offeringID').value = '-1';
+            document.getElementById('btnOfferingSelectionUpdate').click();  // call button press to let the code behind use this id and update accordingly
+        }
+
+        function open_new_window(URL) {
+            NewWindow = window.open(URL, "_blank", "toolbar=no,menubar=0,status=0,copyhistory=0,scrollbars=yes,resizable=1,location=0,height=" + screen.height + ',width=' + screen.width);
+            NewWindow.location = URL;
+        }
+
+    </script>
+ </asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <asp:Panel ID="pnlDefaultButton" runat="server" DefaultButton="btnDefaultButton_NoSubmit">
+    <asp:Button ID="btnDefaultButton_NoSubmit" runat="server" CssClass="hiddencol" OnClientClick="javascript:return false;" />
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+            <td>
+
+                <table border="0" cellpadding="0" cellspacing="0">
+                    <tr>
+
+                        <td valign="top"><h2 id="heading" runat="server" class="nowrap">Invoice Lines Report</h2></td>
+
+                        <td id="td_search_space1" runat="server" style="width:60px"></td>
+
+                        <td  id="td_orgs_patients" runat="server" valign="middle">
+                            <table>
+                                <tr>
+                                    <td valign="top">
+                                        <asp:Label  ID="lblOrganisationText" runat="server" Text="<b>All Organisations<b>" CssClass="nowrap" />
+                                    </td>
+                                    <td valign="top" style="width:15px;"></td>
+                                    <td valign="top">
+                                        <asp:Button ID="btnOrganisationListPopup" runat="server" style="min-width:100%;" Text="Get Organisation" OnClientClick="javascript:get_organisation(); return false;"/>
+                                    </td>
+                                    <td valign="top">
+                                        <asp:Button ID="btnClearOrganisation" runat="server" style="min-width:100%;" Text="All Organisations" OnClientClick="javascript:clear_organisation(); return false;"/>
+                                    </td>
+                                </tr>
+                                <tr id="providerRow" runat="server">
+                                    <td valign="top">
+                                        <asp:Label  ID="lblProviderText" runat="server" Text="<b>All Providers<b>" CssClass="nowrap" />
+                                    </td>
+                                    <td valign="top" style="width:15px;"></td>
+                                    <td valign="top">
+                                        <asp:Button ID="btnProviderListPopup" runat="server" style="min-width:100%;" Text="Get Provider" OnClientClick="javascript:get_provider(); return false;"/>
+                                    </td>
+                                    <td valign="top">
+                                        <asp:Button ID="btnClearProvider" runat="server" style="min-width:100%;" Text="All Providers" OnClientClick="javascript:clear_provider(); return false;"/>
+                                    </td>
+                                </tr>
+                                <tr id="offeringRow" runat="server">
+                                    <td valign="top">
+                                        <asp:Label  ID="lblOfferingText" runat="server" Text="<b>All Offerings<b>" CssClass="nowrap" />
+                                    </td>
+                                    <td valign="top" style="width:15px;"></td>
+                                    <td valign="top">
+                                        <asp:Button ID="btnOfferingListPopup" runat="server" style="min-width:100%;" Text="Get Offering" OnClientClick="javascript:get_offering(); return false;"/>
+                                    </td>
+                                    <td valign="top">
+                                        <asp:Button ID="btnClearOffering" runat="server" style="min-width:100%;" Text="All Offerings" OnClientClick="javascript:clear_offering(); return false;"/>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+
+                        <td id="td_search_space2" runat="server" style="width:30px"></td>
+
+                        <td id="td_search_dates" runat="server">
+                            <table>
+                                <tr>
+                                    <td class="nowrap"><asp:Label ID="lblSearchDate" runat="server">Start Date: </asp:Label></td>
+                                    <td class="nowrap"><asp:TextBox ID="txtStartDate" runat="server" Columns="10"/></td>
+                                    <td class="nowrap"><asp:ImageButton ID="txtStartDate_Picker" runat="server" ImageUrl="~/images/Calendar-icon-24px.png" /></td>
+                                    <td class="nowrap"><button type="button" onclick="javascript:document.getElementById('txtStartDate').value = '';return false;">Clear</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="nowrap"><asp:Label ID="lblEndDate" runat="server">End Date: </asp:Label></td>
+                                    <td class="nowrap"><asp:TextBox ID="txtEndDate" runat="server" Columns="10"></asp:TextBox></td>
+                                    <td class="nowrap"><asp:ImageButton ID="txtEndDate_Picker" runat="server" ImageUrl="~/images/Calendar-icon-24px.png" /></td>
+                                    <td class="nowrap"><button type="button" onclick="javascript:document.getElementById('txtEndDate').value = '';return false;">Clear</button></td>
+                                </tr>
+                            </table>
+                        </td>
+
+                        <td style="width:30px"></td>
+
+                        <td class="nowrap">
+                            <asp:RadioButtonList ID="rblDateType" runat="server">
+                                <asp:ListItem Text="Inv Date"   Value="Invoices" Selected="True"></asp:ListItem>
+                                <asp:ListItem Text="Treatment Date" Value="Bookings" ></asp:ListItem>
+                            </asp:RadioButtonList>
+                        </td>
+
+                        <td style="width:30px"></td>
+
+                        <td>
+                          <table border="0" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td class="nowrap" align="center">
+                                        <asp:Button ID="btnSearch" runat="server" Text="Update" OnClick="btnSearch_Click" Width="100%" style="min-width:75px;" />
+                                        <div style="line-height:7px;">&nbsp;</div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="nowrap" align="center">
+                                        <asp:Button ID="btnExport" runat="server" Text="Export List" OnClick="btnExport_Click" Width="100%" />
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+
+                        <td style="width:75px"></td>
+
+                        <td><asp:CheckBox ID="chkUsePaging" runat="server" Text="use paging" Font-Size="X-Small" AutoPostBack="True" OnCheckedChanged="chkUsePaging_CheckedChanged" CssClass="nowrap" /></td>
+
+                    </tr>
+                </table>
+            </td>
+
+            <td align="right">
+                <UC:IconKeyControl ID="iconKeyControl" runat="server" />
+            </td>
+
+        </tr>
+    </table>
+    </asp:Panel>
+
+
+
+
+
+    <br />
+    <asp:ValidationSummary ID="EditSummaryReportValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditSummaryReportValidationSummary"/>
+    <asp:ValidationSummary ID="AddSummaryReportValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="AddSummaryReportValidationGroup"/>
+    <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+
+    <asp:HiddenField ID="organisationID" runat="server" Value="-1" />
+    <asp:Button ID="btnOrganisationSelectionUpdate" runat="server" CssClass="hiddencol" Text=""  OnClick="btnOrganisationSelectionUpdate_Click" />
+    <asp:HiddenField ID="providerID" runat="server" Value="-1" />
+    <asp:Button ID="btnProviderSelectionUpdate" runat="server" CssClass="hiddencol" Text=""  OnClick="btnProviderSelectionUpdate_Click" />
+    <asp:HiddenField ID="offeringID" runat="server" Value="-1" />
+    <asp:Button ID="btnOfferingSelectionUpdate" runat="server" CssClass="hiddencol" Text=""  OnClick="btnOfferingSelectionUpdate_Click" />
+
+
+
+    <p>
+    <asp:GridView ID="GrdSummaryReport" runat="server" 
+        AutoGenerateColumns="False" DataKeyNames="invoice_line_id" 
+        OnRowCancelingEdit="GrdSummaryReport_RowCancelingEdit" 
+        OnRowDataBound="GrdSummaryReport_RowDataBound" 
+        OnRowEditing="GrdSummaryReport_RowEditing" 
+        OnRowUpdating="GrdSummaryReport_RowUpdating" ShowFooter="True" 
+        OnRowCommand="GrdSummaryReport_RowCommand" 
+        OnRowDeleting="GrdSummaryReport_RowDeleting" 
+        OnRowCreated="GrdSummaryReport_RowCreated"
+        AllowSorting="True" 
+        OnSorting="GridView_Sorting"
+        AllowPaging="True"
+        OnPageIndexChanging="GrdStaff_PageIndexChanging"
+        PageSize="16"
+        ClientIDMode="Predictable">
+        <PagerSettings Mode="NumericFirstLast" FirstPageText="First" PreviousPageText="Previous" NextPageText="Next" LastPageText="Last" />
+
+        <Columns> 
+
+            <asp:TemplateField HeaderText="ID"  HeaderStyle-HorizontalAlign="Left" SortExpression="booking_booking_id"> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblId" runat="server" Text='<%# Eval("invoice_line_id") %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Provider"  SortExpression="provider_surname, provider_firstname" ItemStyle-CssClass="nowrap"> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblProvider" runat="server" Text='<%# Eval("provider_firstname") + " " + Eval("provider_surname") %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Recorded" SortExpression="booking_date_created" ItemStyle-CssClass="nowrap"> 
+                <ItemTemplate> 
+                        <asp:Label ID="lblAppointmentAddedDate" runat="server" Text='<%# Eval("booking_date_last_moved") != DBNull.Value ? Eval("booking_date_last_moved", "{0:dd MMM yyyy}") : Eval("booking_date_created", "{0:dd MMM yyyy}") %>'></asp:Label>
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Booked for" SortExpression="date_start" ItemStyle-CssClass="nowrap"> 
+                <ItemTemplate> 
+                        <asp:Label ID="lblAppointmentDate"      runat="server" Text='<%# Eval("booking_date_start", "{0:dd MMM yyyy}") %>'></asp:Label>
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Start" SortExpression="date_start" ItemStyle-CssClass="nowrap"> 
+                <ItemTemplate> 
+                        <asp:Label ID="lblAppointmentStart" runat="server" Text='<%# Eval("booking_date_start", "{0:H:mm}") %>'></asp:Label>
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="End" SortExpression="date_end" ItemStyle-CssClass="nowrap"> 
+                <ItemTemplate> 
+                        <asp:Label ID="lblAppointmentEnd" runat="server" Text='<%# Eval("booking_date_end", "{0:H:mm}") %>'></asp:Label>
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Durtaion" SortExpression="booking_duration_total_minutes" ItemStyle-CssClass="nowrap"> 
+                <ItemTemplate> 
+                        <asp:Label ID="lblAppointmentDuration" runat="server" Text='<%# Eval("booking_duration_total_minutes") %>'></asp:Label>
+                </ItemTemplate> 
+            </asp:TemplateField> 
+            
+            <asp:TemplateField HeaderText="Inv date" SortExpression="invoice_date_added" ItemStyle-CssClass="nowrap"> 
+                <ItemTemplate> 
+                        <asp:Label ID="lblInvoiceDateAdded" runat="server" Text='<%# Eval("invoice_date_added", "{0:dd MMM yyyy}") %>'></asp:Label>
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Clinic"  SortExpression="organisation_name" ItemStyle-CssClass="nowrap"> 
+                <ItemTemplate> 
+                    <asp:Label ID="lbOrganisationName" runat="server" Text='<%# Bind("organisation_name") %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Booking"  SortExpression="booking_id" ItemStyle-CssClass="nowrap"> 
+                <ItemTemplate> 
+                    <asp:Label ID="BookingId" runat="server" Text='<%# Bind("booking_id") %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField>
+             
+            <asp:TemplateField HeaderText="Patient"  SortExpression="patient_surname, patient_firstname" ItemStyle-CssClass="nowrap"> 
+                <ItemTemplate> 
+                    <asp:Label ID="lnkPatient" runat="server" Text='<%# Eval("patient_firstname") + " " + Eval("patient_surname") %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Offering"  SortExpression="offering_name" ItemStyle-CssClass="nowrap"> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblOfferingName" runat="server" Text='<%# Eval("offering_name")  %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Amount"  SortExpression="invoice_line_price"> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblInvoiceLinePrice" runat="server" Text='<%# Eval("invoice_line_price")  %>'></asp:Label> 
+                </ItemTemplate> 
+                <FooterTemplate> 
+                    <asp:Label ID="lblSum_Amount" runat="server" Font-Bold="True"></asp:Label>&nbsp;
+                </FooterTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Qty"  SortExpression="invoice_line_quantity"> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblInvoiceLineQuantity" runat="server" Text='<%# Eval("invoice_line_quantity") == DBNull.Value ? "" : (Convert.ToDecimal(Eval("invoice_line_quantity")) == Convert.ToDecimal((int)Convert.ToDecimal(Eval("invoice_line_quantity"))) ? Convert.ToDecimal((int)Convert.ToDecimal(Eval("invoice_line_quantity"))) : Eval("invoice_line_quantity"))  %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Rebates"  SortExpression="total_credit_notes"> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblTotalCreditNotes" runat="server" Text='<%# Eval("total_credit_notes") == DBNull.Value || (decimal)Eval("total_credit_notes") == 0 ? "" : Eval("total_credit_notes")  %>'></asp:Label> 
+                </ItemTemplate> 
+                <FooterTemplate> 
+                    <asp:Label ID="lblSum_Rebates" runat="server" Font-Bold="True"></asp:Label>&nbsp;
+                </FooterTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Comm. %"  SortExpression="commission_percent_amount"> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblCommissionPercent" runat="server" Text='<%# Eval("commission_percent_text")  %>'></asp:Label> 
+                </ItemTemplate> 
+                <FooterTemplate> 
+                    <asp:Label ID="lblSum_CommissionPercent" runat="server" Font-Bold="True"></asp:Label>&nbsp;
+                </FooterTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Comm. Fixed"  SortExpression="fixed_rate_amount"> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblCommissionFixed" runat="server" Text='<%# Eval("fixed_rate_text")  %>'></asp:Label> 
+                </ItemTemplate> 
+                <FooterTemplate> 
+                    <asp:Label ID="lblSum_CommissionFixed" runat="server" Font-Bold="True"></asp:Label>&nbsp;
+                </FooterTemplate> 
+            </asp:TemplateField> 
+
+
+        </Columns> 
+
+    </asp:GridView>
+
+    </p>
+    <p>
+        <asp:Label ID="Label1" runat="server"></asp:Label>
+    </p>
+
+    <p>
+    </p>
+</asp:Content>

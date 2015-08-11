@@ -1,0 +1,182 @@
+﻿<%@ Page Title="Add Receipts & Credit Notes" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="AddReceiptsAndCreditNotes.aspx.cs" Inherits="AddReceiptsAndCreditNotes" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script type="text/javascript">
+
+        function update_total() {
+
+            // get all textboxes in the maintable div
+
+            var total = 0.00;
+            var str = "";
+
+            var inputs = document.getElementsByTagName("input");
+            for (var i = 0; i < inputs.length; i++) {
+                if (inputs[i].id.indexOf('MainContent_lstPayments_txtAmount_') == 0 && inputs[i].value.length > 0 && !isNaN(inputs[i].value))
+                    total += parseFloat(inputs[i].value);
+            }
+
+            var credit_note_total = document.getElementById('txtCreditNoteTotal').value;
+            if (credit_note_total.length > 0 && !isNaN(credit_note_total))
+                total += parseFloat(credit_note_total);
+
+            document.getElementById('txtTotal').value = total.toFixed(2);
+        }
+
+
+    </script>
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <center>
+    <table border="0" cellpadding="0" cellspacing="0">
+        <tr>
+            <td>
+
+                <div id="header_table" runat="server">
+                <center>
+
+                    <table border="0" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td>
+                                <h2>
+                                Invoice #<br />
+                                Amount Owing
+                                </h2>
+                            </td>
+                            <td style="width:18px"></td>
+                            <td>
+                                <h2>
+                                    <asp:Label ID="lblInvoiceNbr" runat="server"></asp:Label><br />
+                                    <asp:Label ID="lblAmountOwing" runat="server"></asp:Label>
+                                </h2>
+
+                            </td>
+                        </tr>
+                    </table>
+
+                </center>
+                </div>
+
+                <br />
+                <asp:ValidationSummary ID="EditRecepitValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditRecepitValidationSummary"/>
+                <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+
+
+                <div id="maintable" runat="server">
+
+
+
+                <hr size="2" width="100%" noshade />
+
+
+
+                <h2>Add Receipt(s)</h2>
+                <br />
+
+                <asp:Button ID="btnUpdatePOSMachineList" runat="server" CssClass="hiddencol" onclick="btnUpdatePOSMachineList_Click" />
+                <asp:Repeater id="lstPayments" runat="server" ClientIDMode="Predictable" EnableViewState="True">
+                    <HeaderTemplate>
+                        <table>
+                    </HeaderTemplate>
+                    <ItemTemplate>
+                        <tr>
+                            <td class="nowrap" valign="top"><asp:Label ID="lblDesc" runat="server"  Text='<%# Eval("descr") %>' /><asp:Label ID="lblTypeID" runat="server"  Text='<%# Eval("receipt_payment_type_id") %>' CssClass="hiddencol" /></td>
+                            <td class="nowrap" valign="top"></td>
+                            <td class="nowrap" valign="top">
+                                <asp:TextBox ID="txtAmount" runat="server" Visible='<%# ((string)Eval("Text")).Length == 0 ? true : false %>' Width="85" onKeyUp="update_total();" /><asp:Label ID="lblText" runat="server" Text='<%# Eval("Text") %>' Visible='<%# ((string)Eval("Text")).Length == 0 ? false : true %>' />
+                                <asp:RangeValidator ID="txtValidateTotalRange" runat="server" CssClass="failureNotification" SetFocusOnError="true"
+                                    ControlToValidate="txtAmount"
+                                    ErrorMessage="Receipt Amount must be a number and must be more than zero" Type="Double" MinimumValue="0.01" MaximumValue="10000.00" 
+                                    Display="Dynamic"
+                                    ValidationGroup="EditRecepitValidationSummary">*</asp:RangeValidator>
+                            </td>
+                            <td class="nowrap" valign="top"></td>
+                            <td class="nowrap" valign="top"><asp:Label ID="lblPosMachineText" runat="server"  Text="POS Machine" /></td>
+                            <td class="nowrap" valign="top"></td>
+                            <td class="nowrap" valign="top">
+                                <asp:DropDownList ID="ddlPosMachine" runat="server" />
+                                <small><asp:Label ID="lnkPopupAddEditPOSMachines" runat="server" TabIndex="-1"></asp:Label></small>
+                            </td>
+                        </tr>
+                    </ItemTemplate>
+                    <FooterTemplate>
+                        </table>
+                    </FooterTemplate>
+                </asp:Repeater>
+
+                <div style="height:8px;">&nbsp;</div>
+
+
+
+                <hr size="2" width="100%" noshade />
+
+
+
+                <h2>Add Adjustment Note</h2>
+                <br />
+
+
+                <table>
+                    <tr>
+                        <td class="nowrap" valign="top">Amount</td>
+                        <td class="nowrap" valign="top"></td>
+                        <td class="nowrap" valign="top">
+                            <asp:TextBox ID="txtCreditNoteTotal" runat="server" Width="85" Text="0.00" onKeyUp="update_total();" />
+                            <asp:RangeValidator ID="txtValidateTotalRange" runat="server" CssClass="failureNotification" SetFocusOnError="true"
+                                ControlToValidate="txtCreditNoteTotal"
+                                ErrorMessage="Credit Note Amount must be a number and not less than zero" Type="Double" MinimumValue="0.00" MaximumValue="10000.00" 
+                                Display="Dynamic"
+                                ValidationGroup="EditRecepitValidationSummary">*</asp:RangeValidator>
+                        </td>
+                        <td class="nowrap" valign="top"></td>
+                        <td class="nowrap" valign="top">Reason</td>
+                        <td class="nowrap" valign="top"></td>
+                        <td class="nowrap" valign="top"><asp:TextBox ID="txtCreditCardReason" runat="server" Width="200" MaxLength="250"></asp:TextBox></td>
+                    </tr>
+                </table>
+
+                <div style="height:8px;">&nbsp;</div>
+
+
+
+                <hr size="2" width="100%" noshade />
+
+
+
+                <br />
+                <center>
+                <table>
+                    <tr>
+                        <td>Total Receipts & Credit Notes</td>
+                        <td style="width:18px"></td>
+                        <td><asp:TextBox ID="txtTotal" runat="server" Width="85" Text="0.00" Enabled="false" Font-Bold="true" /></td>
+                    </tr>
+                    <tr style="height:10px">
+                        <td colspan="3"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="3" align="center">
+                            <asp:Button ID="btnSubmit" runat="server" Text="Submit" onclick="btnSubmit_Click" CausesValidation="True" ValidationGroup="EditRecepitValidationSummary" />
+                            <asp:Button ID="btnCancel" runat="server" Text="Cancel" onclick="btnCancel_Click" OnClientClick="window.returnValue=false;self.close();" />
+                        </td>
+
+
+                    </tr>
+
+                </table>
+                </center>
+
+                </div>
+
+
+
+
+
+            </td>
+        </tr>
+    </table>
+    </center>
+
+
+</asp:Content>

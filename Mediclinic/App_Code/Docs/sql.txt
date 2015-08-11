@@ -1,0 +1,75 @@
+﻿    
+
+	-----------------------------------------------------------------
+	-----------------------------------------------------------------	
+	DECLARE @Database VARCHAR(255)
+	DECLARE @cmd varchar(1000)
+
+	DECLARE DatabaseCursor CURSOR FOR 
+	SELECT name FROM master.sys.databases  
+	WHERE state_desc='ONLINE' AND (name LIKE 'Mediclinic_[0-9][0-9][0-9][0-9]' OR name = 'Mediclinic_FakeDB')
+	Order by 1
+
+	OPEN DatabaseCursor  
+	FETCH NEXT FROM DatabaseCursor INTO @Database 
+	WHILE @@FETCH_STATUS = 0 
+	BEGIN 
+
+
+		--SET @cmd='use ['+@Database+']; IF (SELECT COUNT(*) FROM Credit) > 0 BEGIN Select ''' + @Database + ''', count(*) from Credit END'  
+		--EXEC (@cmd)
+		--SET @cmd='use ['+@Database+']; IF (SELECT COUNT(*) FROM UserLogin) > 250 BEGIN Select ''' + @Database + ''', COUNT(*) from UserLogin END'  
+		--EXEC (@cmd)
+		--SET @cmd='use ['+@Database+']; IF (SELECT COUNT(*) FROM PaymentPending) > 0 BEGIN Select ''' + @Database + ''', COUNT(*) from PaymentPending END'  
+		--EXEC (@cmd)
+		--SET @cmd='use ['+@Database+']; UPDATE UserLogin SET is_logged_off = 1; Select ''' + @Database + ''', count(*) from Staff'  
+		--SET @cmd='use ['+@Database+']; Select ''' + @Database + ''', count(*) from UserLogin WHERE is_logged_off = 1'  
+
+		SET @cmd='use ['+@Database+']; Select ''' + @Database + ''', count(*) from Staff'  
+		EXEC (@cmd)
+
+		FETCH NEXT FROM DatabaseCursor INTO @Database 
+	
+	END 
+	CLOSE DatabaseCursor  
+	DEALLOCATE DatabaseCursor
+	-----------------------------------------------------------------
+	-----------------------------------------------------------------
+
+		
+	-----------------------------------------------------------------
+    EXEC sp_rename 'Organisation.[is_delete]', 'is_deleted', 'COLUMN'
+
+    ALTER TABLE Organisation ADD CONSTRAINT DF_X
+    DEFAULT     (0) FOR is_deleted
+
+    ALTER TABLE TABLENAME ADD FIELDNAME bit not null default 0
+
+    SELECT        OBJECT_NAME(object_id) AS NameofConstraint, SCHEMA_NAME(schema_id) AS SchemaName, OBJECT_NAME(parent_object_id) AS TableName,  type_desc AS ConstraintType
+    FROM            sys.objects
+    WHERE        (OBJECT_NAME(parent_object_id) = 'Referrer')
+
+    ALTER TABLE referrer DROP CONSTRAINT DF__Referrer__is_del__5AF96FB1
+    ALTER TABLE referrer DROP COLUMN is_deleted
+
+	ALTER TABLE table_name ALTER COLUMN column_name datatype
+	ALTER TABLE Organisation ALTER COLUMN start_date datetime  null -- makes nullable
+    -----------------------------------------------------------------
+
+	ALTER TABLE Site ADD CONSTRAINT DF_X5
+	UNIQUE ( entity_id)
+    -----------------------------------------------------------------
+	SELECT        f.name AS ForeignKey, OBJECT_NAME(f.parent_object_id) AS TableName, COL_NAME(fc.parent_object_id, fc.parent_column_id) AS ColumnName, 
+                  OBJECT_NAME(f.referenced_object_id) AS ReferenceTableName, COL_NAME(fc.referenced_object_id, fc.referenced_column_id) AS ReferenceColumnName
+	FROM          sys.foreign_keys AS f INNER JOIN
+                  sys.foreign_key_columns AS fc ON f.object_id = fc.constraint_object_id
+	WHERE         (OBJECT_NAME(f.parent_object_id) = 'Organisation')
+    -----------------------------------------------------------------
+	ALTER TABLE Organisation 
+	ADD CONSTRAINT FK__Organisat__parent_id
+	FOREIGN KEY (parent_organisation_id)
+	REFERENCES Organisation(organisation_id)
+
+	ALTER TABLE Organisation 
+	DROP CONSTRAINT FK__Organisat__parent_id
+    -----------------------------------------------------------------

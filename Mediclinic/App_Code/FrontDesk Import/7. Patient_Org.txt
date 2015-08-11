@@ -1,0 +1,10 @@
+﻿
+INSERT INTO Mediclinic_0027.dbo.RegisterPatient
+	(organisation_id, patient_id, register_patient_date_added, is_deleted)
+SELECT
+	 (SELECT TOP 1 organisation_id FROM Mediclinic_0027.dbo.Booking WHERE patient_id = Patient.patient_id ORDER BY date_created desc)
+	,patient_id
+	,(SELECT TOP 1 date_created    FROM Mediclinic_0027.dbo.Booking WHERE patient_id = Patient.patient_id ORDER BY date_created desc)
+	,0
+FROM Patient
+WHERE (select COUNT(*) FROM Mediclinic_0027.dbo.Booking WHERE patient_id = Patient.patient_id) > 0

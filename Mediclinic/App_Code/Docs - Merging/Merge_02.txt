@@ -1,0 +1,568 @@
+﻿/*
+DELETE THESE FROM HOLLOWAY ONLY!
+
+DELETE cn
+FROM CreditNote cn
+LEFT JOIN Invoice i ON cn.invoice_id = i.invoice_id
+Where i.site_id = 1 --AND i.invoice_id > 180000
+;
+DELETE op
+FROM Overpayment op
+LEFT JOIN Receipt r ON op.receipt_id = op.receipt_id
+LEFT JOIN Invoice i ON r.invoice_id = i.invoice_id
+Where i.site_id = 1 --AND i.invoice_id > 180000
+;
+DELETE r
+FROM Receipt r
+LEFT JOIN Invoice i ON r.invoice_id = i.invoice_id
+Where i.site_id = 1 --AND i.invoice_id > 180000
+;
+DELETE il
+FROM InvoiceLine il
+LEFT JOIN Invoice i ON il.invoice_id = i.invoice_id
+Where i.site_id = 1 --AND i.invoice_id > 180000
+;
+DELETE r
+FROM Refund r
+LEFT JOIN Invoice i ON r.invoice_id = i.invoice_id
+Where i.site_id = 1 --AND i.invoice_id > 180000
+;
+delete Invoice
+where   site_id = 1 --AND invoice_id > 180000
+;
+*/
+
+
+=============================================================================================
+=============================================================================================
+=============================>> REFERENCE TABLES <<==========================================
+=============================================================================================
+=============================================================================================
+
+
+Suburb
+
+		- Holloway:
+
+
+		 -- create suburb2 in Holloway
+
+
+		----------------------
+
+		 -- remove fields
+		 update Mediclinic_Holloway_TestDB.dbo.Suburb  set amended_date = null, amended_by = null, previous = '';
+		 update Mediclinic_Balwyn_TestDB.dbo.Suburb  set amended_date = null, amended_by = null, previous = '';
+
+		----------------------
+
+		SELECT 
+		B_Suburb.suburb_id,
+		B_Suburb.name,
+		B_Suburb.postcode,
+		B_Suburb.state,
+		B_Suburb.amended_date,
+		B_Suburb.amended_by,
+		B_Suburb.previous
+
+		INTO Mediclinic_Holloway_TestDB.dbo.Suburb2
+		FROM  Mediclinic_Balwyn_TestDB.dbo.Suburb B_Suburb
+		;
+		ALTER TABLE Mediclinic_Holloway_TestDB.dbo.Suburb2 ADD PRIMARY KEY (suburb_id);
+		ALTER TABLE Mediclinic_Holloway_TestDB.dbo.Suburb2 ADD FOREIGN KEY (amended_by) REFERENCES Staff(staff_id);
+
+
+		----------------------
+
+		insert into Mediclinic_Balwyn_TestDB.dbo.Suburb
+		(name, postcode, state,amended_date,amended_by,previous)
+		(
+		   select name, postcode, state, NULL, NULL, '' from Mediclinic_Holloway_TestDB.dbo.Suburb 
+		   EXCEPT
+		   select name, postcode, state, NULL, NULL, '' from Mediclinic_Holloway_TestDB.dbo.Suburb2
+		)
+
+		;
+
+		insert into Mediclinic_Holloway_TestDB.dbo.Suburb2
+		(name, postcode, state,amended_date,amended_by,previous)
+		(
+		   select name, postcode, state, NULL, NULL, '' from Mediclinic_Holloway_TestDB.dbo.Suburb 
+		   EXCEPT
+		   select name, postcode, state, NULL, NULL, '' from Mediclinic_Holloway_TestDB.dbo.Suburb2
+		)
+
+		;
+		----------------------
+
+
+		 -- check all in suburb2
+
+		 select * 
+		 from       Mediclinic_Holloway_TestDB.dbo.ContactAus c
+		  LEFT JOIN Mediclinic_Holloway_TestDB.dbo.Suburb     s ON c.suburb_id = s.suburb_id
+		 where c.suburb_id IS NOT NULL
+			   AND (select count(*) from Mediclinic_Holloway_TestDB.dbo.Suburb2 where name = s.name AND postcode = s.postcode AND state = s.state) = 0
+
+
+		-- add suburb_id2 field to ContactAus
+		ALTER TABLE Mediclinic_Holloway_TestDB.dbo.ContactAus  ADD suburb_id2 int FOREIGN KEY REFERENCES Mediclinic_Holloway_TestDB.dbo.Suburb2(suburb_id) default null;
+
+
+		UPDATE
+			c
+		SET
+			suburb_id2 = 
+			(
+				select top 1 suburb_id 
+				from Mediclinic_Holloway_TestDB.dbo.Suburb2 where name = s.name AND postcode = s.postcode AND state = s.state
+			)
+		FROM
+			Mediclinic_Holloway_TestDB.dbo.ContactAus c
+			JOIN
+			Mediclinic_Holloway_TestDB.dbo.Suburb s on c.suburb_id = s.suburb_id
+		WHERE
+			c.suburb_id is not null;
+
+
+
+		-- add suburb_id2 field to ContactOld
+		ALTER TABLE Mediclinic_Holloway_TestDB.dbo.ContactOld ADD suburb_id2 int FOREIGN KEY REFERENCES Mediclinic_Holloway_TestDB.dbo.Suburb2(suburb_id) default null;
+
+
+		UPDATE
+			c
+		SET
+			suburb_id2 = 
+			(
+				select top 1 suburb_id 
+				from Mediclinic_Holloway_TestDB.dbo.Suburb2 where name = s.name AND postcode = s.postcode AND state = s.state
+			)
+		FROM
+			Mediclinic_Holloway_TestDB.dbo.ContactOld c
+			JOIN
+			Mediclinic_Holloway_TestDB.dbo.Suburb s on c.suburb_id = s.suburb_id
+		WHERE
+			c.suburb_id is not null;
+
+
+
+		/*
+		select s.*, s2.*, c.*
+		from Mediclinic_Holloway_TestDB.dbo.ContactAus c
+			 left join Mediclinic_Holloway_TestDB.dbo.Suburb s on c.suburb_id = s.suburb_id
+			 left join Mediclinic_Holloway_TestDB.dbo.Suburb2 s2 on c.suburb_id2 = s2.suburb_id
+        --where s.name <> s2.name or s.postcode <> s2.postcode or s.state <> s2.state
+
+		select s.*, s2.*, c.*
+		from Mediclinic_Holloway_TestDB.dbo.ContactOld c
+			 left join Mediclinic_Holloway_TestDB.dbo.Suburb s on c.suburb_id = s.suburb_id
+			 left join Mediclinic_Holloway_TestDB.dbo.Suburb2 s2 on c.suburb_id2 = s2.suburb_id
+        --where s.name <> s2.name or s.postcode <> s2.postcode or s.state <> s2.state
+		*/
+
+
+
+		// now delete 
+
+		=> designer:
+		1. delete suburb_id fields from ContactAus/ContactOld
+		2. rename suburb_id2 fields to suburb_id
+		2. delete whole Suburb table
+		3. rename Suburb2 to Suburb
+
+
+
+		-- check all
+		(
+		   select * from Mediclinic_Holloway_TestDB.dbo.Suburb 
+		   EXCEPT
+		   select * from Mediclinic_Balwyn_TestDB.dbo.Suburb
+		)
+		union all
+		(
+		   select * from Mediclinic_Balwyn_TestDB.dbo.Suburb 
+		   EXCEPT
+		   select * from Mediclinic_Holloway_TestDB.dbo.Suburb
+		)
+
+----------------------------------------------------------------------
+End Suburb
+----------------------------------------------------------------------
+  
+AddressChannelType
+
+
+		(
+			select 'Holloway', * from Mediclinic_Holloway_TestDB.dbo.AddressChannelType 
+			EXCEPT
+			select 'Holloway', * from Mediclinic_Balwyn_TestDB.dbo.AddressChannelType
+		)
+		union all
+		(
+			select 'Balwyn', * from Mediclinic_Balwyn_TestDB.dbo.AddressChannelType 
+			EXCEPT
+			select 'Balwyn', * from Mediclinic_Holloway_TestDB.dbo.AddressChannelType
+		)
+
+
+
+		SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.AddressChannelType ON;
+		INSERT INTO Mediclinic_Balwyn_TestDB.dbo.AddressChannelType (address_channel_type_id,descr)
+		VALUES
+		(320, 'Glade'),
+		(321, 'Pass'),
+		(322, 'View'),
+		(323, 'Track'),
+		(324, 'Row'),
+		(325, 'Brae');
+		SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.AddressChannelType OFF;
+
+		SET IDENTITY_INSERT Mediclinic_Holloway_TestDB.dbo.AddressChannelType ON;
+		INSERT INTO Mediclinic_Holloway_TestDB.dbo.AddressChannelType (address_channel_type_id,descr)
+		VALUES
+		(320, 'Glade'),
+		(321, 'Pass'),
+		(322, 'View'),
+		(323, 'Track'),
+		(324, 'Row'),
+		(325, 'Brae');
+		SET IDENTITY_INSERT Mediclinic_Holloway_TestDB.dbo.AddressChannelType OFF;
+
+
+		UPDATE Mediclinic_Balwyn_TestDB.dbo.ContactAus SET address_channel_type_id = 320 WHERE address_channel_type_id = 315;
+		UPDATE Mediclinic_Balwyn_TestDB.dbo.ContactAus SET address_channel_type_id = 321 WHERE address_channel_type_id = 318;
+		UPDATE Mediclinic_Balwyn_TestDB.dbo.ContactAus SET address_channel_type_id = 322 WHERE address_channel_type_id = 319;
+
+		UPDATE Mediclinic_Holloway_TestDB.dbo.ContactAus SET address_channel_type_id = 323 WHERE address_channel_type_id = 313;
+		UPDATE Mediclinic_Holloway_TestDB.dbo.ContactAus SET address_channel_type_id = 324 WHERE address_channel_type_id = 318;
+		UPDATE Mediclinic_Holloway_TestDB.dbo.ContactAus SET address_channel_type_id = 325 WHERE address_channel_type_id = 319;
+
+
+		UPDATE Mediclinic_Balwyn_TestDB.dbo.AddressChannel SET address_channel_type_id = 320 WHERE address_channel_type_id = 315;
+		UPDATE Mediclinic_Balwyn_TestDB.dbo.AddressChannel SET address_channel_type_id = 321 WHERE address_channel_type_id = 318;
+		UPDATE Mediclinic_Balwyn_TestDB.dbo.AddressChannel SET address_channel_type_id = 322 WHERE address_channel_type_id = 319;
+
+		UPDATE Mediclinic_Holloway_TestDB.dbo.AddressChannel SET address_channel_type_id = 323 WHERE address_channel_type_id = 313;
+		UPDATE Mediclinic_Holloway_TestDB.dbo.AddressChannel SET address_channel_type_id = 324 WHERE address_channel_type_id = 318;
+		UPDATE Mediclinic_Holloway_TestDB.dbo.AddressChannel SET address_channel_type_id = 325 WHERE address_channel_type_id = 319;
+
+
+		DELETE Mediclinic_Balwyn_TestDB.dbo.AddressChannelType   WHERE  address_channel_type_id IN (315,318,319);
+		DELETE Mediclinic_Holloway_TestDB.dbo.AddressChannelType WHERE  address_channel_type_id IN (313,318,319);
+
+
+----------------------------------------------------------------------
+End AddressChannelType
+----------------------------------------------------------------------
+
+AddressChannel
+
+
+		- Holloway:
+
+
+		 // create AddressChannel2 in Holloway
+
+
+		----------------------
+
+		 -- remove fields
+		 update Mediclinic_Holloway_TestDB.dbo.AddressChannel  set address_channel_date_added = null, address_channel_date_modified = null;
+		 update Mediclinic_Balwyn_TestDB.dbo.AddressChannel    set address_channel_date_added = null, address_channel_date_modified = null;
+
+
+		----------------------
+
+		SELECT 
+		B_AddressChannel.address_channel_id,
+		B_AddressChannel.descr,
+		B_AddressChannel.address_channel_type_id,
+		B_AddressChannel.address_channel_date_added,
+		B_AddressChannel.address_channel_date_modified
+
+		INTO Mediclinic_Holloway_TestDB.dbo.AddressChannel2
+		FROM  Mediclinic_Balwyn_TestDB.dbo.AddressChannel B_AddressChannel
+		;
+		ALTER TABLE Mediclinic_Holloway_TestDB.dbo.AddressChannel2 ADD PRIMARY KEY (address_channel_id);
+		ALTER TABLE Mediclinic_Holloway_TestDB.dbo.AddressChannel2 ADD FOREIGN KEY (address_channel_type_id) REFERENCES AddressChannelType(address_channel_type_id);
+
+		----------------------
+
+		insert into Mediclinic_Balwyn_TestDB.dbo.AddressChannel
+		(descr, address_channel_type_id, address_channel_date_added,address_channel_date_modified)
+		(
+		   select descr, address_channel_type_id, address_channel_date_added,address_channel_date_modified from Mediclinic_Holloway_TestDB.dbo.AddressChannel 
+		   EXCEPT
+		   select descr, address_channel_type_id, address_channel_date_added,address_channel_date_modified from Mediclinic_Holloway_TestDB.dbo.AddressChannel2
+		)
+
+		;
+
+		insert into Mediclinic_Holloway_TestDB.dbo.AddressChannel2
+		(descr, address_channel_type_id, address_channel_date_added,address_channel_date_modified)
+		(
+		   select descr, address_channel_type_id, address_channel_date_added,address_channel_date_modified from Mediclinic_Holloway_TestDB.dbo.AddressChannel 
+		   EXCEPT
+		   select descr, address_channel_type_id, address_channel_date_added,address_channel_date_modified from Mediclinic_Holloway_TestDB.dbo.AddressChannel2
+		)
+
+		;
+		----------------------
+
+		 // check all in AddressChannel2
+
+		  select * 
+		 from       Mediclinic_Holloway_TestDB.dbo.ContactOld c
+		  LEFT JOIN Mediclinic_Holloway_TestDB.dbo.AddressChannel     s ON c.address_channel_id = s.address_channel_id
+		 where c.address_channel_id IS NOT NULL
+			   AND (select count(*) from Mediclinic_Holloway_TestDB.dbo.AddressChannel2 where descr = s.descr AND address_channel_type_id = s.address_channel_type_id) = 0
+
+
+
+		-- add address_channel_id2 field to ContactOld
+		ALTER TABLE Mediclinic_Holloway_TestDB.dbo.ContactOld ADD address_channel_id2 int FOREIGN KEY REFERENCES Mediclinic_Holloway_TestDB.dbo.AddressChannel2(address_channel_id) default null;
+
+
+		UPDATE
+			c
+		SET
+			address_channel_id2 = 
+			(
+				select top 1 address_channel_id 
+				from Mediclinic_Holloway_TestDB.dbo.AddressChannel2 where descr = s.descr AND address_channel_type_id = s.address_channel_type_id
+			)
+		FROM
+			Mediclinic_Holloway_TestDB.dbo.ContactOld c
+			JOIN
+			Mediclinic_Holloway_TestDB.dbo.AddressChannel s on c.address_channel_id = s.address_channel_id
+		WHERE
+			c.address_channel_id is not null;
+
+
+
+		/*
+		select s.*, s2.*, c.*
+		from Mediclinic_Holloway_TestDB.dbo.ContactOld c
+			 left join Mediclinic_Holloway_TestDB.dbo.AddressChannel s on c.address_channel_id = s.address_channel_id
+			 left join Mediclinic_Holloway_TestDB.dbo.AddressChannel2 s2 on c.address_channel_id2 = s2.address_channel_id
+        --where s.descr <> s2.descr or s.address_channel_type_id <> s2.address_channel_type_id
+		*/
+
+
+
+		// now delete 
+
+		=> designer:
+		1. delete address_channel_id fields from ContactOld
+		2. rename address_channel_id2 fields to address_channel_id
+		2. delete whole AddressChannel table
+		3. rename AddressChannel2 to AddressChannel
+
+
+
+		-- check all
+		(
+		   select * from Mediclinic_Holloway_TestDB.dbo.AddressChannel 
+		   EXCEPT
+		   select * from Mediclinic_Balwyn_TestDB.dbo.AddressChannel
+		)
+		union all
+		(
+		   select * from Mediclinic_Balwyn_TestDB.dbo.AddressChannel 
+		   EXCEPT
+		   select * from Mediclinic_Holloway_TestDB.dbo.AddressChannel
+		)
+
+----------------------------------------------------------------------
+End AddressChannel
+----------------------------------------------------------------------
+
+StaffPosition
+
+		INSERT Mediclinic_Holloway_TestDB.dbo.StaffPosition Values ('Unknown');
+
+		UPDATE
+			sp1
+		SET
+			descr = 
+			(
+				select descr 
+				from Mediclinic_Holloway_TestDB.dbo.StaffPosition sp2 WHERE sp2.staff_position_id = sp1.staff_position_id - 1
+			)
+		FROM
+			Mediclinic_Holloway_TestDB.dbo.StaffPosition sp1
+		WHERE 	
+			sp1.staff_position_id >= 6 AND sp1.staff_position_id <= 14;
+
+
+		UPDATE Mediclinic_Holloway_TestDB.dbo.StaffPosition SET descr = 'Clinical Psychologyist ' WHERE staff_position_id = 5;
+
+
+		UPDATE Mediclinic_Holloway_TestDB.dbo.Staff
+		SET staff_position_id = staff_position_id + 1 
+		WHERE staff_position_id >= 5 AND staff_position_id <= 13;
+
+
+(
+	select 'Holloway', * from Mediclinic_Holloway_TestDB.dbo.StaffPosition 
+	EXCEPT
+	select 'Holloway', * from Mediclinic_Balwyn_TestDB.dbo.StaffPosition
+)
+union all
+(
+	select 'Balwyn', * from Mediclinic_Balwyn_TestDB.dbo.StaffPosition 
+	EXCEPT
+	select 'Balwyn', * from Mediclinic_Holloway_TestDB.dbo.StaffPosition
+)
+
+SELECT 'Holloway', * FROM Mediclinic_Holloway_TestDB.dbo.StaffPosition;
+SELECT 'Balwyn'  , * FROM Mediclinic_Balwyn_TestDB.dbo.StaffPosition;
+
+
+SELECT 
+       Mediclinic_Holloway_TestDB.dbo.StaffPosition.*, 
+       Mediclinic_Holloway_TestDB.dbo.Staff.* 
+FROM 
+       Mediclinic_Holloway_TestDB.dbo.Staff 
+       LEFT JOIN Mediclinic_Holloway_TestDB.dbo.StaffPosition ON Mediclinic_Holloway_TestDB.dbo.StaffPosition.staff_position_id = Staff.staff_position_id
+
+----------------------------------------------------------------------
+End StaffPosition
+----------------------------------------------------------------------
+
+BookingUnavailabilityReason
+
+
+Holloway	293	341	Vincent in Clinic
+Holloway	295	341	Stuart in Clinic
+Holloway	297	341	AGED CARE
+Holloway	308	341	Home Visit
+Balwyn	293	341	Prov needs to leave
+Balwyn	295	341	MITCHAM CLINIC
+Balwyn	297	341	BREAK
+Balwyn	308	341	Aged Care
+Balwyn	309	340	Aged Care
+Balwyn	310	340	Clinics Closed Christmas Break
+Balwyn	311	341	Matthew Requires Room
+
+
+
+		SELECT 'Holloway', * FROM Mediclinic_Holloway_TestDB.dbo.BookingUnavailabilityReason;
+		SELECT 'Balwyn'  , * FROM Mediclinic_Balwyn_TestDB.dbo.BookingUnavailabilityReason;
+
+
+		(
+			SELECT 'Holloway', * FROM Mediclinic_Holloway_TestDB.dbo.BookingUnavailabilityReason 
+			EXCEPT
+			SELECT 'Holloway', * FROM Mediclinic_Balwyn_TestDB.dbo.BookingUnavailabilityReason
+		)
+		union all
+		(
+			SELECT 'Balwyn', * FROM Mediclinic_Balwyn_TestDB.dbo.BookingUnavailabilityReason 
+			EXCEPT
+			SELECT 'Balwyn', * FROM Mediclinic_Holloway_TestDB.dbo.BookingUnavailabilityReason
+		)
+
+
+
+		SET IDENTITY_INSERT Mediclinic_Holloway_TestDB.dbo.BookingUnavailabilityReason ON;
+		INSERT INTO Mediclinic_Holloway_TestDB.dbo.BookingUnavailabilityReason (booking_unavailability_reason_id,booking_unavailability_reason_type_id,descr)
+		VALUES
+		(315,340,'Aged Care'),
+		(316,340,'Clinics Closed Christmas Break'),
+		(317,341,'Home Visit'),
+		(318,341,'Prov Needs To Leave'),
+		(319,341,'Mitcham Clinic'),
+		(320,341,'Break'),
+		(321,341,'Vincent in Clinic'),
+		(322,341,'Stuart in Clinic'),
+		(323,341,'Matthew in Clinic');
+		SET IDENTITY_INSERT Mediclinic_Holloway_TestDB.dbo.BookingUnavailabilityReason OFF;
+
+		SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.BookingUnavailabilityReason ON;
+		INSERT INTO Mediclinic_Balwyn_TestDB.dbo.BookingUnavailabilityReason (booking_unavailability_reason_id,booking_unavailability_reason_type_id,descr)
+		VALUES
+		(315,340,'Aged Care'),
+		(316,340,'Clinics Closed Christmas Break'),
+		(317,341,'Home Visit'),
+		(318,341,'Prov Needs To Leave'),
+		(319,341,'Mitcham Clinic'),
+		(320,341,'Break'),
+		(321,341,'Vincent in Clinic'),
+		(322,341,'Stuart in Clinic'),
+		(323,341,'Matthew in Clinic');
+		SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.BookingUnavailabilityReason OFF;
+
+
+		UPDATE Mediclinic_Balwyn_TestDB.dbo.Booking SET booking_unavailability_reason_id = 318 WHERE booking_unavailability_reason_id = 293;
+		UPDATE Mediclinic_Balwyn_TestDB.dbo.Booking SET booking_unavailability_reason_id = 319 WHERE booking_unavailability_reason_id = 295;
+		UPDATE Mediclinic_Balwyn_TestDB.dbo.Booking SET booking_unavailability_reason_id = 320 WHERE booking_unavailability_reason_id = 297;
+		UPDATE Mediclinic_Balwyn_TestDB.dbo.Booking SET booking_unavailability_reason_id = 315 WHERE booking_unavailability_reason_id = 308;
+		UPDATE Mediclinic_Balwyn_TestDB.dbo.Booking SET booking_unavailability_reason_id = 315 WHERE booking_unavailability_reason_id = 309;
+		UPDATE Mediclinic_Balwyn_TestDB.dbo.Booking SET booking_unavailability_reason_id = 316 WHERE booking_unavailability_reason_id = 310;
+		UPDATE Mediclinic_Balwyn_TestDB.dbo.Booking SET booking_unavailability_reason_id = 323 WHERE booking_unavailability_reason_id = 311;
+
+		UPDATE Mediclinic_Holloway_TestDB.dbo.Booking SET booking_unavailability_reason_id = 321 WHERE booking_unavailability_reason_id = 293;
+		UPDATE Mediclinic_Holloway_TestDB.dbo.Booking SET booking_unavailability_reason_id = 322 WHERE booking_unavailability_reason_id = 295;
+		UPDATE Mediclinic_Holloway_TestDB.dbo.Booking SET booking_unavailability_reason_id = 315 WHERE booking_unavailability_reason_id = 297;
+		UPDATE Mediclinic_Holloway_TestDB.dbo.Booking SET booking_unavailability_reason_id = 317 WHERE booking_unavailability_reason_id = 308;
+
+		DELETE Mediclinic_Balwyn_TestDB.dbo.BookingUnavailabilityReason   WHERE  booking_unavailability_reason_id IN (293,295,297,308,309,310,311);
+		DELETE Mediclinic_Holloway_TestDB.dbo.BookingUnavailabilityReason WHERE  booking_unavailability_reason_id IN (293,295,297,308);
+
+
+----------------------------------------------------------------------
+End BookingUnavailabilityReason
+----------------------------------------------------------------------
+
+BookingChangeHistoryReason
+
+
+
+Holloway	314	Pt Ill. will call back
+
+Balwyn	313	Patient ill. Will call back
+Balwyn	316	1 BREAK
+Balwyn	317	Lesley Covering
+
+
+
+SELECT 'Holloway', * FROM Mediclinic_Holloway_TestDB.dbo.BookingChangeHistoryReason;
+SELECT 'Balwyn'  , * FROM Mediclinic_Balwyn_TestDB.dbo.BookingChangeHistoryReason;
+
+
+(
+	SELECT 'Holloway', booking_change_history_reason_id, descr FROM Mediclinic_Holloway_TestDB.dbo.BookingChangeHistoryReason 
+	EXCEPT
+	SELECT 'Holloway', booking_change_history_reason_id, descr FROM Mediclinic_Balwyn_TestDB.dbo.BookingChangeHistoryReason
+)
+union all
+(
+	SELECT 'Balwyn', booking_change_history_reason_id, descr FROM Mediclinic_Balwyn_TestDB.dbo.BookingChangeHistoryReason 
+	EXCEPT
+	SELECT 'Balwyn', booking_change_history_reason_id, descr FROM Mediclinic_Holloway_TestDB.dbo.BookingChangeHistoryReason
+)
+
+
+
+
+		SET IDENTITY_INSERT Mediclinic_Holloway_TestDB.dbo.BookingChangeHistoryReason ON;
+		INSERT INTO Mediclinic_Holloway_TestDB.dbo.BookingChangeHistoryReason (booking_change_history_reason_id,descr,display_order)
+		VALUES
+		(313,'Patient ill. Will call back',0),
+		(316,'1 Break',0),
+		(317,'Lesley Covering',0);
+		SET IDENTITY_INSERT Mediclinic_Holloway_TestDB.dbo.BookingChangeHistoryReason OFF;
+
+
+		UPDATE Mediclinic_Holloway_TestDB.dbo.BookingChangeHistory SET booking_change_history_reason_id = 313 WHERE booking_change_history_reason_id = 314;
+
+		DELETE Mediclinic_Holloway_TestDB.dbo.BookingChangeHistoryReason   WHERE  booking_change_history_reason_id IN (314);
+
+----------------------------------------------------------------------
+End BookingChangeHistoryReason
+----------------------------------------------------------------------
+
+
+

@@ -1,0 +1,802 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Text.RegularExpressions;
+using System.Collections;
+
+public partial class Merge_MatchPatients : System.Web.UI.Page
+{
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        HideErrorMessage();
+
+        if (!IsPostBack)
+            FillGrid();
+    }
+
+    protected void btnUpdateList_Click(object sender, EventArgs e)
+    {
+        FillGrid();
+    }
+
+    #region GrdMatchPatients
+
+    protected void FillGrid()
+    {
+        int n = (ddlNumPatientsToRetrieve.SelectedValue == "All") ?
+            60000
+            :
+            Convert.ToInt32(ddlNumPatientsToRetrieve.SelectedValue) * 30;
+
+        DataTable dt = GetDataTable(n, chkIncAgedCare.Checked);
+        Session["matchpatients_data"] = dt;
+
+        SetErrorMessage(dt.Rows.Count.ToString());
+
+        FillGrid(dt);
+    }
+    protected void FillGrid(DataTable dt)
+    {
+        if (dt.Rows.Count > 0)
+        {
+            GrdMatchPatients.DataSource = dt;
+            try
+            {
+                GrdMatchPatients.DataBind();
+            }
+            catch (Exception ex)
+            {
+                SetErrorMessage(ex.ToString());
+            }
+
+            //Sort("parent_descr", "ASC");
+        }
+        else
+        {
+            dt.Rows.Add(dt.NewRow());
+            GrdMatchPatients.DataSource = dt;
+            GrdMatchPatients.DataBind();
+
+            int TotalColumns = GrdMatchPatients.Rows[0].Cells.Count;
+            GrdMatchPatients.Rows[0].Cells.Clear();
+            GrdMatchPatients.Rows[0].Cells.Add(new TableCell());
+            GrdMatchPatients.Rows[0].Cells[0].ColumnSpan = TotalColumns;
+            GrdMatchPatients.Rows[0].Cells[0].Text = "No Record Found";
+        }
+    }
+    protected void GrdMatchPatients_RowCreated(object sender, GridViewRowEventArgs e)
+    {
+        //if (!Utilities.IsDev() && e.Row.RowType != DataControlRowType.Pager)
+        //    e.Row.Cells[0].CssClass = "hiddencol";
+    }
+    protected void GrdMatchPatients_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+    }
+    protected void GrdMatchPatients_RowCancelingEdit(object sender, GridViewCancelEditEventArgs e)
+    {
+        GrdMatchPatients.EditIndex = -1;
+        FillGrid();
+    }
+    protected void GrdMatchPatients_RowUpdating(object sender, GridViewUpdateEventArgs e)
+    {
+    }
+    protected void GrdMatchPatients_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+    }
+    protected void GrdMatchPatients_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+        if (e.CommandName.Equals("Insert"))
+        {
+            //FillGrid();
+        }
+    }
+    protected void GrdMatchPatients_RowEditing(object sender, GridViewEditEventArgs e)
+    {
+        GrdMatchPatients.EditIndex = e.NewEditIndex;
+        FillGrid();
+    }
+    protected void GridView_Sorting(object sender, GridViewSortEventArgs e)
+    {
+        // dont allow sorting if in edit mode
+        if (GrdMatchPatients.EditIndex >= 0)
+            return;
+
+        Sort(e.SortExpression);
+    }
+
+    protected void Sort(string sortExpression, params string[] sortExpr)
+    {
+        DataTable dataTable = Session["matchpatients_data"] as DataTable;
+
+        if (dataTable != null)
+        {
+            if (Session["matchpatients_sortexpression"] == null)
+                Session["matchpatients_sortexpression"] = "";
+
+            DataView dataView = new DataView(dataTable);
+            string[] sortData = Session["matchpatients_sortexpression"].ToString().Trim().Split(' ');
+
+            string newSortExpr = (sortExpr.Length == 0) ?
+                (sortExpression == sortData[0] && sortData[1] == "ASC") ? "DESC" : "ASC" :
+                sortExpr[0];
+
+            dataView.Sort = sortExpression + " " + newSortExpr;
+            Session["matchpatients_sortexpression"] = sortExpression + " " + newSortExpr;
+
+            GrdMatchPatients.DataSource = dataView;
+            GrdMatchPatients.DataBind();
+        }
+    }
+
+    #endregion
+
+
+
+    protected DataTable GetDataTable(int nRows, bool incAgedCare)
+    {
+        string sql = @"
+
+DECLARE @tmptbl TABLE
+(
+ dupeCount            int,
+ dupeCount2           int,
+ o_patient_id         int,
+ o_patient_is_deleted int,
+ 
+ o_firstname       varchar(100),
+ o_surname         varchar(100),
+ 
+ bk_count        int,
+ o_bk_count      int,
+
+ acbk_count      int,
+ o_acbk_count    int,
+ 
+ bk1             datetime,
+ bk2             datetime,
+ bk_nbr          int,
+ 
+ person_id       int,
+ entity_id       int,
+ added_by        int,
+ title_id        int,
+ firstname       varchar(100),
+ middlename      varchar(100),
+ surname         varchar(100),
+ nickname        varchar(100),
+ gender          varchar(1),
+ dob             datetime,
+ person_date_added      datetime,
+ person_date_modified   datetime,
+ 
+ patient_id                   int,
+ person_id2                   int,
+ patient_date_added           datetime,
+ is_clinic_patient            bit,
+ is_deleted                   bit,
+ is_deceased                  bit,
+ flashing_text                varchar(max),
+ private_health_fund          varchar(100),
+ concession_card_number       varchar(100),
+ concession_card_expiry_date  datetime,
+ is_diabetic                  bit,
+ is_member_diabetes_australia bit,
+ ac_inv_offering_id           int,
+ ac_pat_offering_id           int
+)
+    
+    
+INSERT INTO @tmptbl
+--select dupeCount, pe.firstname, pe.surname , pa.*, pe.*
+SELECT top " + nRows + @"
+ (
+ SELECT COUNT(*) 
+ FROM Patient pa2 
+	  LEFT JOIN Person pe2 ON pa2.person_id = pe2.person_id 
+ WHERE 
+        pe.surname            = pe2.surname 
+	AND pe.firstname          = pe2.firstname 
+	AND ((pe.dob IS NULL AND pe2.dob IS NULL) OR (pe.dob = pe2.dob)) 
+	AND pe.person_date_added  = pe2.person_date_added 
+	AND pa.patient_date_added = pa2.patient_date_added
+	AND pe.firstname <> '' AND pe.surname <> '' 
+ ),
+
+ (
+ SELECT COUNT(*) 
+ FROM Patient pa2 
+	  LEFT JOIN Person pe2 ON pa2.person_id = pe2.person_id 
+ WHERE 
+        pe.surname            = pe2.surname 
+	AND pe.firstname          = pe2.firstname 
+	AND ((pe.dob IS NULL AND pe2.dob IS NULL) OR (pe.dob = pe2.dob)) 
+	AND pe.person_date_added  = pe2.person_date_added 
+	AND pa.patient_date_added = pa2.patient_date_added
+	
+	--AND ((pa.patient_id > 40000 AND pa2.patient_id = (pa.patient_id - 40000)) OR (pa.patient_id < 40000 AND pa2.patient_id = (pa.patient_id + 40000)))
+	AND (pa.patient_id < 40000 AND pa2.patient_id = (pa.patient_id + 40000))
+	
+	/*
+	AND (  (SELECT COUNT(*) from Booking WHERE patient_id = pa.patient_id) = (SELECT COUNT(*) from Booking WHERE patient_id = pa2.patient_id)  )
+	AND (  (SELECT COUNT(*) from Booking WHERE booking_status_id = 187 AND patient_id = pa.patient_id) = (SELECT COUNT(*) from Booking WHERE booking_status_id = 187 AND patient_id = pa2.patient_id)  )
+	AND (  (SELECT COUNT(*) from Booking WHERE booking_status_id = 0   AND patient_id = pa.patient_id) = (SELECT COUNT(*) from Booking WHERE booking_status_id = 0   AND patient_id = pa2.patient_id)  )
+	AND (  (SELECT COUNT(*) from Booking WHERE booking_status_id = 187 AND patient_id = pa.patient_id) = (SELECT COUNT(*) from Booking WHERE booking_status_id = 187 AND patient_id = pa2.patient_id)  )
+	AND (
+	        (
+	         (SELECT COUNT(*) from Booking WHERE patient_id = pa.patient_id)  = 0 
+	         AND 
+	         (SELECT COUNT(*) from Booking WHERE patient_id = pa2.patient_id) = 0
+	        )
+	        OR
+	        (
+		     (SELECT top 1 date_start from Booking WHERE patient_id = pa.patient_id order by date_start desc) = (SELECT top 1 date_start from Booking WHERE patient_id = pa2.patient_id order by date_start desc)
+		     AND
+		     (SELECT top 1 date_start from Booking WHERE patient_id = pa.patient_id order by date_start asc)  = (SELECT top 1 date_start from Booking WHERE patient_id = pa2.patient_id order by date_start asc)
+		    )
+		)
+	*/
+ ),
+ 
+ (
+ SELECT TOP 1 pa2.patient_id
+ FROM Patient pa2 
+	  LEFT JOIN Person pe2 ON pa2.person_id = pe2.person_id 
+ WHERE 
+        pe.surname            = pe2.surname 
+	AND pe.firstname          = pe2.firstname 
+	AND ((pe.dob IS NULL AND pe2.dob IS NULL) OR (pe.dob = pe2.dob)) 
+	AND pe.person_date_added  = pe2.person_date_added 
+	AND pa.patient_date_added = pa2.patient_date_added
+	
+	--AND ((pa.patient_id > 40000 AND pa2.patient_id = (pa.patient_id - 40000)) OR (pa.patient_id < 40000 AND pa2.patient_id = (pa.patient_id + 40000)))
+	AND (pa.patient_id < 40000 AND pa2.patient_id = (pa.patient_id + 40000))
+	
+	/*
+	AND (  (SELECT COUNT(*) from Booking WHERE patient_id = pa.patient_id) = (SELECT COUNT(*) from Booking WHERE patient_id = pa2.patient_id)  )
+	AND (  (SELECT COUNT(*) from Booking WHERE booking_status_id = 187 AND patient_id = pa.patient_id) = (SELECT COUNT(*) from Booking WHERE booking_status_id = 187 AND patient_id = pa2.patient_id)  )
+	AND (  (SELECT COUNT(*) from Booking WHERE booking_status_id = 0   AND patient_id = pa.patient_id) = (SELECT COUNT(*) from Booking WHERE booking_status_id = 0   AND patient_id = pa2.patient_id)  )
+	AND (  (SELECT COUNT(*) from Booking WHERE booking_status_id = 187 AND patient_id = pa.patient_id) = (SELECT COUNT(*) from Booking WHERE booking_status_id = 187 AND patient_id = pa2.patient_id)  )
+	AND (
+	        (
+	         (SELECT COUNT(*) from Booking WHERE patient_id = pa.patient_id)  = 0 
+	         AND 
+	         (SELECT COUNT(*) from Booking WHERE patient_id = pa2.patient_id) = 0
+	        )
+	        OR
+	        (
+		     (SELECT top 1 date_start from Booking WHERE patient_id = pa.patient_id order by date_start desc) = (SELECT top 1 date_start from Booking WHERE patient_id = pa2.patient_id order by date_start desc)
+		     AND
+		     (SELECT top 1 date_start from Booking WHERE patient_id = pa.patient_id order by date_start asc)  = (SELECT top 1 date_start from Booking WHERE patient_id = pa2.patient_id order by date_start asc)
+		    )
+		)
+	*/
+ ),
+ 
+ NULL,
+
+ NULL,
+ NULL,
+ 
+ NULL,
+ NULL,
+ 
+ NULL,
+ NULL,
+ 
+ (SELECT top 1 date_start from Booking WHERE patient_id = pa.patient_id order by date_start asc),
+ (SELECT top 1 date_start from Booking WHERE patient_id = pa.patient_id order by date_start desc),
+
+ (SELECT COUNT(*) from Booking WHERE patient_id = pa.patient_id),
+ 
+ pe.person_id,
+ pe.entity_id,
+ pe.added_by,
+ pe.title_id,
+ pe.firstname,
+ pe.middlename,
+ pe.surname,
+ pe.nickname,
+ pe.gender,
+ pe.dob,
+ pe.person_date_added,
+ pe.person_date_modified,
+
+ pa.patient_id,
+ pa.person_id as person_id2,
+ pa.patient_date_added,
+ pa.is_clinic_patient,
+ pa.is_deleted,
+ pa.is_deceased,
+ pa.flashing_text,
+ pa.private_health_fund,
+ pa.concession_card_number,
+ pa.concession_card_expiry_date,
+ pa.is_diabetic,
+ pa.is_member_diabetes_australia,
+ pa.ac_inv_offering_id,
+ pa.ac_pat_offering_id
+
+FROM Patient pa 
+     left join Person pe on pa.person_id = pe.person_id
+WHERE 
+	pe.firstname <> '' AND pe.surname <> '' 
+ORDER BY 
+		--person_date_added
+		surname
+		,firstname
+
+
+DELETE @tmptbl where dupeCount <> 2
+DELETE @tmptbl where dupeCount2 <> 1
+
+
+UPDATE
+    tmptbl
+SET
+    o_firstname = pe.firstname,
+    o_surname = pe.surname,
+    o_patient_is_deleted = pa.is_deleted
+FROM
+    @tmptbl tmptbl
+    LEFT JOIN Patient pa ON tmptbl.o_patient_id = pa.patient_id
+    LEFT JOIN Person  pe ON pa.person_id     = pe.person_id
+
+UPDATE
+    tmptbl
+SET
+     bk_count     = (SELECT COUNT(*) FROM Booking bk WHERE bk.patient_id = tmptbl.patient_id)
+    ,o_bk_count   = (SELECT COUNT(*) FROM Booking bk WHERE bk.patient_id = tmptbl.o_patient_id)
+    ,acbk_count   = (SELECT COUNT(*)  FROM InvoiceLine LEFT JOIN Invoice ON InvoiceLine.invoice_id = Invoice.invoice_id LEFT JOIN Booking ON Invoice.booking_id = Booking.booking_id WHERE (Booking.patient_id IS NULL OR Booking.patient_id <> tmptbl.patient_id)   AND InvoiceLine.patient_id = tmptbl.patient_id)
+    ,o_acbk_count = (SELECT COUNT(*)  FROM InvoiceLine LEFT JOIN Invoice ON InvoiceLine.invoice_id = Invoice.invoice_id LEFT JOIN Booking ON Invoice.booking_id = Booking.booking_id WHERE (Booking.patient_id IS NULL OR Booking.patient_id <> tmptbl.o_patient_id) AND InvoiceLine.patient_id = tmptbl.o_patient_id)
+FROM
+    @tmptbl tmptbl
+
+SELECT * FROM @tmptbl
+WHEREis_deleted = 0 AND o_patient_is_deleted = 0 " + (incAgedCare ? "" : " AND acbk_count = 0 AND o_acbk_count = 0 ") + @"
+--ORDER BY 
+		--person_date_added
+		--,surname
+		--,firstname
+";
+
+        return DBBase.ExecuteQuery(sql, null, 500).Tables[0];
+
+    }
+    protected void DeletePatient(int patientID)
+    {
+        //string sql = @"EXEC uspMerging_DeletePatient " + patientID;
+        //DBBase.ExecuteNonResult(sql);
+    }
+    protected int GetPatientBookingCount(int patientID)
+    {
+        string sql = @"SELECT COUNT(*) FROM Booking 
+                       WHERE  Booking.booking_type_id <> 35 AND (Booking.booking_status_id IS NULL OR Booking.booking_status_id in (-1,0,187,188)) 
+                              AND (Booking.patient_id = " + patientID + @" OR EXISTS (SELECT 1 FROM InvoiceLine LEFT JOIN Invoice ON InvoiceLine.invoice_id = Invoice.invoice_id WHERE Invoice.booking_id = booking.booking_id AND InvoiceLine.patient_id = " + patientID + @")) ";
+        return Convert.ToInt32(DBBase.ExecuteSingleResult(sql));
+    }
+    protected int GetPatientACBookingCount(int patientID)
+    {
+        string sql = @"SELECT COUNT(*) FROM Booking 
+                       WHERE  Booking.booking_type_id <> 35 AND (Booking.booking_status_id IS NULL OR Booking.booking_status_id in (-1,0,187,188)) 
+                              AND (EXISTS (SELECT 1 FROM InvoiceLine LEFT JOIN Invoice ON InvoiceLine.invoice_id = Invoice.invoice_id WHERE Invoice.booking_id = booking.booking_id AND (Booking.patient_id IS NULL OR Booking.patient_id <> " + patientID + @") AND InvoiceLine.patient_id = " + patientID + @")) ";
+        return Convert.ToInt32(DBBase.ExecuteSingleResult(sql));
+    }
+
+
+
+    protected void lnkSelect_Command(object sender, CommandEventArgs e)
+    {
+        string raw = (string)e.CommandArgument;
+        string[] ptIDs = raw.Split('_');
+
+        int patientID1 = Convert.ToInt32(ptIDs[0]);
+        int patientID2 = Convert.ToInt32(ptIDs[1]);
+
+        SetPatients(patientID1, patientID2);
+    }
+
+    protected void SetPatients(int patientID1, int patientID2)
+    {
+
+        Patient p1 = PatientDB.GetByID(patientID1);
+        Patient p2 = PatientDB.GetByID(patientID2);
+
+        System.Collections.Hashtable offeringsHash = OfferingDB.GetHashtable(true, -1, null, true);
+        PatientDB.AddACOfferings(ref offeringsHash, ref p1);
+        PatientDB.AddACOfferings(ref offeringsHash, ref p2);
+
+
+        txtPatientID1.Text = p1.PatientID.ToString();
+        txtPatientID2.Text = p2.PatientID.ToString();
+
+        SetField(lblTitle1,           lblTitle2,           imgMatchTitle,           p1.Person.Title.Descr,                p2.Person.Title.Descr,                p1.Person.Title.ID   == p2.Person.Title.ID);
+        SetField(lblFirstname1,       lblFirstname2,       imgMatchFirstname,       p1.Person.Firstname,                  p2.Person.Firstname,                  p1.Person.Firstname  == p2.Person.Firstname);
+        SetField(lblMiddlename1,      lblMiddlename2,      imgMatchMiddlename,      p1.Person.Middlename,                 p2.Person.Middlename,                 p1.Person.Middlename == p2.Person.Middlename);
+        SetField(lblSurname1,         lblSurname2,         imgMatchSurname,         p1.Person.Surname,                    p2.Person.Surname,                    p1.Person.Surname    == p2.Person.Surname);
+        SetField(lblGender1,          lblGender2,          imgMatchGender,          p1.Person.Gender,                     p2.Person.Gender,                     p1.Person.Gender     == p2.Person.Gender);
+
+        string p1DOBtext = p1.Person.Dob == DateTime.MinValue ? "" : p1.Person.Dob.ToString("dd-MM-yyyy");
+        string p2DOBtext = p2.Person.Dob == DateTime.MinValue ? "" : p2.Person.Dob.ToString("dd-MM-yyyy");
+        SetField(lblDOB1,             lblDOB2,             imgMatchDOB,             p1DOBtext,                            p2DOBtext,                            p1.Person.Dob        == p2.Person.Dob);
+        SetField(lblIsClinicPatient1, lblIsClinicPatient2, imgMatchIsClinicPatient, p1.IsClinicPatient ? "Yes" : "No",    p2.IsClinicPatient ? "Yes" : "No",    p1.IsClinicPatient   == p2.IsClinicPatient);
+        SetField(lblDeceased1,        lblDeceased2,        imgMatchDeceased,        p1.IsDeceased      ? "Yes" : "No",    p2.IsDeceased      ? "Yes" : "No",    p1.IsDeceased        == p2.IsDeceased);
+
+        bool   sameAcOffering   = (p1.ACInvOffering == null && p2.ACInvOffering == null) || (p1.ACInvOffering != null && p2.ACInvOffering != null && p1.ACInvOffering.OfferingID == p2.ACInvOffering.OfferingID);
+        SetField(lblACPTType1,        lblACPTType2,        imgMatchACPTType,        GetACPTTypeText(p1),                  GetACPTTypeText(p2),                  sameAcOffering);
+
+
+        // put in bookings/invoices, invoicelines, helthcard, etc
+
+        DataTable p1Bookings = GetBookingsList(p1);
+        DataTable p2Bookings = GetBookingsList(p2);
+        string    p1BookingsDisplay = GetBookingsDisplay(p1Bookings, p2Bookings);
+        string    p2BookingsDisplay = GetBookingsDisplay(p2Bookings, p1Bookings);
+        bool      sameBookings      = IsSameBookings(p1Bookings, p2Bookings);
+        SetField(lblBookings1, lblBookings2, imgMatchBookings, p1BookingsDisplay, p2BookingsDisplay, sameBookings, false);
+
+
+
+        // maybe better to set alternate patient as deleted instead of deleting the actual thing????
+        // safer ... can still have info in case there is an error in the deleting
+
+
+
+        SetDeleteButton(btnDeletePatient1, lblErrorMessagePT1, p1Bookings, p1);
+        SetDeleteButton(btnDeletePatient2, lblErrorMessagePT2, p2Bookings, p2);
+    }
+    protected void SetField(Label lbl1, Label lbl2, Image img, string s1, string s2, bool same, bool boldIfDifferent = true)
+    {
+        lbl1.Text = s1;
+        lbl2.Text = s2;
+        lbl1.Font.Bold = lbl2.Font.Bold = !same && boldIfDifferent;
+        lbl1.ForeColor = lbl2.ForeColor = !same && boldIfDifferent ? System.Drawing.Color.Red : System.Drawing.Color.Black;
+        img.ImageUrl = !same ? "~/images/Delete-icon-12.png" : "~/images/tick-12.png";
+    }
+    protected void SetDeleteButton(Button deleteButton, Label lblErrorMessagePT, DataTable tblBookingList, Patient patient)
+    {
+        bool canDelete = true;
+
+        /*
+        if (tblBookingList != null)
+        {
+            for (int i = 0; i < tblBookingList.Rows.Count; i++)
+            {
+                Booking curBooking = BookingDB.LoadFull(tblBookingList.Rows[i]);
+                if (curBooking.Patient == null || curBooking.Patient.PatientID != patient.PatientID)
+                    canDelete = false;
+            }
+        }
+        */
+
+        if (patient.IsDeleted)
+            canDelete = false;
+
+
+        deleteButton.CommandArgument = patient.PatientID.ToString();
+        deleteButton.Visible = canDelete;
+
+        //lblErrorMessagePT.Text = "You can not delete this patient as they are in aged care booking(s)";
+        lblErrorMessagePT.Text = "Patient already set as deleted";
+        lblErrorMessagePT.ForeColor = System.Drawing.Color.Blue;
+        lblErrorMessagePT.Visible = !canDelete;
+    }
+
+    protected string GetACPTTypeText(Patient patient)
+    {
+        if (patient.ACInvOffering == null)
+            return string.Empty;
+
+        if (patient.ACInvOffering.OfferingID == -1)
+            return string.Empty;
+        else if ((new List<int> { 2, 3, 4, 5 }).Contains(patient.ACInvOffering.AgedCarePatientType.ID))
+            return patient.ACInvOffering.Name;
+        else if ((new List<int> { 6, 7, 8, 9, 10 }).Contains(patient.ACInvOffering.AgedCarePatientType.ID))
+            return patient.ACInvOffering.Name + " (" + patient.ACPatOffering.Name + ")";
+        else // (?)
+            return patient.ACInvOffering.Name;
+    }
+
+    protected DataTable GetBookingsList(Patient patient)
+    {
+        int bkCount = GetPatientBookingCount(patient.PatientID);
+
+        if (bkCount == 0)
+            return null;
+
+        DataTable tblBookingList = BookingDB.GetDataTable_Between(DateTime.MinValue, DateTime.MinValue, null, null, patient, null, true);
+
+        if (tblBookingList.Rows.Count > 0)
+        {
+            int[] bookingIDs = new int[tblBookingList.Rows.Count];
+            for (int i = 0; i < tblBookingList.Rows.Count; i++)
+            {
+                Booking curBooking = BookingDB.LoadFull(tblBookingList.Rows[i]);
+                bookingIDs[i] = curBooking.BookingID;
+            }
+
+
+            Hashtable invoiceHash                  = InvoiceDB.GetAllByBookings(bookingIDs, -1);
+            Hashtable hashHasMedicareOrDVAInvoices = BookingDB.GetHashHasMedicareDVA(bookingIDs);
+
+            tblBookingList.Columns.Add("inv_type_text",    typeof(string));
+            tblBookingList.Columns.Add("inv_total",        typeof(Decimal));
+            tblBookingList.Columns.Add("inv_total_rcpts", typeof(Decimal));
+            tblBookingList.Columns.Add("inv_total_cr_nts", typeof(Decimal));
+            tblBookingList.Columns.Add("inv_total_owing",  typeof(Decimal));
+            for (int i = 0; i < tblBookingList.Rows.Count; i++)
+            {
+                int  booking_id   = Convert.ToInt32(tblBookingList.Rows[i]["booking_booking_id"]);
+                bool has_medicare = hashHasMedicareOrDVAInvoices[new Hashtable2D.Key(booking_id, -1)] != null && Convert.ToBoolean(hashHasMedicareOrDVAInvoices[new Hashtable2D.Key(booking_id, -1)]);
+                bool has_dva      = hashHasMedicareOrDVAInvoices[new Hashtable2D.Key(booking_id, -2)] != null && Convert.ToBoolean(hashHasMedicareOrDVAInvoices[new Hashtable2D.Key(booking_id, -2)]);
+                
+                if (has_medicare) tblBookingList.Rows[i]["inv_type_text"] = "Medicare";
+                else if (has_dva) tblBookingList.Rows[i]["inv_type_text"] = "DVA";
+                else              tblBookingList.Rows[i]["inv_type_text"] = string.Empty;
+
+                Invoice[] invoices = (invoiceHash[booking_id] == null ? new Invoice[] { } : (Invoice[])invoiceHash[booking_id]);
+                tblBookingList.Rows[i]["inv_total"] = invoices.Sum(item => item.Total);
+                tblBookingList.Rows[i]["inv_total_rcpts"]  = invoices.Sum(item => item.ReceiptsTotal);
+                tblBookingList.Rows[i]["inv_total_cr_nts"] = invoices.Sum(item => item.CreditNotesTotal);
+                tblBookingList.Rows[i]["inv_total_owing"]  = invoices.Sum(item => item.TotalDue);
+            }
+
+            tblBookingList.DefaultView.Sort = "booking_date_start ASC";
+            tblBookingList = tblBookingList.DefaultView.ToTable();
+        }
+
+        return tblBookingList;
+    }
+    protected string GetBookingsDisplay(DataTable tblBookingList, DataTable tblBookingListOther)
+    {
+
+        string output = string.Empty;
+
+        if (tblBookingList == null || tblBookingList.Rows.Count == 0)
+        {
+            output += "<table>";
+            output += "<tr><td>No Bookings</td></tr>";
+        }
+        else
+        {
+            output += "<table border=1>";
+            output += @"
+                        <tr>
+                            <td style=""white-space: nowrap"">BK ID</td>
+                            <td>Date/Time</td>
+                            <td>Service</td>
+                            <td>Clinic/Fac</td>
+                            <td>Provider</td>
+                            <td>Patient</td>
+                            <td>Invoices</td>
+                        </tr>
+";
+
+            for (int i = 0; i < tblBookingList.Rows.Count; i++)
+            {
+                Booking curBooking = BookingDB.LoadFull(tblBookingList.Rows[i]);
+                string invTypeText = tblBookingList.Rows[i]["inv_type_text"].ToString();
+
+                Decimal invTotal        = (Decimal)tblBookingList.Rows[i]["inv_total"];
+                Decimal invTotalRcpts   = (Decimal)tblBookingList.Rows[i]["inv_total_rcpts"];
+                Decimal invTotalCrNotes = (Decimal)tblBookingList.Rows[i]["inv_total_cr_nts"];
+                Decimal invTotalOwing   = (Decimal)tblBookingList.Rows[i]["inv_total_owing"];
+
+                bool sameAsOtherBooking = IsSameAsOtherBooking(tblBookingList.Rows[i], tblBookingListOther.Rows.Count-1 >= i ? tblBookingListOther.Rows[i] : null);
+
+
+                output += @"<tr valign=""top"""+(sameAsOtherBooking ? "" : @"style=""font-weight:bold;color:red;""")+@">
+                                <td>" + curBooking.BookingID                                                                     + @"</td>
+                                <td style=""white-space: nowrap"">" + curBooking.DateStart.ToString("d MMM yyyy") + "<br />" + curBooking.DateStart.ToString("hh:mm") + " - " + curBooking.DateEnd.ToString("hh:mm") + @"</td>
+                                <td>" + (curBooking.Offering == null ? "" : curBooking.Offering.Name)                            + @"</td>
+                                <td>" + curBooking.Organisation.Name                                                             + @"</td>
+                                <td>" + curBooking.Provider.Person.FullnameWithoutMiddlename                                     + @"</td>
+                                <td>" + (curBooking.Patient  == null ? "" : curBooking.Patient.Person.FullnameWithoutMiddlename) + @"</td>
+                                <td>
+                                    <table>
+                                      <tr><td style=""white-space: nowrap"">Total </td><td>" + invTotal + @"</td></tr>
+                                      <tr><td style=""white-space: nowrap"">Owing </td><td>" + invTotalOwing + @"</td></tr>
+                                      <tr><td style=""white-space: nowrap"">Rcpts </td><td>" + invTotalRcpts + @"</td></tr>
+                                      <tr><td style=""white-space: nowrap"">Cr Nts </td><td>" + invTotalCrNotes + @"</td></tr>
+                                    </table>
+                                </td>
+                           </tr>
+";
+            }
+        }
+
+        output += "</table>";
+
+        return output;
+
+    }
+    protected bool IsSameBookings(DataTable p1Bookings, DataTable p2Bookings)
+    {
+        if (p1Bookings == null && p1Bookings == null)
+            return true;
+
+        if (p1Bookings == null || p2Bookings == null)
+            return false;
+
+        // here we have both not null
+
+        if (p1Bookings.Rows.Count != p2Bookings.Rows.Count)
+            return false;
+
+        // here we have both not null and both same count
+
+        for (int i = 0; i < p1Bookings.Rows.Count; i++)
+            if (!IsSameAsOtherBooking(p1Bookings.Rows[i], p2Bookings.Rows[i]))
+                return false;
+
+        return true;
+    }
+    protected bool IsSameAsOtherBooking(DataRow p1BkRow, DataRow p2BkRow)
+    {
+        if (p1BkRow == null || p2BkRow == null)
+            return false;
+
+
+        Booking curBooking1      = BookingDB.LoadFull(p1BkRow);
+        string  invTypeText1     = p1BkRow["inv_type_text"].ToString();
+        Decimal invTotal1        = (Decimal)p1BkRow["inv_total"];
+        Decimal invTotalRcpts1   = (Decimal)p1BkRow["inv_total_rcpts"];
+        Decimal invTotalCrNotes1 = (Decimal)p1BkRow["inv_total_cr_nts"];
+        Decimal invTotalOwing1   = (Decimal)p1BkRow["inv_total_owing"];
+
+        Booking curBooking2      = BookingDB.LoadFull(p2BkRow);
+        string  invTypeText2     = p2BkRow["inv_type_text"].ToString();
+        Decimal invTotal2        = (Decimal)p2BkRow["inv_total"];
+        Decimal invTotalRcpts2   = (Decimal)p2BkRow["inv_total_rcpts"];
+        Decimal invTotalCrNotes2 = (Decimal)p2BkRow["inv_total_cr_nts"];
+        Decimal invTotalOwing2   = (Decimal)p2BkRow["inv_total_owing"];
+
+
+
+        if (curBooking1.DateStart != curBooking1.DateStart)
+            return false;
+        if (curBooking1.DateEnd != curBooking1.DateEnd)
+            return false;
+        if (curBooking1.DateDeleted != curBooking1.DateDeleted)
+            return false;
+        //if (curBooking1.Organisation.Name != curBooking2.Organisation.Name)
+        //    return false;
+        //if ((curBooking1.Offering == null && curBooking2.Offering != null) || (curBooking1.Offering != null && curBooking2.Offering == null) || (curBooking1.Offering != null && curBooking2.Offering != null && curBooking1.Offering.Name != curBooking2.Offering.Name))
+        //    return false;
+        if (curBooking1.Provider.StaffID != curBooking2.Provider.StaffID)
+            return false;
+        if (curBooking1.BookingTypeID != curBooking2.BookingTypeID)
+            return false;
+        if (curBooking1.BookingStatus.ID != curBooking2.BookingStatus.ID)
+            return false;
+        if (curBooking1.IsPatientMissedAppt != curBooking2.IsPatientMissedAppt)
+            return false;
+        if (curBooking1.IsProviderMissedAppt != curBooking2.IsProviderMissedAppt)
+            return false;
+        if (curBooking1.IsEmergency != curBooking2.IsEmergency)
+            return false;
+
+
+        if (invTotal1 != invTotal2)
+            return false;
+        if (invTotalRcpts1 != invTotalRcpts2)
+            return false;
+        if (invTotalCrNotes1 != invTotalCrNotes2)
+            return false;
+        if (invTotalOwing1 != invTotalOwing2)
+            return false;
+
+
+        return true;
+    }
+
+    protected void btnUpdatePtInfo_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            txtPatientID1.Text = txtPatientID1.Text.Trim();
+            txtPatientID2.Text = txtPatientID2.Text.Trim();
+
+            if (txtPatientID1.Text.Length == 0)
+                throw new CustomMessageException("Please enter first patient ID.");
+            if (txtPatientID2.Text.Length == 0)
+                throw new CustomMessageException("Please enter second patient ID.");
+            if (!Regex.IsMatch(txtPatientID1.Text, @"^\d+$"))
+                throw new CustomMessageException("First patient ID must be all digits and no other characters.");
+            if (!Regex.IsMatch(txtPatientID2.Text, @"^\d+$"))
+                throw new CustomMessageException("Second patient ID must be all digits and no other characters.");
+            if (!PatientDB.Exists(Convert.ToInt32(txtPatientID1.Text)))
+                throw new CustomMessageException("No patient with ID " + txtPatientID1.Text);
+            if (!PatientDB.Exists(Convert.ToInt32(txtPatientID2.Text)))
+                throw new CustomMessageException("No patient with ID " + txtPatientID2.Text);
+
+            if (txtPatientID1.Text == txtPatientID2.Text)
+            {
+                SetErrorMessage("Same Patient ID");
+                // hide delete button at bottum
+            }
+
+            SetPatients(Convert.ToInt32(txtPatientID1.Text), Convert.ToInt32(txtPatientID2.Text));
+        }
+        catch (CustomMessageException ex)
+        {
+            SetErrorMessage(ex.Message);
+        }
+    }
+    protected void btnDeletePatient_Command(object sender, CommandEventArgs e)
+    {
+        try
+        {
+
+            if (e.CommandArgument == null || e.CommandArgument.ToString().Length == 0)
+                return;
+
+            int patientID = Convert.ToInt32(e.CommandArgument);
+
+
+
+            PatientDB.UpdateInactive(patientID, Convert.ToInt32(Session["StaffID"]));
+
+            /*
+            // make sure no invoicelines with this patient .. that doesnt have the booking for this patient
+            if (GetPatientACBookingCount(patientID) > 0)
+                throw new CustomMessageException("Can not delete patient " + patientID + " because they have aged care invoices");
+
+            DeletePatient(patientID);
+            */
+
+
+            DataTable dt = Session["matchpatients_data"] as DataTable;
+            for (int i = dt.Rows.Count-1; i >= 0; i--)
+                if (Convert.ToInt32(dt.Rows[i]["patient_id"]) == patientID || Convert.ToInt32(dt.Rows[i]["o_patient_id"]) == patientID)
+                    dt.Rows.RemoveAt(i);
+            Session["matchpatients_data"] = dt;
+            FillGrid(dt);
+
+            btnDeletePatient1.Visible = false;
+            btnDeletePatient2.Visible = false;
+
+            SetErrorMessage("Deleted patient " + patientID);
+        }
+        catch (CustomMessageException ex)
+        {
+            SetErrorMessage(ex.Message);
+        }
+    }
+
+
+    #region HideTableAndSetErrorMessage, SetErrorMessage, HideErrorMessag
+
+    private void HideTableAndSetErrorMessage(string errMsg = "", string details = "")
+    {
+        SetErrorMessage(errMsg, details);
+    }
+    private void SetErrorMessage(string errMsg = "", string details = "")
+    {
+        if (errMsg.Contains(Environment.NewLine))
+            errMsg = errMsg.Replace(Environment.NewLine, "<br />");
+
+        // double escape so shows up literally on webpage for 'alert' message
+        string detailsToDisplay = (details.Length == 0 ? "" : " <a href=\"#\" onclick=\"alert('" + details.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("'", "\\'").Replace("\"", "\\'") + "'); return false;\">Details</a>");
+
+        lblErrorMessage.Visible = true;
+        if (errMsg != null && errMsg.Length > 0)
+            lblErrorMessage.Text = errMsg + detailsToDisplay + "<br />";
+        else
+            lblErrorMessage.Text = "An error has occurred. Plase contact the system administrator. " + detailsToDisplay + "<br />";
+    }
+    private void HideErrorMessage()
+    {
+        lblErrorMessage.Visible = false;
+        lblErrorMessage.Text = "";
+    }
+
+    #endregion
+
+}
+
+

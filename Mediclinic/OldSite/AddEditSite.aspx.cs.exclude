@@ -1,0 +1,498 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Text.RegularExpressions;
+
+public partial class AddEditSite : System.Web.UI.Page
+{
+
+    #region Page_Load
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        try
+        {
+
+            HideErrorMessage();
+            SetupGUI();
+
+            if (!IsPostBack)
+            {
+                PagePermissions.EnforcePermissions_RequireAll(Session, Response, false, false, true, false, false, true);
+                if ((GetUrlParamType() == UrlParamType.Edit || GetUrlParamType() == UrlParamType.View) && IsValidFormID())
+                {
+                    Site site = SiteDB.GetByID(GetFormID());
+                    if (site != null)
+                        FillEditViewForm(site, GetUrlParamType() == UrlParamType.Edit);
+                    else
+                        HideTableAndSetErrorMessage();
+
+                    if (Utilities.GetAddressType().ToString() == "Contact")
+                    {
+                        addressControl.Visible = true;
+                        addressControl.Set(site.EntityID, true, EntityType.GetByType(EntityType.EntityTypeEnum.Site));
+                    }
+                    else if (Utilities.GetAddressType().ToString() == "ContactAus")
+                    {
+                        addressAusControl.Visible = true;
+                        addressAusControl.Set(site.EntityID, true, EntityType.GetByType(EntityType.EntityTypeEnum.Site));
+                    }
+                    else
+                        throw new Exception("Unknown AddressType in config: " + Utilities.GetAddressType().ToString().ToString());
+                }
+                else if (GetUrlParamType() == UrlParamType.Add)
+                    FillEmptyAddForm();
+                else
+                    HideTableAndSetErrorMessage();
+            }
+
+
+            if (!Utilities.IsDev())
+                this.Label1.Visible = false;
+
+        }
+        catch (CustomMessageException ex)
+        {
+            if (IsPostBack) SetErrorMessage(ex.Message);
+            else HideTableAndSetErrorMessage(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            if (IsPostBack) SetErrorMessage("", ex.ToString());
+            else HideTableAndSetErrorMessage("", ex.ToString());
+        }
+    }
+
+    #endregion
+
+    #region GetUrlParamCard(), GetUrlParamType(), IsValidFormID(), GetFormID()
+
+    private bool IsValidFormID()
+    {
+        string id = Request.QueryString["id"];
+        return id != null && Regex.IsMatch(id, @"^\d+$");
+    }
+    private int GetFormID()
+    {
+        if (!IsValidFormID())
+            throw new Exception("Invalid url id");
+
+        string id = Request.QueryString["id"];
+        return Convert.ToInt32(id);
+    }
+
+    private enum UrlParamType { Add, Edit, View, None };
+    private UrlParamType GetUrlParamType()
+    {
+        string type = Request.QueryString["type"];
+        if (type != null && type.ToLower() == "add")
+            return UrlParamType.Add;
+        else if (type != null && type.ToLower() == "edit")
+            return UrlParamType.Edit;
+        else if (type != null && type.ToLower() == "view")
+            return UrlParamType.View;
+        else
+            return UrlParamType.None;
+    }
+
+    #endregion
+
+
+    protected void SetupGUI()
+    {
+        for (int i = 0; i < 24; i++)
+        {
+            ddlDayStart_Hour.Items.Add(new ListItem(i.ToString().PadLeft(2, '0'), i.ToString()));
+            ddlLunchStart_Hour.Items.Add(new ListItem(i.ToString().PadLeft(2, '0'), i.ToString()));
+            ddlLunchEnd_Hour.Items.Add(new ListItem(i.ToString().PadLeft(2, '0'), i.ToString()));
+            ddlDayEnd_Hour.Items.Add(new ListItem(i.ToString().PadLeft(2, '0'), i.ToString()));
+        }
+        for (int i = 0; i < 60; i += 15)
+        {
+            ddlDayStart_Minute.Items.Add(new ListItem(i.ToString().PadLeft(2, '0'), i.ToString()));
+            ddlLunchStart_Minute.Items.Add(new ListItem(i.ToString().PadLeft(2, '0'), i.ToString()));
+            ddlLunchEnd_Minute.Items.Add(new ListItem(i.ToString().PadLeft(2, '0'), i.ToString()));
+            ddlDayEnd_Minute.Items.Add(new ListItem(i.ToString().PadLeft(2, '0'), i.ToString()));
+        }
+        for (int i = 1; i < 37; i++)
+            ddlNumBookingMonthsToGet.Items.Add(new ListItem(i.ToString(), i.ToString()));
+        for (int i = 1; i < 32; i++)
+            ddlFiscalYrEnd_Day.Items.Add(new ListItem(i.ToString(), i.ToString()));
+
+
+
+        int fiscalYearEnd = -1;
+        if ((GetUrlParamType() == UrlParamType.Edit || GetUrlParamType() == UrlParamType.View) && IsValidFormID())
+        {
+            Site site = SiteDB.GetByID(GetFormID());
+            if (site != null)
+            {
+                if (site.FiscalYrEnd != DateTime.MinValue)
+                    fiscalYearEnd = site.FiscalYrEnd.Year;
+            }
+        }
+
+        int ddlFirstYear = DateTime.Now.Year - 5;
+        int ddlLastYear  = DateTime.Today.Year + 5;
+
+        if (fiscalYearEnd != -1 && fiscalYearEnd < ddlFirstYear)
+            ddlFiscalYrEnd_Year.Items.Add(new ListItem(fiscalYearEnd.ToString(), fiscalYearEnd.ToString()));
+        for (int i = ddlFirstYear; i <= ddlLastYear; i++)
+            ddlFiscalYrEnd_Year.Items.Add(new ListItem(i.ToString(), i.ToString()));
+        if (fiscalYearEnd != -1 && fiscalYearEnd >= ddlLastYear)
+            ddlFiscalYrEnd_Year.Items.Add(new ListItem(fiscalYearEnd.ToString(), fiscalYearEnd.ToString()));
+
+        bool editable = GetUrlParamType() == UrlParamType.Add || GetUrlParamType() == UrlParamType.Edit;
+
+        Utilities.SetEditControlBackColour(txtName,                     editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(ddlClinic,                   editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(txtABN,                      editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(txtACN,                      editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(txtTFN,                      editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(txtASIC,                     editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(txtBPay,                     editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(txtBSB,                      editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(txtBankAccount,              editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(txtBankDirectDebitUserID,    editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(txtBankUsername,             editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(txtOustandingBalanceWarning, editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(ddlNumBookingMonthsToGet,    editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(ddlFiscalYrEnd_Day,          editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(ddlFiscalYrEnd_Month,        editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(ddlFiscalYrEnd_Year,         editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+
+        Utilities.SetEditControlBackColour(ddlDayStart_Hour,            editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(ddlDayStart_Minute,          editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(ddlLunchStart_Hour,          editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(ddlLunchStart_Minute,        editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(ddlLunchEnd_Hour,            editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(ddlLunchEnd_Minute,          editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(ddlDayEnd_Hour,              editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+        Utilities.SetEditControlBackColour(ddlDayEnd_Minute,            editable, System.Drawing.Color.LightGoldenrodYellow, System.Drawing.Color.Empty);
+    }
+
+    protected void btnUpdateNotesIcon_Click(object sender, EventArgs e)
+    {
+        Site site = SiteDB.GetByID(GetFormID());
+        lnkNotes.ImageUrl = NoteDB.HasNotes(site.EntityID) ? "~/images/notes-48.png" : "~/images/notes-bw-48.jpg";
+    }
+
+    private void FillEditViewForm(Site site, bool isEditMode)
+    {
+        Page.Title = ((SystemVariables)Session["SystemVariables"])["Site"].Value + " - " + site.Name;
+
+        if (!Utilities.IsDev())
+            idRow.Attributes["class"] = "hiddencol";
+
+        string screen_id = "2";
+        string allFeatures = "dialogWidth:980px;dialogHeight:430px;center:yes;resizable:no; scroll:no";
+        string js = "javascript:window.showModalDialog('" + "NoteInfo.aspx?id=" + site.EntityID.ToString() + "&screen=" + screen_id + "', '', '" + allFeatures + "');document.getElementById('btnUpdateNotesIcon').click();return false;";
+        this.lnkNotes.Attributes.Add("onclick", js);
+        lnkNotes.ImageUrl = NoteDB.HasNotes(site.EntityID) ? "~/images/notes-48.png" : "~/images/notes-bw-48.jpg";
+
+
+        lblId.Text                             = site.SiteID.ToString();
+
+        chkIncSunday.Checked    = !site.ExclSun;
+        chkIncMonday.Checked    = !site.ExclMon;
+        chkIncTuesday.Checked   = !site.ExclTue;
+        chkIncWednesday.Checked = !site.ExclWed;
+        chkIncThursday.Checked  = !site.ExclThu;
+        chkIncFriday.Checked    = !site.ExclFri;
+        chkIncSaturday.Checked  = !site.ExclSat;
+
+        ddlDayStart_Hour.SelectedValue     = site.DayStartTime.Hours.ToString();
+        ddlDayStart_Minute.SelectedValue   = site.DayStartTime.Minutes.ToString();
+        ddlDayEnd_Hour.SelectedValue       = site.DayEndTime.Hours.ToString();
+        ddlDayEnd_Minute.SelectedValue     = site.DayEndTime.Minutes.ToString();
+
+        ddlLunchStart_Hour.SelectedValue   = site.LunchStartTime.Hours.ToString();
+        ddlLunchStart_Minute.SelectedValue = site.LunchStartTime.Minutes.ToString();
+        ddlLunchEnd_Hour.SelectedValue     = site.LunchEndTime.Hours.ToString();
+        ddlLunchEnd_Minute.SelectedValue   = site.LunchEndTime.Minutes.ToString();
+
+        lblPrintEPCText.Text = site.IsClinic ? "Print EPC" : "Print Referral";
+
+        if (isEditMode)
+        {
+
+            DataTable dt = SiteDB.GetDataTable();
+            bool showClinicAddOption   = true;
+            bool showAgedCareAddOption = true;
+            for (int i = 0; i < dt.Rows.Count; i++)
+            {
+                if (Convert.ToBoolean(dt.Rows[i]["is_clinic"]) == true)
+                    showClinicAddOption = false;
+                if (Convert.ToBoolean(dt.Rows[i]["is_clinic"]) == false)
+                    showAgedCareAddOption = false;
+            }
+            if (site.IsClinic == true)
+                showClinicAddOption = true;
+            if (site.IsClinic == false)
+                showAgedCareAddOption = true;
+
+            ddlClinic.Items.Clear();
+            if (showClinicAddOption)
+                ddlClinic.Items.Add(new ListItem("Clinic", "1"));
+            if (showAgedCareAddOption)
+                ddlClinic.Items.Add(new ListItem("Aged Care", "0"));
+
+
+            txtName.Text                           = site.Name;
+            ddlClinic.SelectedValue                = site.IsClinic ? "1" : "0";
+            txtABN.Text                            = site.Abn;
+            txtACN.Text                            = site.Acn;
+            txtTFN.Text                            = site.Tfn;
+            txtASIC.Text                           = site.Asic;
+            chkIsProvider.Checked                  = site.IsProvider;
+            txtBPay.Text                           = site.BankBpay;
+            txtBSB.Text                            = site.BankBsb;
+            txtBankAccount.Text                    = site.BankAccount;
+            txtBankDirectDebitUserID.Text          = site.BankDirectDebitUserID;
+            txtBankUsername.Text                   = site.BankUsername;
+            txtOustandingBalanceWarning.Text       = site.OustandingBalanceWarning.ToString();
+            chkIsPrintEPC.Checked                  = site.PrintEpc;
+            ddlNumBookingMonthsToGet.SelectedValue = site.NumBookingMonthsToGet > 36 ? "36" : site.NumBookingMonthsToGet.ToString();
+            ddlFiscalYrEnd_Day.SelectedValue       = site.FiscalYrEnd.Day.ToString();
+            ddlFiscalYrEnd_Month.SelectedValue     = site.FiscalYrEnd.Month.ToString();
+            ddlFiscalYrEnd_Year.SelectedValue      = site.FiscalYrEnd.Year.ToString();
+
+
+            lblName.Visible                     = false;
+            lblClinic.Visible                   = false;
+            lblABN.Visible                      = false;
+            lblACN.Visible                      = false;
+            lblTFN.Visible                      = false;
+            lblASIC.Visible                     = false;
+            lblIsProvider.Visible               = false;
+            lblBPay.Visible                     = false;
+            lblBSB.Visible                      = false;
+            lblBankAccount.Visible              = false;
+            lblBankDirectDebitUserID.Visible    = false;
+            lblBankUsername.Visible             = false;
+            lblOustandingBalanceWarning.Visible = false;
+            lblIsPrintEPC.Visible               = false;
+            lblNumBookingMonthsToGet.Visible    = false;
+            lblFiscalYrEnd.Visible              = false;
+        }
+        else
+        {
+            lblName.Text                     = site.Name;
+            lblClinic.Text                   = site.IsClinic                           ? "Clinic" : "Aged Care";
+            lblABN.Text                      = site.Abn.Length                    == 0 ? "--"  : site.Abn;
+            lblACN.Text                      = site.Acn.Length                    == 0 ? "--"  : site.Acn;
+            lblTFN.Text                      = site.Tfn.Length                    == 0 ? "--"  : site.Tfn;
+            lblASIC.Text                     = site.Asic.Length                   == 0 ? "--"  : site.Asic;
+            lblIsProvider.Text               = site.IsProvider                         ? "Yes" : "No";
+            lblBPay.Text                     = site.BankBpay.Length               == 0 ? "--"  : site.BankBpay;
+            lblBSB.Text                      = site.BankBsb.Length                == 0 ? "--"  : site.BankBsb;
+            lblBankAccount.Text              = site.BankAccount.Length            == 0 ? "--"  : site.BankAccount;
+            lblBankDirectDebitUserID.Text    = site.BankDirectDebitUserID.Length  == 0 ? "--"  : site.BankDirectDebitUserID;
+            lblBankUsername.Text             = site.BankUsername.Length           == 0 ? "--"  : site.BankUsername;
+            lblOustandingBalanceWarning.Text = site.OustandingBalanceWarning.ToString();
+            lblIsPrintEPC.Text               = site.PrintEpc                           ? "Yes" : "No";
+            lblNumBookingMonthsToGet.Text    = site.NumBookingMonthsToGet.ToString();
+            lblFiscalYrEnd.Text              = site.FiscalYrEnd == DateTime.MinValue   ? "--" : site.FiscalYrEnd.ToString("dd-MM-yyyy");
+
+            txtName.Visible                     = false;
+            ddlClinic.Visible                   = false;
+            txtABN.Visible                      = false;
+            txtACN.Visible                      = false;
+            txtTFN.Visible                      = false;
+            txtASIC.Visible                     = false;
+            chkIsProvider.Visible               = false;
+            txtBPay.Visible                     = false;
+            txtBSB.Visible                      = false;
+            txtBankAccount.Visible              = false;
+            txtBankDirectDebitUserID.Visible    = false;
+            txtBankUsername.Visible             = false;
+            txtOustandingBalanceWarning.Visible = false;
+            chkIsPrintEPC.Visible               = false;
+            ddlNumBookingMonthsToGet.Visible    = false;
+            ddlFiscalYrEnd_Day.Visible          = false;
+            ddlFiscalYrEnd_Month.Visible        = false;
+            ddlFiscalYrEnd_Year.Visible         = false;
+
+            chkIncSunday.Enabled         = false;
+            chkIncMonday.Enabled         = false;
+            chkIncTuesday.Enabled        = false;
+            chkIncWednesday.Enabled      = false;
+            chkIncThursday.Enabled       = false;
+            chkIncFriday.Enabled         = false;
+            chkIncSaturday.Enabled       = false;
+
+            ddlDayStart_Hour.Enabled     = false;
+            ddlDayStart_Minute.Enabled   = false;
+            ddlDayEnd_Hour.Enabled       = false;
+            ddlDayEnd_Minute.Enabled     = false;
+
+            ddlLunchStart_Hour.Enabled   = false;
+            ddlLunchStart_Minute.Enabled = false;
+            ddlLunchEnd_Hour.Enabled     = false;
+            ddlLunchEnd_Minute.Enabled   = false;
+
+
+
+        }
+
+        btnSubmit.Text = isEditMode ? "Update Details" : "Edit Details";
+        btnCancel.Visible = isEditMode;
+    }
+
+    private void FillEmptyAddForm()
+    {
+        Page.Title = ((SystemVariables)Session["SystemVariables"])["Site"].Value + " - " + "Add Site";
+        Heading.InnerText = "Add Site";
+
+        this.lnkNotes.Visible = false;
+
+        idRow.Visible = false;
+
+
+        DataTable dt = SiteDB.GetDataTable();
+        bool showClinicAddOption   = Convert.ToInt32(SystemVariableDB.GetByDescr("AllowAddSiteClinic").Value)   == 1;
+        bool showAgedCareAddOption = Convert.ToInt32(SystemVariableDB.GetByDescr("AllowAddSiteAgedCare").Value) == 1;
+        for (int i = 0; i < dt.Rows.Count; i++)
+        {
+            if (Convert.ToBoolean(dt.Rows[i]["is_clinic"]) == true)
+                showClinicAddOption = false;
+            if (Convert.ToBoolean(dt.Rows[i]["is_clinic"]) == false)
+                showAgedCareAddOption = false;
+        }
+        ddlClinic.Items.Clear();
+        if (showClinicAddOption)
+            ddlClinic.Items.Add(new ListItem("Clinic", "1"));
+        if (showAgedCareAddOption)
+            ddlClinic.Items.Add(new ListItem("Aged Care", "0"));
+        if (!showClinicAddOption && !showAgedCareAddOption)
+            HideTableAndSetErrorMessage("Unable to add either Clinic or Aged Care Facility.");
+
+
+
+        ddlNumBookingMonthsToGet.SelectedValue = "9";
+
+        ddlFiscalYrEnd_Day.SelectedValue   = "30";
+        ddlFiscalYrEnd_Month.SelectedValue = "6";
+
+        chkIncSunday.Checked    = false;
+        chkIncMonday.Checked    = true;
+        chkIncTuesday.Checked   = true;
+        chkIncWednesday.Checked = true;
+        chkIncThursday.Checked  = true;
+        chkIncFriday.Checked    = true;
+        chkIncSaturday.Checked  = false;
+
+        ddlDayStart_Hour.SelectedValue     = "8";
+        ddlDayStart_Minute.SelectedValue   = "0";
+        ddlDayEnd_Hour.SelectedValue       = "18";
+        ddlDayEnd_Minute.SelectedValue     = "0";
+
+        ddlLunchStart_Hour.SelectedValue   = "12";
+        ddlLunchStart_Minute.SelectedValue = "0";
+        ddlLunchEnd_Hour.SelectedValue     = "13";
+        ddlLunchEnd_Minute.SelectedValue   = "0";
+
+        addressControl.Visible    = false;
+        addressAusControl.Visible = false;
+
+        btnSubmit.Text = "Add Site";
+    }
+
+    protected void btnCancel_Click(object sender, EventArgs e)
+    {
+        Response.Redirect(UrlParamModifier.AddEdit(Request.RawUrl, "type", "view"));
+    }
+    protected void btnSubmit_Click(object sender, EventArgs e)
+    {
+        if (GetUrlParamType() == UrlParamType.View)
+        {
+            Response.Redirect(UrlParamModifier.AddEdit(Request.RawUrl, "type", "edit"));
+        }
+        if (GetUrlParamType() == UrlParamType.Edit)
+        {
+            SiteDB.Update(Convert.ToInt32(lblId.Text), Utilities.FormatName(txtName.Text), ddlClinic.SelectedValue == "1", txtABN.Text, txtACN.Text, txtTFN.Text, txtASIC.Text,
+                            chkIsProvider.Checked, txtBPay.Text, txtBSB.Text, txtBankAccount.Text, txtBankDirectDebitUserID.Text, txtBankUsername.Text,
+                            Convert.ToDecimal(txtOustandingBalanceWarning.Text), chkIsPrintEPC.Checked,
+                            !chkIncSunday.Checked, !chkIncMonday.Checked, !chkIncTuesday.Checked, !chkIncWednesday.Checked,
+                            !chkIncThursday.Checked, !chkIncFriday.Checked, !chkIncSaturday.Checked,
+                            GetDayStartTime(), GetLunchStartTime(), GetLunchEndTime(), GetDayEndTime(), GetFYEFromForm(), Convert.ToInt32(ddlNumBookingMonthsToGet.SelectedValue));
+
+            Response.Redirect(UrlParamModifier.AddEdit(Request.RawUrl, "type", "view"));
+        }
+        else if (GetUrlParamType() == UrlParamType.Add)
+        {
+            int id = SiteDB.Insert(Utilities.FormatName(txtName.Text), ddlClinic.SelectedValue == "1", txtABN.Text, txtACN.Text, txtTFN.Text, txtASIC.Text,
+                            chkIsProvider.Checked, txtBPay.Text, txtBSB.Text, txtBankAccount.Text, txtBankDirectDebitUserID.Text, txtBankUsername.Text,
+                            Convert.ToDecimal(txtOustandingBalanceWarning.Text), chkIsPrintEPC.Checked,
+                            !chkIncSunday.Checked, !chkIncMonday.Checked, !chkIncTuesday.Checked, !chkIncWednesday.Checked,
+                            !chkIncThursday.Checked, !chkIncFriday.Checked, !chkIncSaturday.Checked,
+                            GetDayStartTime(), GetLunchStartTime(), GetLunchEndTime(), GetDayEndTime(), GetFYEFromForm(), Convert.ToInt32(ddlNumBookingMonthsToGet.SelectedValue));
+
+            string url = Request.RawUrl;
+            url = UrlParamModifier.AddEdit(url, "type", "view");
+            url = UrlParamModifier.AddEdit(url, "id", id.ToString());
+            Response.Redirect(url);
+        }
+        else
+        {
+            HideTableAndSetErrorMessage("", "Invalid URL Parameters");
+        }
+    }
+
+    public DateTime GetFYEFromForm()
+    {
+        return new DateTime(Convert.ToInt32(ddlFiscalYrEnd_Year.SelectedValue), Convert.ToInt32(ddlFiscalYrEnd_Month.SelectedValue), Convert.ToInt32(ddlFiscalYrEnd_Day.SelectedValue));
+    }
+    public TimeSpan GetDayStartTime()
+    {
+        return new TimeSpan(Convert.ToInt32(ddlDayStart_Hour.SelectedValue), Convert.ToInt32(ddlDayStart_Minute.SelectedValue), 0);
+    }
+    public TimeSpan GetDayEndTime()
+    {
+        return new TimeSpan(Convert.ToInt32(ddlDayEnd_Hour.SelectedValue), Convert.ToInt32(ddlDayEnd_Minute.SelectedValue), 0);
+    }
+    public TimeSpan GetLunchStartTime()
+    {
+        return new TimeSpan(Convert.ToInt32(ddlLunchStart_Hour.SelectedValue), Convert.ToInt32(ddlLunchStart_Minute.SelectedValue), 0);
+    }
+    public TimeSpan GetLunchEndTime()
+    {
+        return new TimeSpan(Convert.ToInt32(ddlLunchEnd_Hour.SelectedValue), Convert.ToInt32(ddlLunchEnd_Minute.SelectedValue), 0);
+    }
+
+
+    #region HideTableAndSetErrorMessage, SetErrorMessage, HideErrorMessag
+
+    private void HideTableAndSetErrorMessage(string errMsg = "", string details = "")
+    {
+        maintable.Visible = false;
+        btnSubmit.Visible = false;
+        SetErrorMessage(errMsg, details);
+    }
+    private void SetErrorMessage(string errMsg = "", string details = "")
+    {
+        if (errMsg.Contains(Environment.NewLine))
+            errMsg = errMsg.Replace(Environment.NewLine, "<br />");
+
+        // double escape so shows up literally on webpage for 'alert' message
+        string detailsToDisplay = (details.Length == 0 ? "" : " <a href=\"#\" onclick=\"alert('" + details.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("'", "\\'").Replace("\"", "\\'") + "'); return false;\">Details</a>");
+
+        lblErrorMessage.Visible = true;
+        if (errMsg != null && errMsg.Length > 0)
+            lblErrorMessage.Text = errMsg + detailsToDisplay + "<br />";
+        else
+            lblErrorMessage.Text = "An error has occurred. Plase contact the system administrator. " + detailsToDisplay + "<br />";
+    }
+    private void HideErrorMessage()
+    {
+        lblErrorMessage.Visible = false;
+        lblErrorMessage.Text = "";
+    }
+
+    #endregion
+
+}

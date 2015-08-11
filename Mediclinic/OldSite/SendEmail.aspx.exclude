@@ -1,0 +1,364 @@
+<%@ Page Language="C#" ValidateRequest=false %>
+<%@ Register TagPrefix="FTB" Namespace="FreeTextBoxControls" Assembly="FreeTextBox" %>
+
+<script runat="server">
+
+protected void Page_Load(Object Src, EventArgs E) {
+
+    UpdateLogout(true);
+    
+	if (!IsPostBack)
+    {
+        try
+        {
+            Page.Form.DefaultFocus = txtSubject.ClientID;
+
+            bool contactFound = false;
+            
+            if (Utilities.GetAddressType().ToString() == "Contact")
+            {
+                Contact contact = GetContact();
+                if (contact != null)
+                {
+                    txtEmailTo.Text = contact.AddrLine1;
+                    contactFound = true;
+                }
+            }
+            else if (Utilities.GetAddressType().ToString() == "ContactAus")
+            {
+                ContactAus contact = GetContactAus();
+                if (contact != null)
+                {
+                    txtEmailTo.Text = contact.AddrLine1;
+                    contactFound = true;
+                }
+            }
+            else
+                throw new Exception("Unknown AddressType in config: " + Utilities.GetAddressType().ToString().ToString());
+
+
+            if (!contactFound)
+            {
+                txtEmailTo.ReadOnly = false;
+                txtEmailTo.BackColor = System.Drawing.Color.LightGoldenrodYellow;
+                Page.Form.DefaultFocus = txtEmailTo.ClientID;
+            }
+            
+
+            SetDraft();
+        }
+        catch (CustomMessageException cmEx)
+        {
+            lblError.Text               =  cmEx.Message;
+            toRow.Visible               =  false;
+            subjectRow.Visible          =  false;
+            messageRow.Visible          =  false;
+            attachmentRow1.Visible      =  false;
+            attachmentRow2.Visible      =  false;
+            attachmentRow3.Visible      =  false;
+
+            SendButton_Close.Visible    =  false;
+            SendButton_KeepOpen.Visible =  false;
+            btnCancel.Text              = "Close";
+            return;
+        }
+	}
+}
+
+protected Contact GetContact()
+{
+    string id = Request.QueryString["id"];
+    if (id == null || !System.Text.RegularExpressions.Regex.IsMatch(id, @"^\d+$"))
+        return null;
+    return ContactDB.GetByID(Convert.ToInt32(id));
+}
+protected ContactAus GetContactAus()
+{
+    string id = Request.QueryString["id"];
+    if (id == null || !System.Text.RegularExpressions.Regex.IsMatch(id, @"^\d+$"))
+        return null;
+    return ContactAusDB.GetByID(Convert.ToInt32(id));
+} 
+
+protected void SendButton_KeepOpen_Click(Object Src, EventArgs E)
+{
+    Send(false);
+}
+protected void SendButton_Close_Click(Object Src, EventArgs E)
+{
+    Send(true);
+}
+protected void Send(bool close)
+{
+    string[] attachments = null;
+
+    try
+    {
+
+        // Output.Text = FreeTextBox1.Text;
+
+        if (txtSubject.Text.Trim().Length == 0)
+        {
+            Page.Form.DefaultFocus = txtSubject.ClientID;
+            throw new CustomMessageException("Please enter a subject");
+        }
+
+        string to      = txtEmailTo.Text;
+        string subject = txtSubject.Text;
+        string message = FreeTextBox1.Text;
+
+        attachments = GetAttachments(new HtmlInputFile[] { inpAttachment1, inpAttachment2, inpAttachment3 });
+
+        Emailer.SimpleEmail(
+            (string)Session["SiteName"],
+            to,
+            subject,
+            message,
+            true,
+            attachments,
+            null);
+        
+        RemoveDraft();
+
+
+        lblError.Text = "Sent!";
+
+        if (close)
+            Page.ClientScript.RegisterStartupScript(Page.ClientScript.GetType(), Page.ClientID, "close_window()", true);
+
+    }
+    catch (CustomMessageException cmEx)
+    {
+        lblError.Text = cmEx.Message;
+    }
+    catch (Exception ex)
+    {
+        lblError.Text = Utilities.IsDev() ? ex.ToString() : ex.Message;
+    }
+    finally
+    {
+        if (attachments != null)
+            foreach (string file in attachments)
+                System.IO.File.Delete(file);
+    }
+}
+
+protected string[] GetAttachments(HtmlInputFile[] htmlInputFiles)
+{
+    ArrayList attachments = new ArrayList();
+    foreach (HtmlInputFile htmlInputFile in htmlInputFiles)
+    {
+        if (htmlInputFile.PostedFile == null)
+            continue;
+
+        HttpPostedFile attFile = htmlInputFile.PostedFile;
+        if (attFile.ContentLength == 0)
+            continue;
+
+        string strFileName = System.IO.Path.GetFileName(htmlInputFile.PostedFile.FileName);
+        string hostedFilePath = Letter.GetTempLettersDirectory() + strFileName;
+        htmlInputFile.PostedFile.SaveAs(hostedFilePath);  // Save the file on the server
+
+        attachments.Add(hostedFilePath);
+    }
+
+    return (string[])attachments.ToArray(typeof(string));
+}
+
+
+
+
+
+protected void UpdateLogout(bool hideHeader)
+{
+    bool isLoggedIn    = Session["IsLoggedIn"]     != null && Convert.ToBoolean(Session["IsLoggedIn"]);
+    bool isStakeholder = Session["IsStakeholder"]  != null && Convert.ToBoolean(Session["IsStakeholder"]);
+    bool isMasterAdmin = Session["IsMasterAdmin"]  != null && Convert.ToBoolean(Session["IsMasterAdmin"]);
+    bool isAdmin       = Session["IsAdmin"]        != null && Convert.ToBoolean(Session["IsAdmin"]);
+    bool isPrincipal   = Session["IsPrincipal"]    != null && Convert.ToBoolean(Session["IsPrincipal"]);
+
+    bool isAdminView   = isStakeholder || isMasterAdmin || isAdmin;
+
+    if (!isLoggedIn)
+    {
+        Logout(hideHeader);
+        return;
+    }
+
+    // if another session logged in - logout here
+    if (!(new List<int> { -5, -7, -8 }).Contains((int)Session["StaffID"]))
+    {
+        UserLogin userlogin = (Session["PatientID"] == null) ?
+            UserLoginDB.GetByUserID(Convert.ToInt32(Session["StaffID"]), -1) :
+            UserLoginDB.GetByUserID(-1, Convert.ToInt32(Session["StaffID"]));
+
+        if (userlogin == null || userlogin.SessionID != HttpContext.Current.Session.SessionID.ToString())
+        {
+            Logout(hideHeader);
+            return;
+        }
+
+        if (Session["SiteID"] == null &&
+            !HttpContext.Current.Request.Url.LocalPath.Contains("/Account/LoginV2.aspx") &&
+            !HttpContext.Current.Request.Url.LocalPath.Contains("/Account/LogoutV2.aspx") &&
+            !HttpContext.Current.Request.Url.LocalPath.Contains("/Account/SelectSiteV2.aspx"))
+            Response.Redirect("~/Account/SelectSiteV2.aspx?from_url=" + Request.RawUrl);
+
+
+        if (!isAdminView && Session["OrgID"] == null &&
+            !HttpContext.Current.Request.Url.LocalPath.Contains("/Account/LoginV2.aspx") &&
+            !HttpContext.Current.Request.Url.LocalPath.Contains("/Account/LogoutV2.aspx") &&
+            !HttpContext.Current.Request.Url.LocalPath.Contains("/Account/SelectOrgV2.aspx") &&
+            !HttpContext.Current.Request.Url.LocalPath.Contains("/Account/SelectSiteV2.aspx"))
+            Response.Redirect("~/Account/SelectOrgV2.aspx?from_url=" + Request.RawUrl);
+
+        if (!(new List<int> { -5, -7, -8 }).Contains((int)Session["StaffID"]))
+            UserLoginDB.UpdateLastAccessTime(userlogin.UserloginID, DateTime.Now, Request.RawUrl.Contains("/Account/Logout.aspx") ? "" : Request.RawUrl);
+    }
+}
+
+protected void Logout(bool hideHeader)
+{
+    Session.Remove("IsLoggedIn");
+    Session.Remove("IsAdmin");
+    Session.Remove("IsStakeholder");
+    Session.Remove("StaffID");
+    Session.Remove("StaffFullnameWithoutMiddlename");
+    Session.Remove("NumDaysToDisplayOnBookingScreen");
+    //System.Web.Security.FormsAuthentication.SignOut();
+
+    SaveDraft();
+    
+    if (!HttpContext.Current.Request.Url.LocalPath.Contains("/Account/LoginV2.aspx") &&
+        !HttpContext.Current.Request.Url.LocalPath.EndsWith("/Account/LogoutV2.aspx"))
+        Response.Redirect("~/Account/LoginV2.aspx?show_header=" + (hideHeader ? "0" : "1") + "&from_url=" + Request.RawUrl);
+}
+
+protected void SaveDraft()
+{
+    Session["EmailDraft_Subject"] = txtSubject.Text;
+    Session["EmailDraft_Body"]    = FreeTextBox1.Text;
+}
+protected void SetDraft()
+{
+    if (Session["EmailDraft_Subject"] != null)
+        txtSubject.Text   = Session["EmailDraft_Subject"].ToString();
+    if (Session["EmailDraft_Body"] != null)
+        FreeTextBox1.Text = Session["EmailDraft_Body"].ToString();
+}
+protected void RemoveDraft()
+{
+    Session.Remove("EmailDraft_Subject");
+    Session.Remove("EmailDraft_Body");
+}
+
+
+</script>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<title>Default Setup</title>
+    <script type="text/javascript">
+
+        function close_window() {
+            window.returnValue = false;
+            self.close();
+        }
+
+        function clear_file_upload(id) {
+
+            // get the file upload element
+            fileField = document.getElementById(id);
+
+            // get the file upload parent element
+            parentNod = fileField.parentNode;
+
+            // create new element
+            tmpForm = document.createElement("form");
+            parentNod.replaceChild(tmpForm, fileField);
+            tmpForm.appendChild(fileField);
+            tmpForm.reset();
+            parentNod.replaceChild(fileField, tmpForm);
+        }
+
+    </script>
+</head>
+<body>
+
+    <center>
+    <form id="Form1" runat="server">
+    	
+        <table border="0" cellpadding="1" cellspacing="0">
+            <tr>
+                <td colspan="2">
+                    <asp:Label ID="lblError" runat="server" ForeColor="Red" Font-Bold="true" ></asp:Label>
+                </td>
+            </tr>
+            <tr id="toRow" runat="server">
+                <td>
+                    To:
+                </td>
+                <td >
+                    <asp:TextBox ID="txtEmailTo" Columns="60" runat="server" ReadOnly="true"></asp:TextBox>
+                </td>
+            </tr>
+            <tr id="subjectRow" runat="server">
+                <td>
+                    Subject:
+                    <div style="line-height:10px;">&nbsp;</div>
+                </td>
+                <td>
+                    <asp:TextBox ID="txtSubject" Columns="60" runat="server" BackColor="LightGoldenrodYellow"></asp:TextBox>
+                </td>
+            </tr>
+            <tr id="messageRow" runat="server">
+                <td align="center" colspan="2">
+                    <FTB:FreeTextBox id="FreeTextBox1" runat="Server" Text="" Width="600px" />
+
+		            <div>
+			            <asp:Literal id="Output" runat="server" />
+		            </div>
+
+                    <div style="line-height:10px;">&nbsp;</div>
+                </td>
+            </tr>
+            <tr id="attachmentRow1" runat="server">
+				<td valign="middle" align="right">Attachment :</td>
+				<td>
+                    <input id="inpAttachment1" type="file" size="53" name="filMyFile" runat="server" />
+                    <input type="button" value="Remove" onclick="javaScript: clear_file_upload('inpAttachment1'); return false;" />
+				</td>
+			</tr>
+			<tr id="attachmentRow2" runat="server">
+				<td valign="middle" align="right">Attachment :</td>
+				<td>
+                    <input id="inpAttachment2" type="file" size="53" name="filMyFile" runat="server" />
+                    <input type="button" value="Remove" onclick="javaScript: clear_file_upload('inpAttachment2'); return false;" />
+				</td>
+			</tr>
+			<tr id="attachmentRow3" runat="server">
+				<td valign="middle" align="right">Attachment :</td>
+				<td>
+                    <input id="inpAttachment3" type="file" size="53" name="filMyFile" runat="server" />
+                    <input type="button" value="Remove" onclick="javaScript:clear_file_upload('inpAttachment3'); return false;" />
+				</td>
+			</tr>
+            <tr>
+                <td align="center"  colspan="2">
+                    <div style="line-height:10px;">&nbsp;</div>
+			        <asp:Button ID="SendButton_Close" runat="server" Text="Send & Close" OnClick="SendButton_Close_Click" />
+			        <asp:Button ID="SendButton_KeepOpen" runat="server" Text="Send & Keep Open" OnClick="SendButton_KeepOpen_Click" />
+                    <asp:Button ID="btnCancel" runat="server" Text="Cancel" OnClientClick="window.returnValue=false;self.close();" />
+                </td>
+            </tr>
+
+
+
+        </table>
+
+
+	</form>
+    </center>
+
+</body>
+</html>

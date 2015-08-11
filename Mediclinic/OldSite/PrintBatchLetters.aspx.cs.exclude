@@ -1,0 +1,575 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Collections;
+using System.Configuration;
+using System.Text.RegularExpressions;
+using System.IO;
+using System.Web.UI.HtmlControls;
+
+public partial class PrintBatchLetters : System.Web.UI.Page
+{
+    // -- http://localhost:7608/Mediclinic/PrintBatchLetters.aspx?org=1550
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        try
+        {
+
+            HideErrorMessage();
+
+            if (!IsPostBack)
+            {
+                Session.Remove("data_selected");
+                Session.Remove("sortExpression_Selected");
+                Session.Remove("sortExpression_Offering");
+
+                PopulateLettersList();
+
+                if (Convert.ToBoolean(Session["SiteIsAgedCare"]) || Request.QueryString["org"] != null)
+                {
+                    lblPatientsNotLinkedToAnyOrg.Visible = false;
+                    chkIncPatientsWithNoOrg.Visible      = false;
+                    btnUpdatePatientList.Visible         = false;
+                }
+
+                SetUrlFields();
+            }
+
+            if (Convert.ToBoolean(hiddenSelectedIDsSentIn.Value))
+                Page.ClientScript.RegisterStartupScript(this.GetType(), "hide_org_col", "<script language=javascript>hideOrgColumn();</script>");
+
+        }
+        catch (CustomMessageException ex)
+        {
+            if (IsPostBack) SetErrorMessage(ex.Message);
+            else HideTableAndSetErrorMessage(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            if (IsPostBack) SetErrorMessage("", ex.ToString());
+            else HideTableAndSetErrorMessage("", ex.ToString());
+        }
+    }
+
+    #region SetUrlFields
+
+    protected void SetUrlFields()
+    {
+        try
+        {
+            string org_id = Request.QueryString["org"];
+            if (org_id != null && org_id != "0")
+            {
+                if (!Regex.IsMatch(org_id, @"^\d+$"))
+                    throw new CustomMessageException();
+
+                Organisation org = OrganisationDB.GetByID(Convert.ToInt32(org_id));
+                if (org == null)
+                    throw new CustomMessageException();
+
+                // set page heading with link to the org
+                heading.InnerText = "Print Batch Letters For ";
+                lnkToEntity.Text = org.Name;
+                lnkToEntity.NavigateUrl = "AddEditOrganisation.aspx?type=view&id=" + org.OrganisationID;
+
+                // hide cols 1-4 of tbl_select_org_and_patient
+                foreach (HtmlTableRow thisRow in this.tbl_select_org_and_patient.Rows)
+                    for(int i=0; i<thisRow.Cells.Count-3; i++)
+                        thisRow.Cells[i].Visible = false;
+
+                // get patients of this org!
+                foreach (Patient patient in RegisterPatientDB.GetPatientsOf(false, org.OrganisationID))
+                    lstPatients.Items.Add(new ListItem(patient.Person.FullnameWithoutMiddlename, patient.PatientID.ToString()));
+
+
+                // dont use this if single org set
+                chkOneLetterPerPatient.Checked = false;
+                chkOneLetterPerPatient.Visible = false;
+                lblOneLetterPerPatientText.Visible = false;
+                lstPatients.Rows = lstLetters.Rows;
+
+            }
+
+
+            string letter_id = Request.QueryString["letter"];
+            if (letter_id != null && letter_id != "-1")
+            {
+                if (!Regex.IsMatch(letter_id, @"^\d+$"))
+                    throw new CustomMessageException();
+
+                Letter letter = LetterDB.GetByID(Convert.ToInt32(letter_id));
+                if (letter == null)
+                    throw new CustomMessageException();
+
+                foreach (ListItem item in lstLetters.Items)
+                    if (item.Value == letter.LetterID.ToString())
+                        item.Selected = true;
+            }
+
+
+            string selected_patient_ids = Request.Form["selected_patient_ids"];
+            if (selected_patient_ids != null && selected_patient_ids.Length > 0)  // sent by http post
+            {
+                hiddenSelectedIDsSentIn.Value = "true";
+                Patient[] selectedPatients = PatientDB.GetByIDs(selected_patient_ids);
+
+                // put in hashtable by ID
+                Hashtable ptHash = new Hashtable();
+                for (int i = 0; i < selectedPatients.Length; i++)
+                    ptHash[selectedPatients[i].PatientID] = selectedPatients[i];
+
+                // now add list by id order it came in
+                int[] idsByOriginalOrder = Array.ConvertAll(selected_patient_ids.Split(','), int.Parse);
+
+                for(int i = idsByOriginalOrder.Length-1; i >= 0; i--)
+                {
+                    Patient p = (Patient)ptHash[idsByOriginalOrder[i]];
+                    lstPatients.Items.Add(new ListItem(p.Person.FullnameWithoutMiddlename, p.PatientID.ToString()));
+                    lstPatients.Items[lstPatients.Items.Count-1].Selected = true;
+                }
+            }
+
+        }
+        catch (CustomMessageException)
+        {
+            SetErrorMessage();
+        }
+    }
+
+    #endregion
+
+    #region btnUpdateOrgs_Click, btnAddAllOrgs_Click, AddAllOrgs, btnUpdatePatientList_Click, PopulateLettersList, LetterExists
+
+    protected void btnUpdateOrgs_Click(object sender, EventArgs e)
+    {
+        btnUpdatePatientList_Click(null, EventArgs.Empty);
+    }
+
+    protected void btnAddAllOrgs_Click(object sender, EventArgs e)
+    {
+        AddAllOrgs();
+    }
+
+    protected void AddAllOrgs()
+    {
+        // get selected id's
+        ArrayList selectedIDs = new ArrayList();
+        foreach (ListItem item in lstOrgs.Items)
+            if (item.Selected)
+                selectedIDs.Add(item.Value);
+
+        bool incAgedCare = Convert.ToBoolean(Session["SiteIsAgedCare"]);
+        bool incClinics  = Convert.ToBoolean(Session["SiteIsClinic"]);
+
+        lstOrgs.Items.Clear();
+        DataTable orgs = OrganisationDB.GetDataTable(0, false, true, !incClinics, !incAgedCare, true, "", false);
+        lstOrgs.DataSource = orgs;
+        lstOrgs.DataTextField = "name";
+        lstOrgs.DataValueField = "organisation_id";
+        lstOrgs.DataBind();
+
+
+        string items = string.Empty;
+        for (int i = 0; i < orgs.Rows.Count; i++)
+            items += (items.Length == 0 ? "" : ",") + orgs.Rows[i]["organisation_id"];
+        hiddenOrgIDsList.Value = items;
+
+        btnUpdatePatientList_Click(null, EventArgs.Empty);
+    }
+
+
+
+    protected void UpdateOrgsFromJavascriptChanges()
+    {
+        string orgIDs = hiddenOrgIDsList.Value;  // comma seperated
+        Hashtable orgIDsHash = new Hashtable();
+        if (orgIDs.Length > 0)
+            foreach (string orgID in orgIDs.Split(','))
+                orgIDsHash[Convert.ToInt32(orgID)] = 1;
+
+
+        lstOrgs.Items.Clear();
+        bool incAgedCare = Convert.ToBoolean(Session["SiteIsAgedCare"]);
+        bool incClinics  = Convert.ToBoolean(Session["SiteIsClinic"]);
+        DataTable orgs = OrganisationDB.GetDataTable(0, false, true, !incClinics, !incAgedCare, true, "", false);
+        foreach (DataRow row in orgs.Rows)
+        {
+            Organisation org = OrganisationDB.Load(row);
+            if (orgIDsHash[org.OrganisationID] != null)
+                lstOrgs.Items.Add(new ListItem(org.Name, org.OrganisationID.ToString()));
+        }
+    }
+    protected void btnUpdatePatientList_Click(object sender, EventArgs e)
+    {
+        UpdateOrgsFromJavascriptChanges();
+
+        // get selected patient id's
+        ArrayList selectedIDs = new ArrayList();
+        foreach (ListItem item in lstPatients.Items)
+            if (item.Selected)
+                selectedIDs.Add(item.Value);
+
+
+        string orgIDs = string.Empty;
+        foreach (ListItem item in lstOrgs.Items)
+        {
+            //if (!item.Selected)
+            //    continue;
+
+            if (orgIDs.Length > 0)
+                orgIDs += ",";
+            orgIDs += item.Value;
+        }
+
+        lstPatients.Items.Clear();
+
+
+        if (!chkIncPatientsWithNoOrg.Checked)
+        {
+            foreach (Patient patient in RegisterPatientDB.GetPatientsOf(false, orgIDs))
+                lstPatients.Items.Add(new ListItem(patient.Person.FullnameWithoutMiddlename, patient.PatientID.ToString()));
+        }
+        else
+        {
+            Patient[] patients_1 = RegisterPatientDB.GetPatientsOf(false, orgIDs);
+            Patient[] patients_2 = RegisterPatientDB.GetPatientsWithNoOrg();
+
+            // create full list
+            ArrayList allPatients = new ArrayList(patients_1);
+            allPatients.AddRange(patients_2);
+
+            // remove duplicates
+            Hashtable seen = new Hashtable();
+            for (int i = allPatients.Count-1; i >= 0; i--)
+            {
+                Patient cur = (Patient)allPatients[i];
+                if (seen[cur.PatientID] == null)
+                    seen[cur.PatientID] = 1;
+                else
+                    allPatients.RemoveAt(i);
+            }
+
+            // sort
+            allPatients.Sort(new PatientComparer());
+
+            // display
+            foreach (Patient patient in allPatients)
+                lstPatients.Items.Add(new ListItem(patient.Person.FullnameWithoutMiddlename, patient.PatientID.ToString()));
+        }
+
+
+        // select patient id's that were previously selected
+        foreach (ListItem item in lstPatients.Items)
+            if (selectedIDs.Contains(item.Value))
+                item.Selected = true;
+
+        lblPatientCount.Text = lstPatients.Items.Count.ToString();
+    }
+
+    public class PatientComparer : IComparer
+    {
+        public int Compare(object x, object y)
+        {
+            Patient p1 = x as Patient;
+            Patient p2 = y as Patient;
+
+            if (p1.Person.Surname.CompareTo(p2.Person.Surname) != 0)
+                return p1.Person.Surname.CompareTo(p2.Person.Surname);
+            else
+                return p1.Person.Firstname.CompareTo(p2.Person.Firstname);
+        }
+    }
+
+    
+    protected void ddlLetterTypes_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        PopulateLettersList();
+    }
+
+    protected void PopulateLettersList()
+    {
+        DataTable letters = LetterDB.GetDataTable_ByOrg(0, Convert.ToInt32(Session["SiteID"]));
+
+        // remove ones that dont exists
+        for (int i = letters.Rows.Count - 1; i >= 0; i--)
+        {
+            Letter letter = LetterDB.LoadAll(letters.Rows[i]);
+            if (!letter.FileExists(Convert.ToInt32(Session["SiteID"])))
+                letters.Rows.RemoveAt(i);
+        }
+
+        lstLetters.DataSource     = letters;
+        lstLetters.DataTextField  = "letter_docname";
+        lstLetters.DataValueField = "letter_letter_id";
+        lstLetters.DataBind();
+    }
+
+    protected bool LetterExists(int letterID)
+    {
+        Letter letter = LetterDB.GetByID(letterID);
+        bool useDefaultDocs = letter.Organisation == null ? true : !LetterDB.OrgHasdocs(letter.Organisation.OrganisationID);
+
+        string dir = Letter.GetLettersDirectory();
+        return (File.Exists(dir + (useDefaultDocs ? "" : letter.Organisation.OrganisationID + @"\") + letter.Docname));
+    }
+
+
+    #endregion
+
+    #region PrintLetter
+
+    protected void btnPrint_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            // TODO: Send Letter By Email
+            int letterPrintHistorySendMethodID = 1; // send by mail
+
+
+            // make sure at least one org and one patient selected
+            string org_id   = Request.QueryString["org"];
+            int singleOrgID = (org_id != null && org_id != "0") ? Convert.ToInt32(org_id) : 0;
+            if (singleOrgID == 0 && !chkOneLetterPerPatient.Checked && lstOrgs.GetSelectedIndices().Length == 0)
+                throw new CustomMessageException("Please select at least one organisation.");
+            if (lstPatients.GetSelectedIndices().Length == 0)
+                throw new CustomMessageException("Please select at least one patient.");
+
+
+            if (lstLetters.GetSelectedIndices().Length == 0)
+                throw new CustomMessageException("Please select a letter.");
+
+
+            // get letter and make sure it exists
+            Letter letter = LetterDB.GetByID(Convert.ToInt32(lstLetters.SelectedValue));
+            string sourchTemplatePath = letter.GetFullPath(Convert.ToInt32(Session["SiteID"]));
+            if (!File.Exists(sourchTemplatePath))
+                throw new CustomMessageException("File doesn't exist.");
+
+            // get temp directory
+            string tmpLettersDirectory = System.Configuration.ConfigurationManager.AppSettings["TmpLettersDirectory"];
+            if (!tmpLettersDirectory.EndsWith(@"\"))
+                tmpLettersDirectory = tmpLettersDirectory + @"\";
+            if (!Directory.Exists(tmpLettersDirectory))
+                throw new CustomMessageException("Temp letters directory doesn't exist");
+
+            // delete old tmp files
+            FileHelper.DeleteOldFiles(tmpLettersDirectory, new TimeSpan(1, 0, 0));
+
+
+            // create hash to know if relationship exists between org and patient
+            Hashtable orgPatientHash = new Hashtable();
+            DataTable tbl = RegisterPatientDB.GetDataTable();
+            foreach(DataRow row in tbl.Rows)
+            {
+                RegisterPatient regPatient = RegisterPatientDB.Load(row);
+                orgPatientHash[regPatient.Organisation.OrganisationID + "_" + regPatient.Patient.PatientID] = 1;
+            }
+
+            // create individual merged docs and put into list of docsToMerge - only if there is an org-patient relationship
+            ArrayList docsToMerge = new ArrayList();
+
+
+
+
+
+            Site site = SiteDB.GetByID(Convert.ToInt32(Session["SiteID"]));
+
+            if (singleOrgID == 0)  // no org passed into url, so use from orgs list
+            {
+
+                if (chkOneLetterPerPatient.Checked)  // one letter per patient
+                {
+
+                    foreach (ListItem patientItem in lstPatients.Items)
+                    {
+                        if (!patientItem.Selected)
+                            continue;
+
+                        // get just one org for this patient...
+                        //
+                        // 1. get most recent booking for them .. use that org
+                        // 2. if null, get most recent org in registerpatient
+                        // 3. if has no org associated, use "site" for org (org name, org address, etc) but get from site logged into (ie the session variable)
+
+                        int orgOfPatient = 0;
+                        Booking mostRecentBooking = BookingDB.GetMostRecent(Convert.ToInt32(patientItem.Value));
+                        if (mostRecentBooking != null)
+                            orgOfPatient = mostRecentBooking.Organisation.OrganisationID;
+                        else
+                        {
+                            Organisation mostRecentOrg = RegisterPatientDB.GetMostRecentOrganisationOf(Convert.ToInt32(patientItem.Value));
+                            if (mostRecentOrg != null)
+                                orgOfPatient = mostRecentOrg.OrganisationID;
+                        }
+
+
+                        // create doc for that org-patient relation
+                        string tmpSingleFileName = Letter.CreateMergedDocument(
+                            letter.LetterID,
+                            Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["StoreLettersHistoryInDB"]),
+                            Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["StoreLettersHistoryInFlatFile"]),
+                            letterPrintHistorySendMethodID,
+                            Letter.GetLettersHistoryDirectory(orgOfPatient),
+                            letter.Docname.Replace(".dot", ".doc"),
+                            site,
+                            orgOfPatient,
+                            -1, // booking id
+                            Convert.ToInt32(patientItem.Value),
+                            -1, // register_referrer_id_to_use_instead_of_patients_reg_ref
+                            Convert.ToInt32(Session["StaffID"]),
+                            -1, //healthcardactionid
+                            sourchTemplatePath,
+                            tmpLettersDirectory + letter.Docname.Replace(".dot", ".doc"),
+                            true);
+
+                        // record name of merged doc
+                        docsToMerge.Add(tmpSingleFileName);
+                    }
+
+
+                }
+                else  // one letter per org-patient realationship
+                {
+
+                    foreach (ListItem orgItem in lstOrgs.Items)
+                    {
+                        if (!orgItem.Selected)
+                            continue;
+
+                        foreach (ListItem patientItem in lstPatients.Items)
+                        {
+                            if (!patientItem.Selected)
+                                continue;
+
+                            // check relationship that patient is in that org
+                            if (orgPatientHash[orgItem.Value + "_" + patientItem.Value] == null)
+                                continue;
+
+                            // create doc for that org-patient relation
+                            string tmpSingleFileName = Letter.CreateMergedDocument(
+                                letter.LetterID,
+                                Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["StoreLettersHistoryInDB"]),
+                                Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["StoreLettersHistoryInFlatFile"]),
+                                letterPrintHistorySendMethodID,
+                                Letter.GetLettersHistoryDirectory(Convert.ToInt32(orgItem.Value)),
+                                letter.Docname.Replace(".dot", ".doc"),
+                                site,
+                                Convert.ToInt32(orgItem.Value),
+                                -1, // booking id
+                                Convert.ToInt32(patientItem.Value),
+                                -1, // register_referrer_id_to_use_instead_of_patients_reg_ref
+                                Convert.ToInt32(Session["StaffID"]),
+                                -1, //healthcardactionid
+                                sourchTemplatePath,
+                                tmpLettersDirectory + letter.Docname.Replace(".dot", ".doc"),
+                                true);
+
+                            // record name of merged doc
+                            docsToMerge.Add(tmpSingleFileName);
+                        }
+                    }
+
+                }
+
+            }
+            else // org passsed into url
+            {
+                foreach (ListItem patientItem in lstPatients.Items)
+                {
+                    if (!patientItem.Selected)
+                        continue;
+
+                    // check relationship that patient is in that org
+                    if (orgPatientHash[singleOrgID + "_" + patientItem.Value] == null)
+                        continue;
+
+                    // create doc for that org-patient relation
+                    string tmpSingleFileName = Letter.CreateMergedDocument(
+                        letter.LetterID,
+                        Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["StoreLettersHistoryInDB"]),
+                        Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["StoreLettersHistoryInFlatFile"]),
+                        letterPrintHistorySendMethodID,
+                        Letter.GetLettersHistoryDirectory(singleOrgID),
+                        letter.Docname.Replace(".dot", ".doc"),
+                        site,
+                        singleOrgID,
+                        -1, // booking id
+                        Convert.ToInt32(patientItem.Value),
+                        -1, // register_referrer_id_to_use_instead_of_patients_reg_ref
+                        Convert.ToInt32(Session["StaffID"]),
+                        -1, //healthcardactionid
+                        sourchTemplatePath,
+                        tmpLettersDirectory + letter.Docname.Replace(".dot", ".doc"),
+                        true);
+
+                    // record name of merged doc
+                    docsToMerge.Add(tmpSingleFileName);
+                }
+            }
+
+
+            // merge all tmp files
+            string tmpFinalFileName = Letter.MergeMultipleDocuments(
+                ((string[])docsToMerge.ToArray(typeof(string))),
+                tmpLettersDirectory + letter.Docname.Replace(".dot", ".doc"));
+
+            // delete all single tmp files
+            foreach(string file in docsToMerge)
+                File.Delete(file);
+
+            // download the document
+            byte[] fileContents = File.ReadAllBytes(tmpFinalFileName);
+            System.IO.File.Delete(tmpFinalFileName);
+
+            // Nothing gets past the "DownloadDocument" method because it outputs the file 
+            // which is writing a response to the client browser and calls Response.End()
+            // So make sure any other code that functions goes before this
+            Letter.DownloadDocument(Response, fileContents, letter.Docname.Replace(".dot", ".doc"));
+        }
+        catch (CustomMessageException cmEx)
+        {
+            SetErrorMessage(cmEx.Message);
+            return;
+        }
+    }
+
+    #endregion
+
+    #region SetErrorMessage, HideErrorMessag
+
+    private void HideTableAndSetErrorMessage(string errMsg = "", string details = "")
+    {
+        SetErrorMessage(errMsg, details);
+    }
+    private void SetErrorMessage(string errMsg = "", string details = "")
+    {
+        if (errMsg.Contains(Environment.NewLine))
+            errMsg = errMsg.Replace(Environment.NewLine, "<br />");
+
+        // double escape so shows up literally on webpage for 'alert' message
+        string detailsToDisplay = (details.Length == 0 ? "" : " <a href=\"#\" onclick=\"alert('" + details.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("'", "\\'").Replace("\"", "\\'") + "'); return false;\">Details</a>");
+
+        lblErrorMessage.Visible = true;
+        if (errMsg != null && errMsg.Length > 0)
+            lblErrorMessage.Text = errMsg + detailsToDisplay + "<br />";
+        else
+            lblErrorMessage.Text = "An error has occurred. Plase contact the system administrator. " + detailsToDisplay + "<br />";
+
+        spnErrorMessage.Style["display"] = "";
+    }
+    private void HideErrorMessage()
+    {
+        spnErrorMessage.Style["display"] = "none";
+        lblErrorMessage.Visible = false;
+        lblErrorMessage.Text = "";
+    }
+
+    #endregion
+
+}
+

@@ -1,0 +1,344 @@
+﻿<%@ Page Title="Claim Numbers Allocation" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="ClaimNumbersAllocation.aspx.cs" Inherits="ClaimNumbersAllocation" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script type="text/javascript">
+
+        function select_all_rows(chkBox) { // this uses a plain html checkbox, so it is an actual checkbox passed in
+            var chkBoxList = document.getElementById("<%= chkBoxList.ClientID %>");
+            var chkBoxCount = chkBoxList.getElementsByTagName("input");
+            for (var i = 0; i < chkBoxCount.length; i++) {
+                chkBoxCount[i].checked = chkBox.checked;
+            }
+
+            document.getElementById("btnRevertSection").className = "";  // make visible
+
+            return false;
+        }
+
+        function revert_all_rows() { // this uses a plain html checkbox, so it is an actual checkbox passed in
+            var chkBoxList = document.getElementById("<%= chkBoxList.ClientID %>");
+            var chkBoxCount = chkBoxList.getElementsByTagName("input");
+            for (var i = 0; i < chkBoxCount.length; i++) {
+                chkBoxCount[i].checked = chkBoxCount[i].parentNode.getAttribute('style').indexOf("font-weight:bold") !== -1;
+            }
+
+            document.getElementById("btnRevertSection").className = "hiddencol";  // hide
+            document.getElementById("chkCheckAllNone").checked = false;
+
+            return false;
+        }
+
+    </script>
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+    <h2>
+        Claim Numbers Allocation
+    </h2>
+
+    <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" ></asp:Label>
+
+    <table id="maintable" runat="server">
+        <tr>
+            <td align="right">
+                All/None <input type="checkbox" id="chkCheckAllNone" name="chkCheckAllNone" onchange="select_all_rows(this);return false;" />
+                <span id="btnRevertSection" class="hiddencol">
+                    &nbsp;&nbsp;<asp:Button ID="btnRevert" runat="server" Text="Revert" OnClientClick="revert_all_rows();return false;"  />
+                </span>
+            </td>
+        </tr>
+        <tr>
+            <td align="center">
+                <font face="courier new">
+                <asp:CheckBoxList ID="chkBoxList" runat="server" CellPadding="0" CellSpacing="5"
+                      
+                       RepeatColumns="10"
+                       RepeatDirection="Vertical"
+                       RepeatLayout="Table"
+                       TextAlign="Right"
+                       CssClass="nowrap"
+                    >
+                    <asp:ListItem Value="A0000_A0999">A0000-A0999</asp:ListItem>
+                    <asp:ListItem Value="B0000_B0999">B0000-B0999</asp:ListItem>
+                    <asp:ListItem Value="C0000_C0999">C0000-C0999</asp:ListItem>
+                    <asp:ListItem Value="D0000_D0999">D0000-D0999</asp:ListItem>
+                    <asp:ListItem Value="E0000_E0999">E0000-E0999</asp:ListItem>
+                    <asp:ListItem Value="F0000_F0999">F0000-F0999</asp:ListItem>
+                    <asp:ListItem Value="G0000_G0999">G0000-G0999</asp:ListItem>
+                    <asp:ListItem Value="H0000_H0999">H0000-H0999</asp:ListItem>
+                    <asp:ListItem Value="I0000_I0999">I0000-I0999</asp:ListItem>
+                    <asp:ListItem Value="J0000_J0999">J0000-J0999</asp:ListItem>
+                    <asp:ListItem Value="K0000_K0999">K0000-K0999</asp:ListItem>
+                    <asp:ListItem Value="L0000_L0999">L0000-L0999</asp:ListItem>
+                    <asp:ListItem Value="M0000_M0999">M0000-M0999</asp:ListItem>
+                    <asp:ListItem Value="N0000_N0999">N0000-N0999</asp:ListItem>
+                    <asp:ListItem Value="O0000_O0999">O0000-O0999</asp:ListItem>
+                    <asp:ListItem Value="P0000_P0999">P0000-P0999</asp:ListItem>
+                    <asp:ListItem Value="Q0000_Q0999">Q0000-Q0999</asp:ListItem>
+                    <asp:ListItem Value="R0000_R0999">R0000-R0999</asp:ListItem>
+                    <asp:ListItem Value="S0000_S0999">S0000-S0999</asp:ListItem>
+                    <asp:ListItem Value="T0000_T0999">T0000-T0999</asp:ListItem>
+                    <asp:ListItem Value="U0000_U0999">U0000-U0999</asp:ListItem>
+                    <asp:ListItem Value="V0000_V0999">V0000-V0999</asp:ListItem>
+                    <asp:ListItem Value="W0000_W0999">W0000-W0999</asp:ListItem>
+                    <asp:ListItem Value="X0000_X0999">X0000-X0999</asp:ListItem>
+                    <asp:ListItem Value="Y0000_Y0999">Y0000-Y0999</asp:ListItem>
+                    <asp:ListItem Value="Z0000_Z0999">Z0000-Z0999</asp:ListItem>
+
+                    <asp:ListItem Value="A1000_A1999">A1000-A1999</asp:ListItem>
+                    <asp:ListItem Value="B1000_B1999">B1000-B1999</asp:ListItem>
+                    <asp:ListItem Value="C1000_C1999">C1000-C1999</asp:ListItem>
+                    <asp:ListItem Value="D1000_D1999">D1000-D1999</asp:ListItem>
+                    <asp:ListItem Value="E1000_E1999">E1000-E1999</asp:ListItem>
+                    <asp:ListItem Value="F1000_F1999">F1000-F1999</asp:ListItem>
+                    <asp:ListItem Value="G1000_G1999">G1000-G1999</asp:ListItem>
+                    <asp:ListItem Value="H1000_H1999">H1000-H1999</asp:ListItem>
+                    <asp:ListItem Value="I1000_I1999">I1000-I1999</asp:ListItem>
+                    <asp:ListItem Value="J1000_J1999">J1000-J1999</asp:ListItem>
+                    <asp:ListItem Value="K1000_K1999">K1000-K1999</asp:ListItem>
+                    <asp:ListItem Value="L1000_L1999">L1000-L1999</asp:ListItem>
+                    <asp:ListItem Value="M1000_M1999">M1000-M1999</asp:ListItem>
+                    <asp:ListItem Value="N1000_N1999">N1000-N1999</asp:ListItem>
+                    <asp:ListItem Value="O1000_O1999">O1000-O1999</asp:ListItem>
+                    <asp:ListItem Value="P1000_P1999">P1000-P1999</asp:ListItem>
+                    <asp:ListItem Value="Q1000_Q1999">Q1000-Q1999</asp:ListItem>
+                    <asp:ListItem Value="R1000_R1999">R1000-R1999</asp:ListItem>
+                    <asp:ListItem Value="S1000_S1999">S1000-S1999</asp:ListItem>
+                    <asp:ListItem Value="T1000_T1999">T1000-T1999</asp:ListItem>
+                    <asp:ListItem Value="U1000_U1999">U1000-U1999</asp:ListItem>
+                    <asp:ListItem Value="V1000_V1999">V1000-V1999</asp:ListItem>
+                    <asp:ListItem Value="W1000_W1999">W1000-W1999</asp:ListItem>
+                    <asp:ListItem Value="X1000_X1999">X1000-X1999</asp:ListItem>
+                    <asp:ListItem Value="Y1000_Y1999">Y1000-Y1999</asp:ListItem>
+                    <asp:ListItem Value="Z1000_Z1999">Z1000-Z1999</asp:ListItem>
+
+                    <asp:ListItem Value="A2000_A2999">A2000-A2999</asp:ListItem>
+                    <asp:ListItem Value="B2000_B2999">B2000-B2999</asp:ListItem>
+                    <asp:ListItem Value="C2000_C2999">C2000-C2999</asp:ListItem>
+                    <asp:ListItem Value="D2000_D2999">D2000-D2999</asp:ListItem>
+                    <asp:ListItem Value="E2000_E2999">E2000-E2999</asp:ListItem>
+                    <asp:ListItem Value="F2000_F2999">F2000-F2999</asp:ListItem>
+                    <asp:ListItem Value="G2000_G2999">G2000-G2999</asp:ListItem>
+                    <asp:ListItem Value="H2000_H2999">H2000-H2999</asp:ListItem>
+                    <asp:ListItem Value="I2000_I2999">I2000-I2999</asp:ListItem>
+                    <asp:ListItem Value="J2000_J2999">J2000-J2999</asp:ListItem>
+                    <asp:ListItem Value="K2000_K2999">K2000-K2999</asp:ListItem>
+                    <asp:ListItem Value="L2000_L2999">L2000-L2999</asp:ListItem>
+                    <asp:ListItem Value="M2000_M2999">M2000-M2999</asp:ListItem>
+                    <asp:ListItem Value="N2000_N2999">N2000-N2999</asp:ListItem>
+                    <asp:ListItem Value="O2000_O2999">O2000-O2999</asp:ListItem>
+                    <asp:ListItem Value="P2000_P2999">P2000-P2999</asp:ListItem>
+                    <asp:ListItem Value="Q2000_Q2999">Q2000-Q2999</asp:ListItem>
+                    <asp:ListItem Value="R2000_R2999">R2000-R2999</asp:ListItem>
+                    <asp:ListItem Value="S2000_S2999">S2000-S2999</asp:ListItem>
+                    <asp:ListItem Value="T2000_T2999">T2000-T2999</asp:ListItem>
+                    <asp:ListItem Value="U2000_U2999">U2000-U2999</asp:ListItem>
+                    <asp:ListItem Value="V2000_V2999">V2000-V2999</asp:ListItem>
+                    <asp:ListItem Value="W2000_W2999">W2000-W2999</asp:ListItem>
+                    <asp:ListItem Value="X2000_X2999">X2000-X2999</asp:ListItem>
+                    <asp:ListItem Value="Y2000_Y2999">Y2000-Y2999</asp:ListItem>
+                    <asp:ListItem Value="Z2000_Z2999">Z2000-Z2999</asp:ListItem>
+
+                    <asp:ListItem Value="A3000_A3999">A3000-A3999</asp:ListItem>
+                    <asp:ListItem Value="B3000_B3999">B3000-B3999</asp:ListItem>
+                    <asp:ListItem Value="C3000_C3999">C3000-C3999</asp:ListItem>
+                    <asp:ListItem Value="D3000_D3999">D3000-D3999</asp:ListItem>
+                    <asp:ListItem Value="E3000_E3999">E3000-E3999</asp:ListItem>
+                    <asp:ListItem Value="F3000_F3999">F3000-F3999</asp:ListItem>
+                    <asp:ListItem Value="G3000_G3999">G3000-G3999</asp:ListItem>
+                    <asp:ListItem Value="H3000_H3999">H3000-H3999</asp:ListItem>
+                    <asp:ListItem Value="I3000_I3999">I3000-I3999</asp:ListItem>
+                    <asp:ListItem Value="J3000_J3999">J3000-J3999</asp:ListItem>
+                    <asp:ListItem Value="K3000_K3999">K3000-K3999</asp:ListItem>
+                    <asp:ListItem Value="L3000_L3999">L3000-L3999</asp:ListItem>
+                    <asp:ListItem Value="M3000_M3999">M3000-M3999</asp:ListItem>
+                    <asp:ListItem Value="N3000_N3999">N3000-N3999</asp:ListItem>
+                    <asp:ListItem Value="O3000_O3999">O3000-O3999</asp:ListItem>
+                    <asp:ListItem Value="P3000_P3999">P3000-P3999</asp:ListItem>
+                    <asp:ListItem Value="Q3000_Q3999">Q3000-Q3999</asp:ListItem>
+                    <asp:ListItem Value="R3000_R3999">R3000-R3999</asp:ListItem>
+                    <asp:ListItem Value="S3000_S3999">S3000-S3999</asp:ListItem>
+                    <asp:ListItem Value="T3000_T3999">T3000-T3999</asp:ListItem>
+                    <asp:ListItem Value="U3000_U3999">U3000-U3999</asp:ListItem>
+                    <asp:ListItem Value="V3000_V3999">V3000-V3999</asp:ListItem>
+                    <asp:ListItem Value="W3000_W3999">W3000-W3999</asp:ListItem>
+                    <asp:ListItem Value="X3000_X3999">X3000-X3999</asp:ListItem>
+                    <asp:ListItem Value="Y3000_Y3999">Y3000-Y3999</asp:ListItem>
+                    <asp:ListItem Value="Z3000_Z3999">Z3000-Z3999</asp:ListItem>
+
+                    <asp:ListItem Value="A4000_A4999">A4000-A4999</asp:ListItem>
+                    <asp:ListItem Value="B4000_B4999">B4000-B4999</asp:ListItem>
+                    <asp:ListItem Value="C4000_C4999">C4000-C4999</asp:ListItem>
+                    <asp:ListItem Value="D4000_D4999">D4000-D4999</asp:ListItem>
+                    <asp:ListItem Value="E4000_E4999">E4000-E4999</asp:ListItem>
+                    <asp:ListItem Value="F4000_F4999">F4000-F4999</asp:ListItem>
+                    <asp:ListItem Value="G4000_G4999">G4000-G4999</asp:ListItem>
+                    <asp:ListItem Value="H4000_H4999">H4000-H4999</asp:ListItem>
+                    <asp:ListItem Value="I4000_I4999">I4000-I4999</asp:ListItem>
+                    <asp:ListItem Value="J4000_J4999">J4000-J4999</asp:ListItem>
+                    <asp:ListItem Value="K4000_K4999">K4000-K4999</asp:ListItem>
+                    <asp:ListItem Value="L4000_L4999">L4000-L4999</asp:ListItem>
+                    <asp:ListItem Value="M4000_M4999">M4000-M4999</asp:ListItem>
+                    <asp:ListItem Value="N4000_N4999">N4000-N4999</asp:ListItem>
+                    <asp:ListItem Value="O4000_O4999">O4000-O4999</asp:ListItem>
+                    <asp:ListItem Value="P4000_P4999">P4000-P4999</asp:ListItem>
+                    <asp:ListItem Value="Q4000_Q4999">Q4000-Q4999</asp:ListItem>
+                    <asp:ListItem Value="R4000_R4999">R4000-R4999</asp:ListItem>
+                    <asp:ListItem Value="S4000_S4999">S4000-S4999</asp:ListItem>
+                    <asp:ListItem Value="T4000_T4999">T4000-T4999</asp:ListItem>
+                    <asp:ListItem Value="U4000_U4999">U4000-U4999</asp:ListItem>
+                    <asp:ListItem Value="V4000_V4999">V4000-V4999</asp:ListItem>
+                    <asp:ListItem Value="W4000_W4999">W4000-W4999</asp:ListItem>
+                    <asp:ListItem Value="X4000_X4999">X4000-X4999</asp:ListItem>
+                    <asp:ListItem Value="Y4000_Y4999">Y4000-Y4999</asp:ListItem>
+                    <asp:ListItem Value="Z4000_Z4999">Z4000-Z4999</asp:ListItem>
+
+                    <asp:ListItem Value="A5000_A5999">A5000-A5999</asp:ListItem>
+                    <asp:ListItem Value="B5000_B5999">B5000-B5999</asp:ListItem>
+                    <asp:ListItem Value="C5000_C5999">C5000-C5999</asp:ListItem>
+                    <asp:ListItem Value="D5000_D5999">D5000-D5999</asp:ListItem>
+                    <asp:ListItem Value="E5000_E5999">E5000-E5999</asp:ListItem>
+                    <asp:ListItem Value="F5000_F5999">F5000-F5999</asp:ListItem>
+                    <asp:ListItem Value="G5000_G5999">G5000-G5999</asp:ListItem>
+                    <asp:ListItem Value="H5000_H5999">H5000-H5999</asp:ListItem>
+                    <asp:ListItem Value="I5000_I5999">I5000-I5999</asp:ListItem>
+                    <asp:ListItem Value="J5000_J5999">J5000-J5999</asp:ListItem>
+                    <asp:ListItem Value="K5000_K5999">K5000-K5999</asp:ListItem>
+                    <asp:ListItem Value="L5000_L5999">L5000-L5999</asp:ListItem>
+                    <asp:ListItem Value="M5000_M5999">M5000-M5999</asp:ListItem>
+                    <asp:ListItem Value="N5000_N5999">N5000-N5999</asp:ListItem>
+                    <asp:ListItem Value="O5000_O5999">O5000-O5999</asp:ListItem>
+                    <asp:ListItem Value="P5000_P5999">P5000-P5999</asp:ListItem>
+                    <asp:ListItem Value="Q5000_Q5999">Q5000-Q5999</asp:ListItem>
+                    <asp:ListItem Value="R5000_R5999">R5000-R5999</asp:ListItem>
+                    <asp:ListItem Value="S5000_S5999">S5000-S5999</asp:ListItem>
+                    <asp:ListItem Value="T5000_T5999">T5000-T5999</asp:ListItem>
+                    <asp:ListItem Value="U5000_U5999">U5000-U5999</asp:ListItem>
+                    <asp:ListItem Value="V5000_V5999">V5000-V5999</asp:ListItem>
+                    <asp:ListItem Value="W5000_W5999">W5000-W5999</asp:ListItem>
+                    <asp:ListItem Value="X5000_X5999">X5000-X5999</asp:ListItem>
+                    <asp:ListItem Value="Y5000_Y5999">Y5000-Y5999</asp:ListItem>
+                    <asp:ListItem Value="Z5000_Z5999">Z5000-Z5999</asp:ListItem>
+
+                    <asp:ListItem Value="A6000_A6999">A6000-A6999</asp:ListItem>
+                    <asp:ListItem Value="B6000_B6999">B6000-B6999</asp:ListItem>
+                    <asp:ListItem Value="C6000_C6999">C6000-C6999</asp:ListItem>
+                    <asp:ListItem Value="D6000_D6999">D6000-D6999</asp:ListItem>
+                    <asp:ListItem Value="E6000_E6999">E6000-E6999</asp:ListItem>
+                    <asp:ListItem Value="F6000_F6999">F6000-F6999</asp:ListItem>
+                    <asp:ListItem Value="G6000_G6999">G6000-G6999</asp:ListItem>
+                    <asp:ListItem Value="H6000_H6999">H6000-H6999</asp:ListItem>
+                    <asp:ListItem Value="I6000_I6999">I6000-I6999</asp:ListItem>
+                    <asp:ListItem Value="J6000_J6999">J6000-J6999</asp:ListItem>
+                    <asp:ListItem Value="K6000_K6999">K6000-K6999</asp:ListItem>
+                    <asp:ListItem Value="L6000_L6999">L6000-L6999</asp:ListItem>
+                    <asp:ListItem Value="M6000_M6999">M6000-M6999</asp:ListItem>
+                    <asp:ListItem Value="N6000_N6999">N6000-N6999</asp:ListItem>
+                    <asp:ListItem Value="O6000_O6999">O6000-O6999</asp:ListItem>
+                    <asp:ListItem Value="P6000_P6999">P6000-P6999</asp:ListItem>
+                    <asp:ListItem Value="Q6000_Q6999">Q6000-Q6999</asp:ListItem>
+                    <asp:ListItem Value="R6000_R6999">R6000-R6999</asp:ListItem>
+                    <asp:ListItem Value="S6000_S6999">S6000-S6999</asp:ListItem>
+                    <asp:ListItem Value="T6000_T6999">T6000-T6999</asp:ListItem>
+                    <asp:ListItem Value="U6000_U6999">U6000-U6999</asp:ListItem>
+                    <asp:ListItem Value="V6000_V6999">V6000-V6999</asp:ListItem>
+                    <asp:ListItem Value="W6000_W6999">W6000-W6999</asp:ListItem>
+                    <asp:ListItem Value="X6000_X6999">X6000-X6999</asp:ListItem>
+                    <asp:ListItem Value="Y6000_Y6999">Y6000-Y6999</asp:ListItem>
+                    <asp:ListItem Value="Z6000_Z6999">Z6000-Z6999</asp:ListItem>
+
+                    <asp:ListItem Value="A7000_A7999">A7000-A7999</asp:ListItem>
+                    <asp:ListItem Value="B7000_B7999">B7000-B7999</asp:ListItem>
+                    <asp:ListItem Value="C7000_C7999">C7000-C7999</asp:ListItem>
+                    <asp:ListItem Value="D7000_D7999">D7000-D7999</asp:ListItem>
+                    <asp:ListItem Value="E7000_E7999">E7000-E7999</asp:ListItem>
+                    <asp:ListItem Value="F7000_F7999">F7000-F7999</asp:ListItem>
+                    <asp:ListItem Value="G7000_G7999">G7000-G7999</asp:ListItem>
+                    <asp:ListItem Value="H7000_H7999">H7000-H7999</asp:ListItem>
+                    <asp:ListItem Value="I7000_I7999">I7000-I7999</asp:ListItem>
+                    <asp:ListItem Value="J7000_J7999">J7000-J7999</asp:ListItem>
+                    <asp:ListItem Value="K7000_K7999">K7000-K7999</asp:ListItem>
+                    <asp:ListItem Value="L7000_L7999">L7000-L7999</asp:ListItem>
+                    <asp:ListItem Value="M7000_M7999">M7000-M7999</asp:ListItem>
+                    <asp:ListItem Value="N7000_N7999">N7000-N7999</asp:ListItem>
+                    <asp:ListItem Value="O7000_O7999">O7000-O7999</asp:ListItem>
+                    <asp:ListItem Value="P7000_P7999">P7000-P7999</asp:ListItem>
+                    <asp:ListItem Value="Q7000_Q7999">Q7000-Q7999</asp:ListItem>
+                    <asp:ListItem Value="R7000_R7999">R7000-R7999</asp:ListItem>
+                    <asp:ListItem Value="S7000_S7999">S7000-S7999</asp:ListItem>
+                    <asp:ListItem Value="T7000_T7999">T7000-T7999</asp:ListItem>
+                    <asp:ListItem Value="U7000_U7999">U7000-U7999</asp:ListItem>
+                    <asp:ListItem Value="V7000_V7999">V7000-V7999</asp:ListItem>
+                    <asp:ListItem Value="W7000_W7999">W7000-W7999</asp:ListItem>
+                    <asp:ListItem Value="X7000_X7999">X7000-X7999</asp:ListItem>
+                    <asp:ListItem Value="Y7000_Y7999">Y7000-Y7999</asp:ListItem>
+                    <asp:ListItem Value="Z7000_Z7999">Z7000-Z7999</asp:ListItem>
+
+                    <asp:ListItem Value="A8000_A8999">A8000-A8999</asp:ListItem>
+                    <asp:ListItem Value="B8000_B8999">B8000-B8999</asp:ListItem>
+                    <asp:ListItem Value="C8000_C8999">C8000-C8999</asp:ListItem>
+                    <asp:ListItem Value="D8000_D8999">D8000-D8999</asp:ListItem>
+                    <asp:ListItem Value="E8000_E8999">E8000-E8999</asp:ListItem>
+                    <asp:ListItem Value="F8000_F8999">F8000-F8999</asp:ListItem>
+                    <asp:ListItem Value="G8000_G8999">G8000-G8999</asp:ListItem>
+                    <asp:ListItem Value="H8000_H8999">H8000-H8999</asp:ListItem>
+                    <asp:ListItem Value="I8000_I8999">I8000-I8999</asp:ListItem>
+                    <asp:ListItem Value="J8000_J8999">J8000-J8999</asp:ListItem>
+                    <asp:ListItem Value="K8000_K8999">K8000-K8999</asp:ListItem>
+                    <asp:ListItem Value="L8000_L8999">L8000-L8999</asp:ListItem>
+                    <asp:ListItem Value="M8000_M8999">M8000-M8999</asp:ListItem>
+                    <asp:ListItem Value="N8000_N8999">N8000-N8999</asp:ListItem>
+                    <asp:ListItem Value="O8000_O8999">O8000-O8999</asp:ListItem>
+                    <asp:ListItem Value="P8000_P8999">P8000-P8999</asp:ListItem>
+                    <asp:ListItem Value="Q8000_Q8999">Q8000-Q8999</asp:ListItem>
+                    <asp:ListItem Value="R8000_R8999">R8000-R8999</asp:ListItem>
+                    <asp:ListItem Value="S8000_S8999">S8000-S8999</asp:ListItem>
+                    <asp:ListItem Value="T8000_T8999">T8000-T8999</asp:ListItem>
+                    <asp:ListItem Value="U8000_U8999">U8000-U8999</asp:ListItem>
+                    <asp:ListItem Value="V8000_V8999">V8000-V8999</asp:ListItem>
+                    <asp:ListItem Value="W8000_W8999">W8000-W8999</asp:ListItem>
+                    <asp:ListItem Value="X8000_X8999">X8000-X8999</asp:ListItem>
+                    <asp:ListItem Value="Y8000_Y8999">Y8000-Y8999</asp:ListItem>
+                    <asp:ListItem Value="Z8000_Z8999">Z8000-Z8999</asp:ListItem>
+
+                    <asp:ListItem Value="A9000_A9999">A9000-A9999</asp:ListItem>
+                    <asp:ListItem Value="B9000_B9999">B9000-B9999</asp:ListItem>
+                    <asp:ListItem Value="C9000_C9999">C9000-C9999</asp:ListItem>
+                    <asp:ListItem Value="D9000_D9999">D9000-D9999</asp:ListItem>
+                    <asp:ListItem Value="E9000_E9999">E9000-E9999</asp:ListItem>
+                    <asp:ListItem Value="F9000_F9999">F9000-F9999</asp:ListItem>
+                    <asp:ListItem Value="G9000_G9999">G9000-G9999</asp:ListItem>
+                    <asp:ListItem Value="H9000_H9999">H9000-H9999</asp:ListItem>
+                    <asp:ListItem Value="I9000_I9999">I9000-I9999</asp:ListItem>
+                    <asp:ListItem Value="J9000_J9999">J9000-J9999</asp:ListItem>
+                    <asp:ListItem Value="K9000_K9999">K9000-K9999</asp:ListItem>
+                    <asp:ListItem Value="L9000_L9999">L9000-L9999</asp:ListItem>
+                    <asp:ListItem Value="M9000_M9999">M9000-M9999</asp:ListItem>
+                    <asp:ListItem Value="N9000_N9999">N9000-N9999</asp:ListItem>
+                    <asp:ListItem Value="O9000_O9999">O9000-O9999</asp:ListItem>
+                    <asp:ListItem Value="P9000_P9999">P9000-P9999</asp:ListItem>
+                    <asp:ListItem Value="Q9000_Q9999">Q9000-Q9999</asp:ListItem>
+                    <asp:ListItem Value="R9000_R9999">R9000-R9999</asp:ListItem>
+                    <asp:ListItem Value="S9000_S9999">S9000-S9999</asp:ListItem>
+                    <asp:ListItem Value="T9000_T9999">T9000-T9999</asp:ListItem>
+                    <asp:ListItem Value="U9000_U9999">U9000-U9999</asp:ListItem>
+                    <asp:ListItem Value="V9000_V9999">V9000-V9999</asp:ListItem>
+                    <asp:ListItem Value="W9000_W9999">W9000-W9999</asp:ListItem>
+                    <asp:ListItem Value="X9000_X9999">X9000-X9999</asp:ListItem>
+                    <asp:ListItem Value="Y9000_Y9999">Y9000-Y9999</asp:ListItem>
+                    <asp:ListItem Value="Z9000_Z9999">Z9000-Z9999</asp:ListItem>
+                </asp:CheckBoxList>
+                </font>
+            </td>
+        </tr>
+        <tr style="height:15px;">
+            <td></td>
+        </tr>
+        <tr>
+            <td align="center">
+                <asp:Button ID="btnUpdate" runat="server" OnClick="btnUpdate_Click" Text="Update" />
+            </td>
+        </tr>
+
+    </table>
+
+</asp:Content>

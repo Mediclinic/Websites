@@ -1,0 +1,518 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Text.RegularExpressions;
+using System.Collections;
+
+public partial class Merge_MatchReferrers : System.Web.UI.Page
+{
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        HideErrorMessage();
+
+        if (!IsPostBack)
+            FillGrid();
+    }
+
+    protected void btnUpdateList_Click(object sender, EventArgs e)
+    {
+        FillGrid();
+    }
+
+    #region GrdMatchReferrers
+
+    protected void FillGrid()
+    {
+        int n = (ddlNumReferrersToRetrieve.SelectedValue == "All") ?
+            60000
+            :
+            Convert.ToInt32(ddlNumReferrersToRetrieve.SelectedValue) * 18;
+
+        DataTable dt = GetDataTable(n);
+        Session["matchreferrers_data"] = dt;
+
+        SetErrorMessage(dt.Rows.Count.ToString());
+
+        FillGrid(dt);
+    }
+    protected void FillGrid(DataTable dt)
+    {
+        if (dt.Rows.Count > 0)
+        {
+            GrdMatchReferrers.DataSource = dt;
+            try
+            {
+                GrdMatchReferrers.DataBind();
+            }
+            catch (Exception ex)
+            {
+                SetErrorMessage(ex.ToString());
+            }
+
+            //Sort("parent_descr", "ASC");
+        }
+        else
+        {
+            dt.Rows.Add(dt.NewRow());
+            GrdMatchReferrers.DataSource = dt;
+            GrdMatchReferrers.DataBind();
+
+            int TotalColumns = GrdMatchReferrers.Rows[0].Cells.Count;
+            GrdMatchReferrers.Rows[0].Cells.Clear();
+            GrdMatchReferrers.Rows[0].Cells.Add(new TableCell());
+            GrdMatchReferrers.Rows[0].Cells[0].ColumnSpan = TotalColumns;
+            GrdMatchReferrers.Rows[0].Cells[0].Text = "No Record Found";
+        }
+    }
+    protected void GrdMatchReferrers_RowCreated(object sender, GridViewRowEventArgs e)
+    {
+        //if (!Utilities.IsDev() && e.Row.RowType != DataControlRowType.Pager)
+        //    e.Row.Cells[0].CssClass = "hiddencol";
+    }
+    protected void GrdMatchReferrers_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+    }
+    protected void GrdMatchReferrers_RowCancelingEdit(object sender, GridViewCancelEditEventArgs e)
+    {
+        GrdMatchReferrers.EditIndex = -1;
+        FillGrid();
+    }
+    protected void GrdMatchReferrers_RowUpdating(object sender, GridViewUpdateEventArgs e)
+    {
+    }
+    protected void GrdMatchReferrers_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+    }
+    protected void GrdMatchReferrers_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+        if (e.CommandName.Equals("Insert"))
+        {
+            //FillGrid();
+        }
+    }
+    protected void GrdMatchReferrers_RowEditing(object sender, GridViewEditEventArgs e)
+    {
+        GrdMatchReferrers.EditIndex = e.NewEditIndex;
+        FillGrid();
+    }
+    protected void GridView_Sorting(object sender, GridViewSortEventArgs e)
+    {
+        // dont allow sorting if in edit mode
+        if (GrdMatchReferrers.EditIndex >= 0)
+            return;
+
+        Sort(e.SortExpression);
+    }
+
+    protected void Sort(string sortExpression, params string[] sortExpr)
+    {
+        DataTable dataTable = Session["matchreferrers_data"] as DataTable;
+
+        if (dataTable != null)
+        {
+            if (Session["matchreferrers_sortexpression"] == null)
+                Session["matchreferrers_sortexpression"] = "";
+
+            DataView dataView = new DataView(dataTable);
+            string[] sortData = Session["matchreferrers_sortexpression"].ToString().Trim().Split(' ');
+
+            string newSortExpr = (sortExpr.Length == 0) ?
+                (sortExpression == sortData[0] && sortData[1] == "ASC") ? "DESC" : "ASC" :
+                sortExpr[0];
+
+            dataView.Sort = sortExpression + " " + newSortExpr;
+            Session["matchreferrers_sortexpression"] = sortExpression + " " + newSortExpr;
+
+            GrdMatchReferrers.DataSource = dataView;
+            GrdMatchReferrers.DataBind();
+        }
+    }
+
+    #endregion
+
+
+
+    protected DataTable GetDataTable(int nRows)
+    {
+        string sql = @"
+
+DECLARE @tmptbl TABLE
+(
+ dupeCount                int,
+ o_register_referrer_id   int,
+
+ o_referrer_id            int,
+ o_organisation_id        int,
+ o_person_id              int,
+ o_person_entity_id       int,
+ o_organisation_entity_id int,
+ 
+ o_firstname              varchar(100),
+ o_surname                varchar(100),
+
+ n_patients               int,
+ o_n_patients             int,
+ 
+ person_id                int,
+ entity_id                int,
+ added_by                 int,
+ title_id                 int,
+ firstname                varchar(100),
+ middlename               varchar(100),
+ surname                  varchar(100),
+ nickname                 varchar(100),
+ gender                   varchar(1),
+ dob                      datetime,
+ person_date_added        datetime,
+ person_date_modified     datetime,
+ 
+ referrer_id              int,
+ person_id2               int,
+ referrer_date_added      datetime,
+ is_deleted               bit,
+ 
+ register_referrer_id                               int,
+ organisation_id                                    int,
+ referrer_id2                                       int,
+ provider_number                                    varchar(50),
+ report_every_visit_to_referrer                     bit,
+ batch_send_all_patients_treatment_notes            bit,
+ date_last_batch_send_all_patients_treatment_notes  datetime,
+ register_referrer_date_added                       datetime,
+ is_deleted2                                        bit
+ 
+)
+
+
+INSERT INTO @tmptbl
+SELECT top " + nRows + @"
+
+ (
+ SELECT COUNT(*) 
+ FROM RegisterReferrer rr2
+     LEFT JOIN Referrer r2 ON rr2.referrer_id = r2.referrer_id
+     LEFT JOIN Person   p2 ON r2.person_id = p2.person_id
+ WHERE 
+    rr2.is_deleted = 0 AND r2.is_deleted = 0
+    AND 
+    (
+        (p.surname = p2.surname AND p.firstname = p2.firstname) OR (rr.provider_number <> '' AND rr.provider_number = rr2.provider_number)
+	)
+	AND (p.person_date_added   = p2.person_date_added OR (p.person_date_added IS NULL AND p2.person_date_added IS NULL))
+	AND (r.referrer_date_added = r2.referrer_date_added OR (r.referrer_date_added IS NULL AND r2.referrer_date_added IS NULL))
+	AND (rr.register_referrer_date_added = rr2.register_referrer_date_added OR (rr.register_referrer_date_added IS NULL AND rr2.register_referrer_date_added IS NULL))
+	AND (r.referrer_id           < 40000 AND r2.referrer_id           = (r.referrer_id           + 40000))
+	AND (rr.register_referrer_id < 70000 AND rr2.register_referrer_id = (rr.register_referrer_id + 70000))
+	AND (rr.organisation_id      < 3000 AND rr2.organisation_id       = (rr.organisation_id      + 3000 ))
+ ) AS dupeCount,
+
+ (
+ SELECT TOP 1 rr2.register_referrer_id
+ FROM RegisterReferrer rr2
+     LEFT JOIN Referrer r2 ON rr2.referrer_id = r2.referrer_id
+     LEFT JOIN Person p2 ON r2.person_id = p2.person_id
+ WHERE 
+    rr2.is_deleted = 0 AND r2.is_deleted = 0
+    AND 
+    (
+        (p.surname = p2.surname AND p.firstname = p2.firstname) OR (rr.provider_number <> '' AND rr.provider_number = rr2.provider_number)
+	)
+	AND (p.person_date_added   = p2.person_date_added OR (p.person_date_added IS NULL AND p2.person_date_added IS NULL))
+	AND (r.referrer_date_added = r2.referrer_date_added OR (r.referrer_date_added IS NULL AND r2.referrer_date_added IS NULL))
+	AND (rr.register_referrer_date_added = rr2.register_referrer_date_added OR (rr.register_referrer_date_added IS NULL AND rr2.register_referrer_date_added IS NULL))
+	AND (r.referrer_id           < 40000 AND r2.referrer_id           = (r.referrer_id           + 40000))
+	AND (rr.register_referrer_id < 70000 AND rr2.register_referrer_id = (rr.register_referrer_id + 70000))
+	AND (rr.organisation_id      < 3000 AND rr2.organisation_id       = (rr.organisation_id      + 3000 ))
+ ) AS o_register_referrer_id,
+
+ NULL,
+ NULL,
+ NULL,
+ NULL,
+ NULL,
+ NULL,
+ NULL,
+
+ NULL,
+ NULL,
+
+ p.person_id,
+ p.entity_id,
+ p.added_by,
+ p.title_id,
+ p.firstname,
+ p.middlename,
+ p.surname,
+ p.nickname,
+ p.gender,
+ p.dob,
+ p.person_date_added,
+ p.person_date_modified,
+ 
+ r.referrer_id,
+ r.person_id,
+ r.referrer_date_added,
+ r.is_deleted,
+ 
+ rr.register_referrer_id,
+ rr.organisation_id,
+ rr.referrer_id,
+ rr.provider_number,
+ rr.report_every_visit_to_referrer,
+ rr.batch_send_all_patients_treatment_notes,
+ rr.date_last_batch_send_all_patients_treatment_notes,
+ rr.register_referrer_date_added,
+ rr.is_deleted
+ 
+
+FROM RegisterReferrer rr
+     LEFT JOIN Referrer r ON rr.referrer_id = r.referrer_id
+     LEFT JOIN Person p ON r.person_id = p.person_id
+WHERE rr.is_deleted = 0 AND r.is_deleted = 0
+ORDER BY p.surname, p.firstname 
+
+
+UPDATE
+    tmptbl
+SET
+    o_organisation_id        = rr.organisation_id,
+    o_referrer_id            = rr.referrer_id,
+	o_person_id              = r.person_id,
+	o_person_entity_id       = p.entity_id,
+	o_organisation_entity_id = o.entity_id,
+    o_firstname              = p.firstname,
+    o_surname                = p.surname
+FROM
+    @tmptbl tmptbl
+    LEFT JOIN RegisterReferrer rr ON tmptbl.o_register_referrer_id = rr.register_referrer_id
+    LEFT JOIN Referrer         r  ON rr.referrer_id         = r.referrer_id
+    LEFT JOIN Person           p  ON r.person_id            = p.person_id    
+    LEFT JOIN Organisation     o  ON rr.organisation_id     = o.organisation_id
+    
+UPDATE
+    tmptbl
+SET
+    n_patients = (
+        SELECT COUNT(*) 
+        FROM PatientReferrer pr
+             LEFT JOIN Patient pa ON pa.patient_id = pr.patient_id
+        WHERE pr.register_referrer_id = tmptbl.register_referrer_id AND pr.is_active = 1 AND pa.is_deceased = 0 AND pa.is_deleted = 0
+    ),
+    o_n_patients = (
+        SELECT COUNT(*) 
+        FROM PatientReferrer pr
+             LEFT JOIN Patient pa ON pa.patient_id = pr.patient_id
+        WHERE pr.register_referrer_id = tmptbl.o_register_referrer_id AND pr.is_active = 1 AND pa.is_deceased = 0 AND pa.is_deleted = 0
+    )
+FROM
+    @tmptbl tmptbl
+
+
+DELETE @tmptbl
+WHERE dupeCount <> 1 OR is_deleted <> 0
+
+SELECT  * 
+FROM @tmptbl
+
+";
+
+        return DBBase.ExecuteQuery(sql, null, 500).Tables[0];
+
+    }
+
+    protected void lnkSelect_Command(object sender, CommandEventArgs e)
+    {
+        string raw = (string)e.CommandArgument;
+        string[] regRefIDs = raw.Split('_');
+
+        int regRefID1 = Convert.ToInt32(regRefIDs[0]);
+        int regRefID2 = Convert.ToInt32(regRefIDs[1]);
+
+        SetRegRefs(regRefID1, regRefID2);
+    }
+
+    protected void SetRegRefs(int regRefID1, int regRefID2)
+    {
+        RegisterReferrer regRef1 = RegisterReferrerDB.GetByID(regRefID1);
+        RegisterReferrer regRef2 = RegisterReferrerDB.GetByID(regRefID2);
+
+        txtReferrerID1.Text = regRef1.RegisterReferrerID.ToString();
+        txtReferrerID2.Text = regRef2.RegisterReferrerID.ToString();
+
+        SetField(lblFirstname1,       lblFirstname2,       imgMatchFirstname,       regRef1.Referrer.Person.Firstname,                  regRef2.Referrer.Person.Firstname,                  regRef1.Referrer.Person.Firstname  == regRef2.Referrer.Person.Firstname);
+        SetField(lblSurname1,         lblSurname2,         imgMatchSurname,         regRef1.Referrer.Person.Surname,                    regRef2.Referrer.Person.Surname,                    regRef1.Referrer.Person.Surname    == regRef2.Referrer.Person.Surname);
+        SetField(lblClinic1,          lblClinic2,          imgMatchClinic,          regRef1.Organisation.Name,                          regRef2.Organisation.Name,                          regRef1.Organisation.Name          == regRef2.Organisation.Name);
+        SetField(lblProviderNumber1,  lblProviderNumber2,  imgMatchProviderNumber,  regRef1.ProviderNumber,                             regRef2.ProviderNumber,                             regRef1.ProviderNumber             == regRef2.ProviderNumber);
+
+
+        // put in PT list
+        Patient[] pt1List1 = PatientReferrerDB.GetActivePatientsOf(regRef1.RegisterReferrerID);
+        Patient[] pt1List2 = PatientReferrerDB.GetActivePatientsOf(regRef2.RegisterReferrerID);
+        lblPatients1.Text = GetPatientListDisplay(pt1List1);
+        lblPatients2.Text = GetPatientListDisplay(pt1List2);
+
+
+        // maybe better to set alternate patient as deleted instead of deleting the actual thing????
+        // safer ... can still have info in case there is an error in the deleting
+
+
+
+        SetDeleteButton(btnDeletePatient1, lblErrorMessagePT1, pt1List1, regRef1);
+        SetDeleteButton(btnDeletePatient2, lblErrorMessagePT2, pt1List2, regRef2);
+    }
+    protected void SetField(Label lbl1, Label lbl2, Image img, string s1, string s2, bool same, bool boldIfDifferent = true)
+    {
+        lbl1.Text = s1;
+        lbl2.Text = s2;
+        lbl1.Font.Bold = lbl2.Font.Bold = !same && boldIfDifferent;
+        lbl1.ForeColor = lbl2.ForeColor = !same && boldIfDifferent ? System.Drawing.Color.Red : System.Drawing.Color.Black;
+        img.ImageUrl = !same ? "~/images/Delete-icon-12.png" : "~/images/tick-12.png";
+    }
+    protected void SetDeleteButton(Button deleteButton, Label lblErrorMessagePT, Patient[] pt1List, RegisterReferrer regRef)
+    {
+        bool canDelete = pt1List == null || pt1List.Length == 0;
+
+        deleteButton.CommandArgument = regRef.RegisterReferrerID.ToString();
+        deleteButton.Visible = canDelete;
+
+        lblErrorMessagePT.Text = "You can not delete this referrer as they<br />have active patients in the system";
+        lblErrorMessagePT.ForeColor = System.Drawing.Color.Blue;
+        lblErrorMessagePT.Font.Bold = false;
+        lblErrorMessagePT.Visible = !canDelete;
+    }
+
+
+    protected string GetPatientListDisplay(Patient[] pt1List)
+    {
+        string output = string.Empty;
+
+        if (pt1List == null || pt1List.Length == 0)
+        {
+           return "";
+        }
+        else
+        {
+            for (int i = 0; i < pt1List.Length; i++)
+                output += @"<li>" + pt1List[i].Person.FullnameWithoutMiddlename + @"</li>";
+
+            return  "<ul>" + output + "</ul>";
+        }
+    }
+
+    protected void btnUpdateRegRefInfo_Click(object sender, EventArgs e)
+    {
+        try
+        {
+
+            txtReferrerID1.Text = txtReferrerID1.Text.Trim();
+            txtReferrerID2.Text = txtReferrerID2.Text.Trim();
+
+            if (txtReferrerID1.Text.Length == 0)
+                throw new CustomMessageException("Please enter first referrer ID.");
+            if (txtReferrerID2.Text.Length == 0)
+                throw new CustomMessageException("Please enter second referrer ID.");
+            if (!Regex.IsMatch(txtReferrerID1.Text, @"^\d+$"))
+                throw new CustomMessageException("First referrer ID must be all digits and no other characters.");
+            if (!Regex.IsMatch(txtReferrerID2.Text, @"^\d+$"))
+                throw new CustomMessageException("Second referrer ID must be all digits and no other characters.");
+            if (!RegisterReferrerDB.Exists(Convert.ToInt32(txtReferrerID1.Text)))
+                throw new CustomMessageException("No referrer with ID " + txtReferrerID1.Text);
+            if (!RegisterReferrerDB.Exists(Convert.ToInt32(txtReferrerID2.Text)))
+                throw new CustomMessageException("No referrer with ID " + txtReferrerID2.Text);
+
+            if (txtReferrerID1.Text == txtReferrerID2.Text)
+            {
+                SetErrorMessage("Same Referrer ID");
+                // hide delete button at bottum
+            }
+
+            SetRegRefs(Convert.ToInt32(txtReferrerID1.Text), Convert.ToInt32(txtReferrerID2.Text));
+        }
+        catch (CustomMessageException ex)
+        {
+            SetErrorMessage(ex.Message);
+        }
+    }
+    protected void btnDeletePatient_Command(object sender, CommandEventArgs e)
+    {
+        try
+        {
+
+            if (e.CommandArgument == null || e.CommandArgument.ToString().Length == 0)
+                return;
+
+            int registerReferrerID = Convert.ToInt32(e.CommandArgument);
+
+
+            Patient[] ptList = PatientReferrerDB.GetActivePatientsOf(registerReferrerID);
+
+            // make sure no invoicelines with this patient .. that doesnt have the booking for this patient
+            if (ptList.Length > 0)
+                throw new CustomMessageException("Can not delete referrer " + registerReferrerID + " because they have active patients");
+
+            RegisterReferrerDB.UpdateInactive(registerReferrerID);
+            FillGrid();
+
+            btnDeletePatient1.Visible = false;
+            btnDeletePatient2.Visible = false;
+
+            if (txtReferrerID1.Text == registerReferrerID.ToString())
+            {
+                lblErrorMessagePT1.Text = "Referrer set as deleted";
+                lblErrorMessagePT1.ForeColor = System.Drawing.Color.Blue;
+                lblErrorMessagePT1.Font.Bold = true;
+                lblErrorMessagePT1.Visible = true;
+            }
+            if (txtReferrerID2.Text == registerReferrerID.ToString())
+            {
+                lblErrorMessagePT2.Text = "Referrer set as deleted";
+                lblErrorMessagePT2.ForeColor = System.Drawing.Color.Blue;
+                lblErrorMessagePT2.Font.Bold = true;
+                lblErrorMessagePT2.Visible = true;
+            }
+
+
+        }
+        catch (CustomMessageException ex)
+        {
+            SetErrorMessage(ex.Message);
+        }
+    }
+
+
+    #region HideTableAndSetErrorMessage, SetErrorMessage, HideErrorMessag
+
+    private void HideTableAndSetErrorMessage(string errMsg = "", string details = "")
+    {
+        SetErrorMessage(errMsg, details);
+    }
+    private void SetErrorMessage(string errMsg = "", string details = "")
+    {
+        if (errMsg.Contains(Environment.NewLine))
+            errMsg = errMsg.Replace(Environment.NewLine, "<br />");
+
+        // double escape so shows up literally on webpage for 'alert' message
+        string detailsToDisplay = (details.Length == 0 ? "" : " <a href=\"#\" onclick=\"alert('" + details.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("'", "\\'").Replace("\"", "\\'") + "'); return false;\">Details</a>");
+
+        lblErrorMessage.Visible = true;
+        if (errMsg != null && errMsg.Length > 0)
+            lblErrorMessage.Text = errMsg + detailsToDisplay + "<br />";
+        else
+            lblErrorMessage.Text = "An error has occurred. Plase contact the system administrator. " + detailsToDisplay + "<br />";
+    }
+    private void HideErrorMessage()
+    {
+        lblErrorMessage.Visible = false;
+        lblErrorMessage.Text = "";
+    }
+
+    #endregion
+
+}
+
+

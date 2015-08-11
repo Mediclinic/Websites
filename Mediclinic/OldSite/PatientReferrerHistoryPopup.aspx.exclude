@@ -1,0 +1,82 @@
+﻿<%@ Page Title="Patient Referrer History" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="PatientReferrerHistoryPopup.aspx.cs" Inherits="PatientReferrerHistoryPopup" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <center>
+        <table border="0" cellpadding="0" cellspacing="0">
+            <tr>
+                <td>
+
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                        <tr>
+                            <td class="nowrap"  align="center">
+                                <h2>Patient Referrer History</h2>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <asp:ValidationSummary ID="EditPatientReferrerValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditPatientReferrerValidationSummary"/>
+                    <asp:ValidationSummary ID="AddPatientReferrerValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="AddPatientReferrerValidationGroup"/>
+                    <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+
+                    <br />
+
+                    <asp:GridView ID="GrdPatientReferrer" runat="server" 
+                            AutoGenerateColumns="False" DataKeyNames="pr_patient_referrer_id" 
+                            OnRowCancelingEdit="GrdPatientReferrer_RowCancelingEdit" 
+                            OnRowDataBound="GrdPatientReferrer_RowDataBound" 
+                            OnRowEditing="GrdPatientReferrer_RowEditing" 
+                            OnRowUpdating="GrdPatientReferrer_RowUpdating" ShowFooter="False" 
+                            OnRowCommand="GrdPatientReferrer_RowCommand" 
+                            OnRowDeleting="GrdPatientReferrer_RowDeleting" 
+                            OnRowCreated="GrdPatientReferrer_RowCreated"
+                            AllowSorting="True" 
+                            OnSorting="GridView_Sorting"
+                            RowStyle-VerticalAlign="top"
+                            AllowPaging="False"
+                            ClientIDMode="Predictable">
+
+                        <Columns> 
+
+                            <asp:TemplateField HeaderText="ID"  HeaderStyle-HorizontalAlign="Left" SortExpression="pr_patient_referrer_id"> 
+                                <ItemTemplate> 
+                                    <asp:Label ID="lblId" runat="server" Text='<%# Bind("pr_patient_referrer_id") %>'></asp:Label> 
+                                </ItemTemplate> 
+                            </asp:TemplateField> 
+
+                            <asp:TemplateField HeaderText="Referrer" HeaderStyle-HorizontalAlign="Left" SortExpression="descr" FooterStyle-VerticalAlign="Top"> 
+                                <ItemTemplate> 
+                                    <asp:Label ID="lblRegisterReferrer" runat="server" Text='<%# ( (Eval("referrer_person_title_descr") == DBNull.Value || (int)Eval("referrer_person_title_title_id") == 0) ? "" : Eval("referrer_person_title_descr") + " ") + Eval("referrer_person_firstname") + " " + Eval("referrer_person_surname")  %>'></asp:Label> 
+                                </ItemTemplate> 
+                            </asp:TemplateField> 
+
+                            <asp:TemplateField HeaderText="Date Added" HeaderStyle-HorizontalAlign="Left" SortExpression="pr_patient_referrer_date_added" FooterStyle-VerticalAlign="Top"> 
+                                <ItemTemplate> 
+                                    <asp:Label ID="lblDateAdded" runat="server" Text='<%# Bind("pr_patient_referrer_date_added", "{0:dd-MM-yyyy HH:mm}") %>'></asp:Label> 
+                                </ItemTemplate> 
+                            </asp:TemplateField> 
+
+                            <asp:TemplateField HeaderText="Active" SortExpression="pr_is_active" FooterStyle-VerticalAlign="Top"> 
+                                <ItemTemplate> 
+                                    <asp:Label ID="lblIsActive" runat="server" Text='<%# Eval("pr_is_active").ToString()=="True"?"Yes":"No" %>'></asp:Label> 
+                                </ItemTemplate> 
+                            </asp:TemplateField> 
+
+                        </Columns> 
+                    </asp:GridView>
+
+                    <br />
+                    <br />
+                    <center>
+                        <asp:Button ID="btnClose" runat="server" Text="Close" OnClientClick="window.returnValue=false;self.close();" />
+                    </center>
+
+
+                </td>
+            </tr>
+        </table>
+    </center>
+
+</asp:Content>

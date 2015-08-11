@@ -1,0 +1,75 @@
+﻿<%@ Page Title="Email Reminders History" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true"  CodeFile="EmailReminderHistory.aspx.cs" Inherits="EmailReminderHistory" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <table border="0" cellpadding="0" cellspacing="0">
+        <tr>
+            <td>
+                <h2>Email Reminders History</h2>
+            </td>
+        </tr>
+    </table>
+
+
+    <br />
+    <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+
+    <p>
+    <asp:GridView ID="GrdEmailHistory" runat="server" 
+         AutoGenerateColumns="False" DataKeyNames="email_history_id" 
+         OnRowCancelingEdit="GrdEmailHistory_RowCancelingEdit" 
+         OnRowDataBound="GrdEmailHistory_RowDataBound" 
+         OnRowEditing="GrdEmailHistory_RowEditing" 
+         OnRowUpdating="GrdEmailHistory_RowUpdating" ShowFooter="False" 
+         OnRowCommand="GrdEmailHistory_RowCommand" 
+         OnRowDeleting="GrdEmailHistory_RowDeleting" 
+         OnRowCreated="GrdEmailHistory_RowCreated"
+         AllowSorting="True" 
+         OnSorting="GridView_Sorting"
+         AllowPaging="True"
+         OnPageIndexChanging="GrdPatient_PageIndexChanging"
+         PageSize="16"
+         ClientIDMode="Predictable">
+         <PagerSettings Mode="NumericFirstLast" FirstPageText="First" PreviousPageText="Previous" NextPageText="Next" LastPageText="Last" />
+
+        <Columns> 
+
+            <asp:TemplateField HeaderText="ID"  HeaderStyle-HorizontalAlign="Left" SortExpression="email_history_id"> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblId" runat="server" Text='<%# Bind("email_history_id") %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Sent"  HeaderStyle-HorizontalAlign="Left" SortExpression="datetime_sent" ItemStyle-Wrap="False"> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblSent" runat="server" Text='<%# Eval("datetime_sent", "{0:dd MMM  HH:mm}") %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Booking"  HeaderStyle-HorizontalAlign="Left" SortExpression="booking_id"> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblBooking" runat="server" Text='<%# Eval("booking_id")  %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Email"  HeaderStyle-HorizontalAlign="Left" SortExpression="email"> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblEmail" runat="server" Text='<%# Eval("email") %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+            <asp:TemplateField HeaderText="Message"  HeaderStyle-HorizontalAlign="Left"> 
+                <ItemTemplate> 
+                    <asp:Label ID="lblMessage" runat="server" Text='<%# Eval("message") %>'></asp:Label> 
+                </ItemTemplate> 
+            </asp:TemplateField> 
+
+        </Columns> 
+
+    </asp:GridView>
+
+    </p>
+
+</asp:Content>

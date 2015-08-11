@@ -1,0 +1,383 @@
+﻿<%@ Page Title="Print A Letter" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="PrintLetter.aspx.cs" Inherits="PrintLetter" ValidateRequest="false" %>
+<%@ Register TagPrefix="FTB" Namespace="FreeTextBoxControls" Assembly="FreeTextBox" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script type="text/javascript">
+
+    function get_patient() {
+        var org_id = document.getElementById('txtUpdateOrganisationID').value;
+        var retVal = (org_id == '') ?
+                window.showModalDialog("PatientListPopup.aspx", 'Show Popup Window', "dialogHeight:700px;dialogWidth:700px;resizable:yes;center:yes;") :
+                window.showModalDialog("PatientListPopup.aspx?org="+org_id, 'Show Popup Window', "dialogHeight:700px;dialogWidth:700px;resizable:yes;center:yes;");
+
+        if (typeof retVal === "undefined")
+            return;
+
+        var index = retVal.indexOf(":");
+        document.getElementById('txtUpdatePatientID').value = retVal.substring(0, index);
+        document.getElementById('txtUpdatePatientName').value = retVal.substring(index + 1);
+
+        set_textbox_style('txtUpdatePatientName', false);
+        document.getElementById('btnPatientUpdated').click();
+    }
+
+    function clear_patient() {
+        document.getElementById('txtUpdatePatientID').value = '';
+        document.getElementById('txtUpdatePatientName').value = '';
+
+        set_textbox_style('txtUpdatePatientName', true);
+        document.getElementById('btnPatientUpdated').click();
+    }
+
+    function get_organisation() {
+        var patient_id = document.getElementById('txtUpdatePatientID').value;
+        var retVal = (patient_id == '') ?
+                window.showModalDialog("OrganisationListPopup.aspx", 'Show Popup Window', "dialogHeight:700px;dialogWidth:750px;resizable:yes;center:yes;") :
+                window.showModalDialog("OrganisationListPopup.aspx?patient="+patient_id, 'Show Popup Window', "dialogHeight:700px;dialogWidth:750px;resizable:yes;center:yes;");
+
+        if (typeof retVal === "undefined")
+            return;
+
+        var index = retVal.indexOf(":");
+        document.getElementById('txtUpdateOrganisationID').value = retVal.substring(0, index);
+        document.getElementById('txtUpdateOrganisationName').value = retVal.substring(index + 1);
+
+        set_textbox_style('txtUpdateOrganisationName', false);
+        document.getElementById('btnOrganisationUpdated').click();
+    }
+
+    function clear_organisation() {
+        document.getElementById('txtUpdateOrganisationID').value = '';
+        document.getElementById('txtUpdateOrganisationName').value = '';
+
+        set_textbox_style('txtUpdateOrganisationName', true);
+        document.getElementById('btnOrganisationUpdated').click();
+    }
+
+
+    function set_textbox_style(textboxID, is_empty) {
+        if (!is_empty)
+            document.getElementById(textboxID).style.cssText = "border:none;background-color:transparent;color:black;";
+        else
+            document.getElementById(textboxID).style.cssText = "width:175px;";
+    }
+
+    function clear_error_message() {
+        document.getElementById('lblErrorMessage').value = '';
+    }
+
+    function clear_error_msg() {
+        document.getElementById('<%= spnErrorMessage.ClientID  %>').style.cssText = "display:none;";
+    }
+
+
+    function check_org_set() {
+        if (document.getElementById('txtUpdateOrganisationID').value == '') {
+            var _continue = confirm('Organisation has not been set. \r\n\r\nAre you sure you would like to continue?\r\n\r\nPress \'Ok\' to go ahead and use the head offices name and address in place of an organisation\'s. \r\nPress \'Cancel\' to go back and select an organisation.');
+            return _continue;
+        }
+    }
+
+    function open_new_window(URL) {
+        NewWindow = window.open(URL, "_blank", "toolbar=no,menubar=0,status=0,copyhistory=0,scrollbars=yes,resizable=1,location=0,height=" + screen.height + ',width=' + screen.width);
+        NewWindow.location = URL;
+    }
+
+    function clear_file_upload(id) {
+
+        // get the file upload element
+        fileField = document.getElementById(id);
+
+        // get the file upload parent element
+        parentNod = fileField.parentNode;
+
+        // create new element
+        tmpForm = document.createElement("form");
+        parentNod.replaceChild(tmpForm, fileField);
+        tmpForm.appendChild(fileField);
+        tmpForm.reset();
+        parentNod.replaceChild(fileField, tmpForm);
+    }
+
+    </script>
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+    
+    <h2 id="Heading" runat="server">Print A Letter</h2>
+    
+    <br />
+
+    <span id="spnErrorMessage" runat="server">
+        <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification" Text=""></asp:Label>
+    </span>
+    
+    <br />
+
+    <table>
+        <tr valign="top">
+
+            <td id="td_booking" runat="server">
+                
+                <table id ="tbl_booking_details" runat="server">
+                    <tr id="booking_title" runat="server" valign="top">
+                        <td colspan="2" valign="top" align="left"><u>Booking Details</u></td>
+                        <td colspan="3" valign="top" align="right">
+                        
+                            <table>
+                                <tr>
+                                    <td>
+                                        <asp:LinkButton ID="lnkBookingSheetForPatient" runat="server"></asp:LinkButton>
+                                        <br />
+                                        <asp:LinkButton ID="lnkBookingListForPatient" runat="server"></asp:LinkButton>
+                                    </td>
+                                </tr>
+                            </table>
+
+                        </td>
+                    </tr>
+                    <tr height="10">
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr id="booking_apptmt_time" runat="server">
+                        <td>Appointment Time</td>
+                        <td style="width:15px"></td>
+                        <td><asp:Label ID="lblBooking_Time" runat="server"></asp:Label></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr id="booking_provider" runat="server">
+                        <td>Provider</td>
+                        <td></td>
+                        <td><asp:Label ID="lblBooking_Provider" runat="server"></asp:Label></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr id="booking_offering" runat="server">
+                        <td>Service</td>
+                        <td></td>
+                        <td><asp:Label ID="lblBooking_Offering" runat="server"></asp:Label></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr id="booking_status" runat="server">
+                        <td>Booking Status</td>
+                        <td></td>
+                        <td><asp:Label ID="lblBooking_BookingStatus" runat="server"></asp:Label></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr id="booking_notes" runat="server">
+                        <td>Booking Notes (Add/Edit)</td>
+                        <td></td>
+                        <td><asp:Label ID="lblBooking_Notes" runat="server"></asp:Label></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+
+                </table>
+
+                <br /><br />
+
+                <b>Check booking notes to include for printing</b>
+
+                <br />
+                <br />
+
+                <asp:Repeater id="lstNotes" runat="server" onitemdatabound="lstNotes_ItemDataBound">
+                    <HeaderTemplate>
+                        <table border="1" style="border-style: solid;border-collapse: collapse;" width="100%">
+                    </HeaderTemplate>
+                    <ItemTemplate>
+                        <tr>
+                            <td><asp:CheckBox ID="chkUseNote" runat="server" /><asp:Label ID="lblNoteID" runat="server" CssClass="hiddencol" Text='<%# Bind("note_id") %>'></asp:Label><asp:Label ID="lblOriginalText" runat="server" CssClass="hiddencol" Text='<%# Bind("text") %>'></asp:Label></td>
+                            <td style="width:500px"><asp:Label ID="lblNoteText" Text='<%# ((string)Eval("text")).Replace("\n", "<br/>") %>' runat="server"></asp:Label></td>
+                        </tr>
+                    </ItemTemplate>
+                    <FooterTemplate>
+                        <tr id="myNoDataRow" runat="server">
+                            <td>Booking has no notes</td>
+                        </tr>
+                        </table>           
+                    </FooterTemplate>
+                </asp:Repeater>
+            
+            </td>
+
+            <td style="width:25px" id="td_booking_space" runat="server"></td>
+
+            <td id="td_letter" runat="server">
+
+                <table>
+
+                    <tr>
+                        <td>Organisation</td>
+                        <td></td>
+                        <td>
+                            <asp:TextBox ID="txtUpdateOrganisationID" runat="server" CssClass="hiddencol" />
+                            <asp:TextBox ID="txtUpdateOrganisationName" runat="server" Enabled="False" />
+                            <asp:Label ID="lblUpdateOrganisationName" runat="server" Visible="false" ></asp:Label>
+                        </td>
+                        <td>
+                            <asp:Button ID="btnOrganisationListPopup" runat="server" Text="Get Organisation" OnClientClick="javascript:get_organisation(); return false;" Width="100%" />
+                        </td>
+                        <td>
+                            <asp:Button ID="btnClearOrganisation"     runat="server" Text="Clear"            OnClientClick="javascript:clear_organisation();return false;" Width="100%" />
+                        </td>
+                        <td>
+                            <asp:Button ID="btnOrganisationUpdated"   runat="server" CssClass="hiddencol" Text="" onclick="btnOrganisationUpdated_Click" />
+
+                            <asp:Button ID="btnUpdateOrganisation"    runat="server" CssClass="hiddencol" Text="Get ID in Code Behind" onclick="btnUpdateOrganisation_Click" />
+                            <asp:Label  ID="lblOrganisationName"      runat="server" CssClass="hiddencol" Text="--" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Patient</td>
+                        <td style="width:6px"></td>
+                        <td>
+                            <asp:TextBox ID="txtUpdatePatientID" runat="server" CssClass="hiddencol" />
+                            <asp:TextBox ID="txtUpdatePatientName" runat="server" Enabled="False" />
+                            <asp:Label ID="lblUpdatePatientName" runat="server" Visible="false" ></asp:Label>
+                        </td>
+                        <td>
+                            <asp:Button ID="btnPatientListPopup" runat="server" Text="Get Patient" OnClientClick="javascript:get_patient(); return false;" Width="100%" />
+                        </td>
+                        <td>
+                            <asp:Button ID="btnClearPatient"     runat="server" Text="Clear"       OnClientClick="javascript:clear_patient();return false;" Width="100%" />
+                        </td>
+                        <td>
+                            <asp:Button ID="btnPatientUpdated"   runat="server" CssClass="hiddencol" Text="" onclick="btnPatientUpdated_Click" />
+
+                            <asp:Button ID="btnUpdatePatient"    runat="server" CssClass="hiddencol" Text="Get ID in Code Behind" onclick="btnUpdatePatient_Click" />
+                            <asp:Label  ID="lblPatientName"      runat="server" CssClass="hiddencol" Text="--" />
+
+
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <asp:Button ID="btnPrint" runat="server" Text="&nbsp;&nbsp;&nbsp;Print&nbsp;&nbsp;&nbsp;" OnClientClick="javascript:clear_error_msg();return check_org_set();" OnClick="btnPrint_Click" /> 
+                        </td>
+                    </tr>
+                    <tr style="height:15px">
+                        <td colspan="6"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2"></td>
+                        <td colspan="4">
+                            <asp:Label ID="lblDefaultOrOrgSpecificDocs" runat="server"></asp:Label>
+                            <asp:Label ID="lblSpaceBeforeUseDefaultDocsCheckbox" runat="server">&nbsp;&nbsp;&nbsp;</asp:Label>
+                            <asp:CheckBox ID="chkUseDefaultDocs" runat="server" Text="Use Default Docs Instead Of Clinic Specific Docs" AutoPostBack="true" OnCheckedChanged="chkUseDefaultDocs_CheckedChanged" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Letter</td>
+                        <td></td>
+                        <td colspan="4"><asp:ListBox ID="lstLetters" runat="server" rows="32" SelectionMode="Single" style="min-width:350px;"></asp:ListBox></td>
+                    </tr>
+
+                </table>
+            
+            </td>
+
+            <td style="width:25px"></td>
+
+            <td>
+
+                <table>
+
+                    <tr>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td align="center">
+                            <asp:Button ID="SendEmail" runat="server" Text="Send Email" OnClick="SendEmail_Click" />
+                        </td>
+                    </tr>
+                    <tr style="height:15px">
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                    </tr>
+
+
+
+                    <tr>
+                        <td>
+
+                            <table border="0" cellpadding="1" cellspacing="0">
+                                <tr id="toRow" runat="server">
+                                    <td>
+                                        To:
+                                    </td>
+                                    <td >
+                                        <asp:TextBox ID="txtEmailTo" Columns="60" runat="server" BackColor="LightGoldenrodYellow"></asp:TextBox>
+                                    </td>
+                                </tr>
+                                <tr id="subjectRow" runat="server">
+                                    <td>
+                                        Subject:
+                                    </td>
+                                    <td>
+                                        <asp:TextBox ID="txtSubject" Columns="60" runat="server" BackColor="LightGoldenrodYellow"></asp:TextBox>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div style="line-height:6px;">&nbsp;</div>
+                                    </td>
+                                </tr>
+                                <tr id="messageRow" runat="server">
+                                    <td align="center" colspan="2">
+                                        <FTB:FreeTextBox id="FreeTextBox1" runat="Server" Text="" Width="525px" Height="275px" />
+
+		                                <div>
+			                                <asp:Literal id="Output" runat="server" />
+		                                </div>
+
+                                        <div style="line-height:10px;">&nbsp;</div>
+                                    </td>
+                                </tr>
+                                <tr id="attachmentRow1" runat="server">
+				                    <td valign="middle" align="right">Attachment :</td>
+				                    <td>
+                                        <input id="inpAttachment1" type="file" size="53" name="filMyFile" runat="server" />
+                                        <input type="button" value="Remove" onclick="javaScript: clear_file_upload('inpAttachment1'); return false;" />
+				                    </td>
+			                    </tr>
+			                    <tr id="attachmentRow2" runat="server">
+				                    <td valign="middle" align="right">Attachment :</td>
+				                    <td>
+                                        <input id="inpAttachment2" type="file" size="53" name="filMyFile" runat="server" />
+                                        <input type="button" value="Remove" onclick="javaScript: clear_file_upload('inpAttachment2'); return false;" />
+				                    </td>
+			                    </tr>
+			                    <tr id="attachmentRow3" runat="server">
+				                    <td valign="middle" align="right">Attachment :</td>
+				                    <td>
+                                        <input id="inpAttachment3" type="file" size="53" name="filMyFile" runat="server" />
+                                        <input type="button" value="Remove" onclick="javaScript: clear_file_upload('inpAttachment3'); return false;" />
+				                    </td>
+			                    </tr>
+                                <tr>
+                                    <td align="center"  colspan="2">
+                                        <div style="line-height:6px;">&nbsp;</div>
+
+                                    </td>
+                                </tr>
+                            </table>
+
+
+
+
+
+                        </td>
+                    </tr>
+                </table>
+
+            </td>
+
+        </tr>
+    </table>
+
+</asp:Content>

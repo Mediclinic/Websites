@@ -1,0 +1,1 @@
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="HinxGeneration.aspx.cs" Inherits="HinxGen" %>

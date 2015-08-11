@@ -1,0 +1,82 @@
+﻿<%@ Page Title="OfferingInfo" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="OfferingListPopup.aspx.cs" Inherits="OfferingListPopup" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script type="text/javascript">
+        function select_offering(val) {
+            window.returnValue = val;
+            self.close();
+        }
+    </script>
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+    <center>
+        <br />
+        <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+
+
+        <table>
+            <tr valign="top">
+                <td>
+                    <asp:Label ID="lblSearchName" runat="server">Search By Name: </asp:Label>
+                    <asp:TextBox ID="txtSearchOffering" runat="server"></asp:TextBox>
+                    <asp:CheckBox ID="chkOfferingSearchOnlyStartWith" runat="server" Text="starts with" Font-Size="X-Small" Checked="true" />
+                    <asp:Button ID="btnSearchOffering" runat="server" Text="Search" onclick="btnSearchOffering_Click" />
+                    <asp:Button ID="btnClearOffering" runat="server" Text="Clear" onclick="btnClearOfferingSearch_Click" />
+                </td>
+            </tr>
+        </table>
+
+        <br />
+
+        <asp:GridView ID="GrdOffering" runat="server" 
+            AutoGenerateColumns="False" DataKeyNames="o_offering_id" 
+            OnRowCancelingEdit="GrdOffering_RowCancelingEdit" 
+            OnRowDataBound="GrdOffering_RowDataBound" 
+            OnRowEditing="GrdOffering_RowEditing" 
+            OnRowUpdating="GrdOffering_RowUpdating" ShowFooter="False" 
+            OnRowCommand="GrdOffering_RowCommand" 
+            OnRowDeleting="GrdOffering_RowDeleting" 
+            OnRowCreated="GrdOffering_RowCreated"
+            AllowSorting="True" 
+            OnSorting="GrdOffering_Sorting"
+            RowStyle-VerticalAlign="top"
+            AllowPaging="True"
+            OnPageIndexChanging="GrdOffering_PageIndexChanging"
+            PageSize="16"
+            ClientIDMode="Predictable">
+            <PagerSettings Mode="NumericFirstLast" FirstPageText="First" PreviousPageText="Previous" NextPageText="Next" LastPageText="Last" />
+
+
+            <Columns> 
+
+                <asp:TemplateField HeaderText="ID"  HeaderStyle-HorizontalAlign="Left" SortExpression="o_offering_id"> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblId" runat="server" Text='<%# Bind("o_offering_id") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField>
+
+                <asp:TemplateField HeaderText="Name" HeaderStyle-HorizontalAlign="Left" FooterStyle-VerticalAlign="Top" SortExpression="o_name"> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblName" runat="server" Text='<%# Bind("o_name") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Type" HeaderStyle-HorizontalAlign="Left" SortExpression="type_descr" FooterStyle-VerticalAlign="Top"> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblType" runat="server" Text='<%# Eval("type_descr") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="" HeaderStyle-HorizontalAlign="Left" FooterStyle-VerticalAlign="Top"> 
+                    <ItemTemplate> 
+                        <asp:Button ID="btnSelect" runat="server" Text="Select" />
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+            </Columns> 
+        </asp:GridView>
+
+        <br /><br />
+        <asp:Button ID="btnClose" runat="server" Text="Close" OnClientClick="javascript:self.close();return false;" />
+    </center>
+</asp:Content>

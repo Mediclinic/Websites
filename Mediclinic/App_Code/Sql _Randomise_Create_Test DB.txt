@@ -1,0 +1,720 @@
+﻿--drop table RandomAddresses;
+--drop table RandomNames;
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+Create table RandomNames
+(
+id int     not null PRIMARY KEY identity,
+firstname varchar(100),
+surname varchar(100),
+dob datetime,
+);
+
+
+insert into RandomNames
+(dob, firstname, surname)
+values
+
+('1931-01-01',  'John', 'Smith'),
+('1931-01-01',  'Jack', 'Smyth'),
+('1931-01-01',  'Peter', 'Smithers'),
+('1931-01-01',  'David', 'Davidson'),
+('1931-01-01',  'Jon', 'Davids'),
+('1931-01-01',  'Jason', 'Davis'),
+('1931-01-01',  'Janet', 'Johnson'),
+('1931-01-01',  'Joe', 'Johnston'),
+('1931-01-01',  'Joseph', 'Davidson'),
+('1931-01-01',  'Daniel', 'Danielson'),
+('1931-01-01',  'Danielle', 'Daniels'),
+('1931-01-01',  'Rachel', 'Peterson'),
+('1931-01-01',  'Nisha', 'Fricke'),
+('1931-01-01',  'Cassey', 'Running'),
+('1931-01-01',  'Yuki', 'Bible'),
+('1931-01-01',  'Kristeen', 'Larry'),
+('1931-01-01',  'Maryln', 'Rupert'),
+('1931-01-01',  'Cassie', 'Giardina'),
+('1931-01-01',  'Cierra', 'Simington'),
+('1931-01-01',  'Sherly', 'Gehling'),
+('1931-01-01',  'Shakira', 'Steinke'),
+('1933-01-01',  'Candida', 'Rossin'),
+('1933-01-01',  'Janette', 'Kieffer'),
+('1933-01-01',  'Porsche', 'Pino'),
+('1933-01-01',  'Hermina', 'Bojorquez'),
+('1933-01-01',  'Jacquelyne', 'Heinemann'),
+('1933-01-01',  'Hanna', 'Bankston'),
+('1933-01-01',  'Hiroko', 'Baden'),
+('1933-01-01',  'Ermelinda', 'Moffett'),
+('1933-01-01',  'Antonina', 'Hennigan'),
+('1936-01-01',  'Karren', 'Rodreguez'),
+('1936-01-01',  'Bettyann', 'Talcott'),
+('1936-01-01',  'Darby', 'Alcock'),
+('1936-01-01',  'Marquerite', 'Gross'),
+('1936-01-01',  'Kathyrn', 'Herzog'),
+('1936-01-01',  'Ossie', 'Cannata'),
+('1936-01-01',  'Inger', 'Hamby'),
+('1936-01-01',  'Christin', 'Geary'),
+('1936-01-01',  'Voncile', 'Costanza'),
+('1936-01-01',  'Yessenia', 'Mondor'),
+('1936-01-01',  'Nan', 'Chouv'),
+('1936-01-01',  'Mckenzie', 'Polhemus'),
+('1936-01-01',  'Isis', 'Masters'),
+('1936-01-01',  'Otilia', 'Gartland'),
+('1936-01-01',  'Jonnie', 'Cansler'),
+('1936-01-01',  'Danille', 'Beacham'),
+('1936-01-01',  'Jeraldine', 'Haggins'),
+('1936-01-01',  'Gisela', 'Gwin'),
+('1936-01-01',  'Isa', 'Landaverde'),
+('1936-01-01',  'Jodi', 'Mattei'),
+('1937-01-01',  'Lorie', 'Chartrand'),
+('1937-01-01',  'Laveta', 'Dombrosky'),
+('1937-01-01',  'Maryanna', 'Killinger'),
+('1937-01-01',  'Thu', 'Fowlkes'),
+('1937-01-01',  'Latia', 'Duren'),
+('1937-01-01',  'Beryl', 'Montrose'),
+('1937-01-01',  'Lani', 'Reasoner'),
+('1938-01-01',  'Rosaura', 'Choat'),
+('1938-01-01',  'Sherie', 'Mcgahan'),
+('1938-01-01',  'Enid', 'Bolduc'),
+('1938-01-01',  'Tandra', 'Bernal'),
+('1938-01-01',  'Min', 'Bucker'),
+
+
+('1939-01-01',  'Lavern', 'Marney'),
+('1939-01-01',  'Garrett', 'Curtin'),
+('1939-01-01',  'Sydney', 'Ziebarth'),
+('1939-01-01',  'Johnathan', 'Himes'),
+('1939-01-01',  'Von', 'Arvizu'),
+('1939-01-01',  'Chester', 'Binkley'),
+('1939-01-01',  'Devin', 'Martell'),
+('1939-01-01',  'Reid', 'Raco'),
+('1939-01-01',  'Jerrod', 'Strayer'),
+('1939-01-01',  'Domingo', 'Salamanca'),
+('1939-01-01',  'Elisha', 'Peranio'),
+('1932-01-01',  'Dave', 'Mechem'),
+('1932-01-01',  'Graig', 'Zeh'),
+('1932-01-01',  'Chung', 'Woodburn'),
+('1932-01-01',  'Gonzalo', 'Larin'),
+('1932-01-01',  'Taylor', 'Jacobs'),
+('1932-01-01',  'Chong', 'Raske'),
+('1932-01-01',  'Doug', 'Gottfried'),
+('1932-01-01',  'Cedric', 'Voll'),
+('1932-01-01',  'Cameron', 'Ontiveros'),
+('1932-01-01',  'Willard', 'Whobrey'),
+('1932-01-01',  'Leslie', 'Hammett'),
+('1932-01-01',  'Lenny', 'Burgoyne'),
+('1932-01-01',  'Daniel', 'Roloff'),
+('1932-01-01',  'Marlin', 'Lancaster'),
+('1934-01-01',  'Faustino', 'Danforth'),
+('1934-01-01',  'Omar', 'Moad'),
+('1934-01-01',  'Rolf', 'Delcid'),
+('1934-01-01',  'Quinn', 'Ellis'),
+('1934-01-01',  'Arron', 'Donohue'),
+('1934-01-01',  'Horacio', 'Level'),
+('1934-01-01',  'Michal', 'Botkin'),
+('1934-01-01',  'Alberto', 'Uchida'),
+('1934-01-01',  'Sherwood', 'Upham'),
+('1934-01-01',  'Jeramy', 'Hendrickson'),
+('1934-01-01',  'Moshe', 'Gatlin'),
+('1934-01-01',  'Clayton', 'Hui'),
+('1934-01-01',  'Simon', 'Verona'),
+('1934-01-01',  'Carl', 'Pattillo'),
+('1934-01-01',  'Lane', 'Beier'),
+('1934-01-01',  'Abe', 'Feenstra'),
+('1934-01-01',  'Donny', 'Naslund'),
+('1934-01-01',  'Shayne', 'Lapham'),
+('1934-01-01',  'Jackie', 'Cordes'),
+('1934-01-01',  'Marty', 'Steinfeldt'),
+('1934-01-01',  'Gaston', 'Koopman'),
+('1934-01-01',  'Ray', 'Louis'),
+('1934-01-01',  'Sung', 'Disalvo'),
+('1935-01-01',  'Cristopher', 'Gayden'),
+('1935-01-01',  'Quinton', 'Gonsales'),
+
+
+('1931-01-01', 'Garth', 'Mable'),
+('1931-01-01', 'Elliott', 'Dimmick'),
+('1931-01-01', 'Bertram', 'Grafton'),
+('1931-01-01', 'Dick', 'Rowlands'),
+('1931-01-01', 'Jamal', 'Goosby'),
+('1931-01-01', 'Clair', 'Shankles'),
+('1931-01-01', 'Ralph', 'Montague'),
+('1931-01-01', 'Santos', 'Kowalski'),
+('1931-01-01', 'Clark', 'Angle'),
+('1931-01-01', 'Dewey', 'Edman'),
+('1931-01-01', 'Milan', 'Mcnear'),
+('1931-01-01', 'Clinton', 'Burford'),
+('1931-01-01', 'Wm', 'Milledge'),
+('1931-01-01', 'Kendrick', 'Bing'),
+('1931-01-01', 'Tommie', 'Wohl'),
+('1931-01-01', 'Jason', 'Guerette'),
+('1931-01-01', 'Dong', 'Cabrales'),
+('1931-01-01', 'Otha', 'Singh'),
+('1931-01-01', 'Jamar', 'Royce'),
+('1931-01-01', 'Sergio', 'Dougan'),
+('1931-01-01', 'Nathaniel', 'Prisco'),
+('1931-01-01', 'Royce', 'Provo'),
+('1931-01-01', 'Adam', 'Carner'),
+('1931-01-01', 'Allan', 'Rake'),
+('1931-01-01', 'Moises', 'Grubb'),
+('1931-01-01', 'Ambrose', 'Hoos'),
+('1931-01-01', 'Wilber', 'Dela'),
+('1931-01-01', 'Bobbie', 'Pell'),
+('1931-01-01', 'Wesley', 'Sidebottom'),
+('1931-01-01', 'Everett', 'Mayton'),
+('1931-01-01', 'Hung', 'Du'),
+('1931-01-01', 'Wendell', 'Stubblefield'),
+('1931-01-01', 'Tyrone', 'Pettaway'),
+('1931-01-01', 'Clarence', 'Christman'),
+('1931-01-01', 'Norris', 'Hyslop'),
+('1931-01-01', 'Manuel', 'Quirion'),
+('1931-01-01', 'Long', 'Vise'),
+('1931-01-01', 'Eli', 'Singleterry'),
+('1931-01-01', 'Fabian', 'Rozell'),
+('1931-01-01', 'Andrew', 'Henrikson'),
+('1931-01-01', 'Barrett', 'Murphree'),
+('1931-01-01', 'Alejandro', 'Largent'),
+('1931-01-01', 'Kurt', 'Faye'),
+('1931-01-01', 'Lester', 'Blaze'),
+('1931-01-01', 'Jerold', 'Vance'),
+('1931-01-01', 'Dominic', 'Pasquale'),
+('1931-01-01', 'Timothy', 'Mullinax'),
+('1931-01-01', 'Keven', 'Munk'),
+('1931-01-01', 'Michel', 'Blust'),
+('1931-01-01', 'Aaron', 'Everett'),
+
+
+('1931-01-01', 'Antonia', 'Bonomo'),
+('1931-01-01', 'Neal', 'Bhatti'),
+('1931-01-01', 'Francesco', 'Rolan'),
+('1931-01-01', 'Rickey', 'Fleig'),
+('1931-01-01', 'Bernard', 'Batie'),
+('1931-01-01', 'Martin', 'Haines'),
+('1931-01-01', 'Scotty', 'Banner'),
+('1931-01-01', 'Florentino', 'Flores'),
+('1931-01-01', 'Jimmy', 'Daub'),
+('1931-01-01', 'Broderick', 'Carnevale'),
+('1931-01-01', 'Patrick', 'Dobrowolski'),
+('1931-01-01', 'Basil', 'Pelosi'),
+('1931-01-01', 'Irwin', 'Fleischer'),
+('1931-01-01', 'Scot', 'Scharf'),
+('1931-01-01', 'Robt', 'Audia'),
+('1931-01-01', 'Winford', 'Arbaugh'),
+('1931-01-01', 'Rhett', 'Hiltz'),
+('1931-01-01', 'Scott', 'Brogdon'),
+('1931-01-01', 'Eusebio', 'Piatt'),
+('1931-01-01', 'Jamison', 'Robicheaux'),
+('1931-01-01', 'Nathaniel', 'Beazley'),
+('1931-01-01', 'Yong', 'Bedell'),
+('1931-01-01', 'Hyman', 'Klopfenstein'),
+('1931-01-01', 'Michel', 'Donohue'),
+('1931-01-01', 'Rudolf', 'Ange'),
+('1931-01-01', 'Wally', 'Domingo'),
+('1931-01-01', 'Domingo', 'Parton'),
+('1931-01-01', 'Edmundo', 'Overbey'),
+('1931-01-01', 'Lonnie', 'Carlucci'),
+('1931-01-01', 'Harris', 'Hand'),
+('1931-01-01', 'Otto', 'Sensabaugh'),
+('1931-01-01', 'Gustavo', 'Pool'),
+('1931-01-01', 'Joan', 'Morlock'),
+('1931-01-01', 'Eli', 'Cogdill'),
+('1931-01-01', 'Roy', 'Master'),
+('1931-01-01', 'Gordon', 'Leventhal'),
+('1931-01-01', 'Blaine', 'Martinsen'),
+('1931-01-01', 'Lanny', 'Hawke'),
+('1931-01-01', 'Raphael', 'Purvines'),
+('1931-01-01', 'Craig', 'Schmit'),
+('1931-01-01', 'Keven', 'Gimenez'),
+('1931-01-01', 'Gaston', 'Reinhard'),
+('1931-01-01', 'Rodolfo', 'Bettinger'),
+('1931-01-01', 'Emerson', 'Stirling'),
+('1931-01-01', 'Reginald', 'Mullarkey'),
+('1931-01-01', 'Jermaine', 'Oquin'),
+('1931-01-01', 'Merle', 'Moffet'),
+('1931-01-01', 'Darrel', 'Burkholder'),
+('1931-01-01', 'Bobby', 'Connell'),
+('1931-01-01', 'Jerrod', 'Easler'),
+
+
+('1931-01-01', 'Mirtha', 'Monsour'),
+('1931-01-01', 'Judith', 'Sprinkle'),
+('1931-01-01', 'Lupita', 'Keown'),
+('1931-01-01', 'Clarisa', 'Kujawa'),
+('1931-01-01', 'Keitha', 'Riccio'),
+('1931-01-01', 'Amie', 'Wieland'),
+('1931-01-01', 'Jillian', 'Alpert'),
+('1931-01-01', 'Fae', 'Rexroad'),
+('1931-01-01', 'Ebonie', 'Bogard'),
+('1931-01-01', 'Kamilah', 'Lesniak'),
+('1931-01-01', 'Jeanett', 'Gow'),
+('1931-01-01', 'Lyla', 'Bialek'),
+('1931-01-01', 'Terrilyn', 'Bach'),
+('1931-01-01', 'Chery', 'Westray'),
+('1931-01-01', 'Buena', 'Schoening'),
+('1931-01-01', 'Delsie', 'Drennon'),
+('1931-01-01', 'Darci', 'Stillings'),
+('1931-01-01', 'Lakenya', 'Lovato'),
+('1931-01-01', 'Fonda', 'Stricker'),
+('1931-01-01', 'Eldora', 'Tabarez'),
+('1931-01-01', 'Emerald', 'Routh'),
+('1931-01-01', 'Carmel', 'Ruggiero'),
+('1931-01-01', 'Nickie', 'Kasten'),
+('1931-01-01', 'Dung', 'Kuntz'),
+('1931-01-01', 'Janet', 'Galloway'),
+('1931-01-01', 'Isa', 'Gatlin'),
+('1931-01-01', 'Lorraine', 'Maxie'),
+('1931-01-01', 'Renae', 'Kuehl'),
+('1931-01-01', 'Alethea', 'Caulfield'),
+('1931-01-01', 'Ellena', 'Vonruden'),
+('1931-01-01', 'Dreama', 'Schildgen'),
+('1931-01-01', 'Dessie', 'Benware'),
+('1931-01-01', 'Crista', 'Daluz'),
+('1931-01-01', 'Carmella', 'Yamaguchi'),
+('1931-01-01', 'Calandra', 'Guidroz'),
+('1931-01-01', 'Elois', 'Mcneeley'),
+('1931-01-01', 'Chanda', 'Tetrault'),
+('1931-01-01', 'Teisha', 'Trower'),
+('1931-01-01', 'Eura', 'Wittig'),
+('1931-01-01', 'Rebekah', 'Loveland'),
+('1931-01-01', 'Janina', 'Bott'),
+('1931-01-01', 'Raelene', 'Wyche'),
+('1931-01-01', 'Seema', 'Jagger'),
+('1931-01-01', 'Kyong', 'Sallee'),
+('1931-01-01', 'Dell', 'Shires'),
+('1931-01-01', 'Lacie', 'Huisman'),
+('1931-01-01', 'Nadene', 'Flack'),
+('1931-01-01', 'Kenisha', 'Keehn'),
+('1931-01-01', 'Emeline', 'Marable'),
+('1931-01-01', 'Alba', 'Mccaskill'),
+
+
+('1931-01-01', 'Jeanette', 'Dygert'),
+('1931-01-01', 'Flo', 'Dills'),
+('1931-01-01', 'Contessa', 'Swiger'),
+('1931-01-01', 'Ocie', 'Mikus'),
+('1931-01-01', 'Deja', 'Woodfork'),
+('1931-01-01', 'Yasuko', 'Chand'),
+('1931-01-01', 'Maudie', 'Palka'),
+('1931-01-01', 'Sherrell', 'Mayer'),
+('1931-01-01', 'Barabara', 'Stlaurent'),
+('1931-01-01', 'Laveta', 'Geisel'),
+('1931-01-01', 'Lekisha', 'Molina'),
+('1931-01-01', 'Nery', 'Bice'),
+('1931-01-01', 'Tamiko', 'Baney'),
+('1931-01-01', 'An', 'Carpentier'),
+('1931-01-01', 'Isabell', 'Sands'),
+('1931-01-01', 'Kaylee', 'Marks'),
+('1931-01-01', 'Melania', 'Morgado'),
+('1931-01-01', 'Shawnta', 'Lepage'),
+('1931-01-01', 'Trula', 'Aitchison'),
+('1931-01-01', 'Melia', 'Helmer'),
+('1931-01-01', 'Nydia', 'Esh'),
+('1931-01-01', 'Trina', 'Gariepy'),
+('1931-01-01', 'Dorothy', 'Baine'),
+('1931-01-01', 'Opal', 'Rushton'),
+('1931-01-01', 'Jennine', 'Guernsey'),
+('1931-01-01', 'Emeline', 'Nordman'),
+('1931-01-01', 'Kandice', 'Knipe'),
+('1931-01-01', 'Kayce', 'Fane'),
+('1931-01-01', 'Myrle', 'Gibbons'),
+('1931-01-01', 'Terrie', 'Engebretson'),
+('1931-01-01', 'May', 'Kerrigan'),
+('1931-01-01', 'Maribel', 'Gorder'),
+('1931-01-01', 'Elizabet', 'Jerman'),
+('1931-01-01', 'Leonore', 'Cepeda'),
+('1931-01-01', 'Lilliam', 'Bartleson'),
+('1931-01-01', 'Wendolyn', 'Faye'),
+('1931-01-01', 'Lizzie', 'Trenholm'),
+('1931-01-01', 'Agnus', 'Romanelli'),
+('1931-01-01', 'Gaye', 'Cress'),
+('1931-01-01', 'Marketta', 'Dye'),
+('1931-01-01', 'Lona', 'Hereford'),
+('1931-01-01', 'Nevada', 'Fail'),
+('1931-01-01', 'Ellan', 'Catlett'),
+('1931-01-01', 'Georgene', 'Kittredge'),
+('1931-01-01', 'Cherry', 'Lanoue'),
+('1931-01-01', 'Melba', 'Rodrick'),
+('1931-01-01', 'Janetta', 'Beran'),
+('1931-01-01', 'Jamika', 'Newborn'),
+('1931-01-01', 'Caitlyn', 'Tisdale'),
+('1931-01-01', 'Sherlene', 'Elsea');
+
+UPDATE
+  randomnames
+SET
+  dob = DATEADD(day, (ABS(CHECKSUM(NEWID())) % 65530), 0);
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+update Person 
+set 
+firstname = 
+(
+select top 1 firstname 
+from RandomNames
+ORDER BY NEWID(), person_id
+)
+,
+middlename = '',
+nickname = ''
+,
+surname = 
+(
+select top 1 surname 
+from RandomNames
+ORDER BY NEWID(), person_id
+),
+dob = 
+(
+select top 1 dob
+from RandomNames
+ORDER BY NEWID(), person_id
+),
+gender =
+    case person_id % 2
+        when 0 then 'M'
+        when 1 then 'F'
+    end
+,
+person_date_added = GETDATE(),
+person_date_modified = null
+
+
+update Person 
+set title_id = 
+    case gender
+        when 'M' then 6
+        when 'F' then 7
+    end;
+
+
+drop table RandomNames;
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+Create table RandomAddresses
+(
+id int     not null PRIMARY KEY identity,
+nbr varchar(100),
+street varchar(100),
+);
+
+
+insert into RandomAddresses
+(nbr, street)
+values
+
+
+('1','Amber'),
+('2','Auburn'),
+('3A','Bent'),
+('4','Big'),
+('5','Birch'),
+('6','Blue'),
+('7','Bright'),
+('8C','Broad'),
+('9','Burning'),
+('10','Calm'),
+('11','Cinder'),
+('12B','Clear'),
+('13','Cold'),
+('14','Colonial'),
+('15','Cool'),
+('16','Cotton'),
+('17D','Cozy'),
+('18','Crimson'),
+('19','Crystal'),
+('20','Dewy'),
+('11','Dusty'),
+('22A','Easy'),
+('23','Emerald'),
+('24','Fallen'),
+('25','Foggy'),
+('26','Gentle'),
+('27C','Golden'),
+('28','Grand'),
+('29','Green'),
+('30','Happy'),
+('31','Harvest'),
+('32','Hazy'),
+('33D','Heather'),
+('34','Hidden'),
+('35','High'),
+('36','Honey'),
+('37','Hush'),
+('38A','Indian'),
+('39','Iron'),
+('40','Ivory'),
+('41','Jagged'),
+('42','Lazy'),
+('43','Little'),
+('44B','Lone'),
+('45','Lonely'),
+('46','Long'),
+('47','Lost'),
+('48','Merry'),
+('49A','Middle'),
+('50','Misty'),
+('51','Noble'),
+('52','Old'),
+('53','Orange'),
+('54C','Pearl'),
+('55','Pied'),
+('56','Pleasant'),
+('57','Pretty'),
+('58','Quaint'),
+('59','Quaking'),
+('60B','Quiet'),
+('61','Red'),
+('62','Rocky'),
+('63','Rose'),
+('64','Rough'),
+('65C','Round'),
+('66','Rustic'),
+('67','Sandy'),
+('68','Shady'),
+('69','Silent'),
+('70','Silver'),
+('71','Sleepy'),
+('72','Small'),
+('73B','Square'),
+('74','Still'),
+('75','Stony'),
+('76','Strong'),
+('77','Sunny'),
+('78','Sweet'),
+('79','Tawny'),
+('80','Tender'),
+('81','Thunder'),
+('82','Turning'),
+('83','Twin'),
+('84','Umber'),
+('85','Velvet'),
+('86','White'),
+('87','Windy');
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+update ContactAus
+set 
+	addr_line1 = 
+	(
+	select nbr
+	from RandomAddresses
+	where RandomAddresses.id = (ContactAus.contact_id % (select count(*) from RandomAddresses)) + 1
+	),
+	addr_line2 = ''
+	,
+	street_name =
+	(
+	select street 
+	from RandomAddresses
+	where RandomAddresses.id = (ContactAus.entity_id % (select count(*) from RandomAddresses)) + 1
+	),
+suburb_id = 
+	(
+	select COALESCE(suburb_id, 2098)  
+	from Suburb
+	where Suburb.suburb_id = (ContactAus.contact_id % (select count(*) from Suburb)) + 1
+	)
+where 
+	contact_type_id in (35,36,37,38,39,262);
+	
+delete ContactAus where contact_type_id in (27,28,266);
+	
+update ContactAus
+set 
+	addr_line1 = '0123456789'
+where 
+	contact_type_id in (29,30,31,32,33,34,42,43);
+
+update ContactAus set country_id = (select country_id from Country where descr = 'Australia')
+
+drop table RandomAddresses;
+
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+update HealthCard set 
+card_name = '',
+card_nbr =  
+  CONVERT(varchar(50), (health_card_id*7%9) + 1)
+  + right('00000000'+ CONVERT(varchar(50), ABS(CHECKSUM( health_card_id*48998)) % 99999), 3)
+  + right('00000000'+ CONVERT(varchar(50), health_card_id*123%999), 3)
+  + right('00000000'+ CONVERT(varchar(50), health_card_id*642%999), 3);
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+update Staff set 
+  login = REPLACE(LOWER(firstname), ' ', '') + LOWER(LOWER(surname)),
+  pwd   = REPLACE(LOWER(firstname), ' ', '') + LOWER(LOWER(surname))
+from staff left join Person on Staff.person_id = Person.person_id
+where staff_id > 0;
+
+update Staff set 
+  provider_number = '22' + SUBSTRING ( provider_number ,3 , LEN(provider_number)-2 )
+from staff left join Person on Staff.person_id = Person.person_id
+where LEN(provider_number) > 2;
+
+update RegisterReferrer set 
+  provider_number = '22' + SUBSTRING ( provider_number ,3 , LEN(provider_number)-2 )
+from RegisterReferrer
+where LEN(provider_number) > 2;
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+delete EmailHistory;
+delete SMSHistory;
+delete LetterPrintHistory;
+
+DBCC CHECKIDENT(EmailHistory,RESEED,1);
+DBCC CHECKIDENT(EmailHistory);
+DBCC CHECKIDENT(SMSHistory,RESEED,1);
+DBCC CHECKIDENT(SMSHistory);
+DBCC CHECKIDENT(LetterPrintHistory,RESEED,1);
+DBCC CHECKIDENT(LetterPrintHistory);
+
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+update patient set flashing_text = '';
+update patient set flashing_text = 'pt needs 40 min appointment every time' where patient_id % 14 = 0;
+update patient set flashing_text = 'pt hard of hearing' where patient_id % 14 = 1;
+update patient set flashing_text = 'GET PHONE NUMBER' where patient_id % 14 = 2;
+update patient set flashing_text = 'pt 20 mins late last 2 appointments!' where patient_id % 14 = 3;
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+update Note
+set text = 'Patient presented for the clinic for assessment of chronic knee pain.
+On examination the patient''s knees were significantly turned in with excessive rolling in of the ankles and midfoot. This posture is most likely a result from poor hip biomechanics which has come from the patient''s excessive weight problem. Today I have prescribed some non-custom insoles to decrease some of the valgus forces at her knees and ankles. This however is not a complete treatment but merely part of the larger treatment plan for the patient including her planned future lapband surgery for her weight and Physiotherapy for her knees and hips.'
+where note_id % 7 = 0
+  and entity_id in (select entity_id from Booking)
+
+update Note
+set text = 'Nails cut, cleared, filed & burred. Debrided HK, used moores disc & applied sorbolene. completed diabetes foot ax; pedla pulses palpable- good arterial blood supply to feet. monofilament test 10/10 sites detected b/f- protective sensation intact BGL=5mmol Advised client on daily emollient use & vicks vaporub on omycotic nails. RV 10/52 10962 51.95 (STR: SP #058)
+Review as required'
+where note_id % 7 = 1
+  and entity_id in (select entity_id from Booking)
+
+update Note
+set text = 'On examination nails were elongated, circulation appeared very poor with non-palpable pulses and hairless atrophic skin which was cool to the touch. Cut, cleared and burred nails.
+Patient appears to be very unhappy in general, he kept complaining about how it was out of his way to come to any appointment and that he wouldn''t be coming in the future.
+Review as required.'
+where note_id % 7 = 2
+  and entity_id in (select entity_id from Booking)
+
+update Note
+set text = 'Cut, cleared and burred nails. Patient has HAV bilaterally which understandebly causes her problems when she wears restrictive shoes. Educated her on the types of shoes she should look out for in the future. No other problems reported or detected.
+Review 10/52 unless required.'
+where note_id % 7 = 3
+  and entity_id in (select entity_id from Booking)
+
+update Note
+set text = 'B/F All nails cut, cleared, filed & burred. used moores disc & applied Pedimed cream. BGL=6.4mmol RV 10/52 10962 52.95 (STR: SP #137)'
+where note_id % 7 = 4
+  and entity_id in (select entity_id from Booking)
+
+update Note
+set text = 'All nails CCF and B, moores disc and emollient plantarly,advised vicks 2 daily B/1st nails. feet v.cold, pulses not palpable RF and weak LF, unable to ax feeling b/c pt didnt understand testing- cant feel RF due to CVA.SP026 r/w 10/52'
+where note_id % 7 = 5
+  and entity_id in (select entity_id from Booking)
+
+update Note
+set text = 'All nails cut, cleared, filed & burred. Debrided HK, used moores disc & applied sorbolene. completed diabetes foot ax; pedla pulses palpable- good arterial blood supply to feet. monofilament test 10/10 sites detected b/f- protective sensation intact BGL=5mmol Advised client on daily emollient use & vicks vaporub on omycotic nails. RV 10/52 10962 51.95 (STR: SP #058)'
+where note_id % 7 = 6
+  and entity_id in (select entity_id from Booking)
+
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+update Note
+set text = 'Do not treat until EPC - health card #1234567890'
+where note_id % 7 = 0
+  and entity_id in (select entity_id from Person)
+
+update Note
+set text = 'Wants to be seen every 6 weeks'
+where note_id % 7 = 1
+  and entity_id in (select entity_id from Person)
+
+update Note
+set text = 'Diabetic'
+where note_id % 7 = 2
+  and entity_id in (select entity_id from Person)
+
+update Note
+set text = 'HC - not elegable for DVA'
+where note_id % 7 = 3
+  and entity_id in (select entity_id from Person)
+
+update Note
+set text = 'DIFFICULT'
+where note_id % 7 = 4
+  and entity_id in (select entity_id from Person)
+
+update Note
+set text = 'Follow up visit after seeing previous Physio'
+where note_id % 7 = 5
+  and entity_id in (select entity_id from Person)
+
+update Note
+set text = 'Attn: can you please find out who her GP is. Apparently Dr S Yong is no longer the treating doctor.'
+where note_id % 7 = 6
+  and entity_id in (select entity_id from Person)
+
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+update Organisation set name =  (
+	select Suburb.name + ' Clinic' from Suburb where suburb_id = Organisation.organisation_id
+)
+WHERE (Organisation.organisation_id IN (SELECT suburb_id FROM Suburb))
+
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+	UPDATE SystemVariable SET value = 'Mediclinic'               WHERE descr='Site';
+	UPDATE SystemVariable SET value = '~/Styles/Site_Balwyn.css' WHERE descr='CssPage';
+	UPDATE SystemVariable SET value = 'Test Site'                WHERE descr='BannerMessage';
+	UPDATE SystemVariable SET value = 'True'                     WHERE descr='ShowBannerMessage';
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+	UPDATE Site SET name = 'Mediclinic Aged Care' WHERE site_id=1;
+	UPDATE Site SET name = 'Mediclinic Clinics' WHERE site_id=2;
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+
+SELECT 'INSERT INTO Mediclinic_Main.dbo.UserDatabaseMapper VALUES (''' + login + ''',''Mediclinic_FakeDB'');'
+ FROM staff
+WHERE staff_id > 0
+
+
+DELETE Mediclinic_Main.dbo.UserDatabaseMapper WHERE dbname = 'Mediclinic_FakeDB';
+
+SELECT * from staff
+UPDATE STAFF SET pwd = 'support' + CONVERT(varchar,person_id) WHERE staff_id in (-2,-3,-4,-5,-6,-7,-8);
+UPDATE Staff SET login = 'fakedbsp' + CONVERT(varchar,person_id) WHERE staff_id in (-2,-3,-4);
+
+UPDATE Staff set login = ('_' + login), pwd = ('_' + pwd) where login not in ('caitlynmcneeley','albertolepage')
+
+
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------

@@ -1,0 +1,940 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Configuration;
+using System.Text.RegularExpressions;
+using System.Collections;
+
+public partial class ReferrerList_DoctorClinicV2 : System.Web.UI.Page
+{
+
+    #region Page_Load
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        try
+        {
+
+            if (!IsPostBack)
+                Utilities.SetNoCache(Response);
+            HideErrorMessage();
+
+            if (!IsPostBack)
+            {
+                PagePermissions.EnforcePermissions_RequireAny(Session, Response, true, true, true, true, true, false);
+                Session.Remove("referrerinfolist_sortexpression");
+                Session.Remove("referrerinfolist_data");
+                FillGrid();
+                hiddenIsMobileDevice.Value = Utilities.IsMobileDevice(Request) ? "1" : "0";
+                GUI_SetBatchSendElements();
+                txtSearchSurname.Focus();
+            }
+
+
+            this.GrdReferrer.EnableViewState = true;
+
+        }
+        catch (CustomMessageException ex)
+        {
+            if (IsPostBack) SetErrorMessage(ex.Message);
+            else HideTableAndSetErrorMessage(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            if (IsPostBack) SetErrorMessage("", ex.ToString());
+            else HideTableAndSetErrorMessage("", ex.ToString());
+        }
+    }
+
+    #endregion
+
+    #region SetBatchSendElements
+
+    protected void GUI_SetBatchSendElements()
+    {
+        if (UserView.GetInstance().IsAdminView)
+        {
+            try
+            {
+                DateTime lastGenerated = GetLastDateBatchSendTreatmentNotesAllReferrers();
+                string lastGeneratedString = (lastGenerated == DateTime.MinValue) ? "Never" : lastGenerated.ToString("dd-MM-yyyy");
+                string howLongAgoString = string.Empty;
+                if (lastGenerated != DateTime.MinValue)
+                {
+                    if (DateTime.Now.Subtract(lastGenerated).TotalDays <= 30)
+                        howLongAgoString = " (" + DateTime.Now.Subtract(lastGenerated).TotalDays.ToString("0") + " days ago)";
+                    else
+                        howLongAgoString = " (" + MonthDifference(DateTime.Now, lastGenerated).ToString("0.0") + " months ago)";
+                }
+
+                //lblLastBatchSendTreatmentNotes_AllReferrers.Text =
+                //    "Generate Treatement Notes All Referrers" + "<br />" +
+                //    "Last Generated: <b>" + lastGeneratedString + howLongAgoString +"</b>";
+            }
+            catch (Exception)
+            {
+                SetErrorMessage("Last batch send treatment notes all referrers has invalid date: " + ((SystemVariables)Session["SystemVariables"])["LastDateBatchSendTreatmentNotes_AllReferrers"].Value);
+            }
+        }
+        else
+        {
+            //td_generate_treatment_notes_space_before.Visible      = false;
+            //td_generate_treatment_notes_button.Visible            = false;
+            //td_generate_treatment_notes_date_space_before.Visible = false;
+            //td_generate_treatment_notes_date_label.Visible        = false;
+        }
+    }
+    protected DateTime GetLastDateBatchSendTreatmentNotesAllReferrers()
+    {
+        SystemVariables systemVariables = SystemVariableDB.GetAll();
+        string strLastDate = systemVariables["LastDateBatchSendTreatmentNotesAllReferrers"].Value;
+        if (strLastDate.Length == 0)
+            return DateTime.MinValue;
+
+        // "12:46:48 05-12-2012" 
+        string[] parts = strLastDate.Split(' ');
+        string[] timeParts = parts[0].Split(':');
+        string[] dateParts = parts[1].Split('-');
+
+        DateTime dateTime = new DateTime(
+            Convert.ToInt32(dateParts[2]),
+            Convert.ToInt32(dateParts[1]),
+            Convert.ToInt32(dateParts[0]),
+            Convert.ToInt32(timeParts[0]),
+            Convert.ToInt32(timeParts[1]),
+            Convert.ToInt32(timeParts[2])
+            );
+
+        return dateTime;
+    }
+    protected void SetLastDateBatchSendTreatmentNotesAllReferrers(DateTime dateTime)
+    {
+        string val = dateTime == DateTime.MinValue ? "" : dateTime.ToString("HH:mm:ss dd-MM-yyyy");
+        SystemVariableDB.Update("LastDateBatchSendTreatmentNotesAllReferrers", val);
+        GUI_SetBatchSendElements();
+    }
+    protected decimal MonthDifference(DateTime d1, DateTime d2)
+    {
+        if (d1 > d2)
+        {
+            DateTime hold = d1;
+            d1 = d2;
+            d2 = hold;
+        }
+
+        int monthsApart = Math.Abs(12 * (d1.Year - d2.Year) + d1.Month - d2.Month) - 1;
+        decimal daysInMonth1 = DateTime.DaysInMonth(d1.Year, d1.Month);
+        decimal daysInMonth2 = DateTime.DaysInMonth(d2.Year, d2.Month);
+
+        decimal dayPercentage = ((daysInMonth1 - d1.Day) / daysInMonth1) + (d2.Day / daysInMonth2);
+        return monthsApart + dayPercentage;
+    }
+
+    #endregion
+
+    #region GrdReferrer
+
+    protected void FillGrid()
+    {
+        string searchSurname = "";
+        if (Request.QueryString["surname_search"] != null && Request.QueryString["surname_search"].Length > 0)
+        {
+            searchSurname = Request.QueryString["surname_search"];
+            txtSearchSurname.Text = Request.QueryString["surname_search"];
+        }
+        bool searchSurnameOnlyStartsWith = true;
+        if (Request.QueryString["surname_starts_with"] != null && Request.QueryString["surname_starts_with"].Length > 0)
+        {
+            searchSurnameOnlyStartsWith = Request.QueryString["surname_starts_with"] == "0" ? false : true;
+            chkSurnameSearchOnlyStartWith.Checked = searchSurnameOnlyStartsWith;
+        }
+        else
+        {
+            chkSurnameSearchOnlyStartWith.Checked = searchSurnameOnlyStartsWith;
+        }
+
+        string searchProviderNbr = "";
+        if (Request.QueryString["provider_nbr_search"] != null && Request.QueryString["provider_nbr_search"].Length > 0)
+        {
+            searchProviderNbr = Request.QueryString["provider_nbr_search"];
+            txtSearchProviderNbr.Text = Request.QueryString["provider_nbr_search"];
+        }
+        bool searchProviderNbrOnlyStartsWith = true;
+        if (Request.QueryString["provider_nbr_starts_with"] != null && Request.QueryString["provider_nbr_starts_with"].Length > 0)
+        {
+            searchProviderNbrOnlyStartsWith = Request.QueryString["provider_nbr_starts_with"] == "0" ? false : true;
+            chkProviderNbrSearchOnlyStartWith.Checked = searchProviderNbrOnlyStartsWith;
+        }
+        else
+        {
+            chkProviderNbrSearchOnlyStartWith.Checked = searchProviderNbrOnlyStartsWith;
+        }
+
+        string searchPhoneNbr = "";
+        if (Request.QueryString["phone_nbr_search"] != null && Request.QueryString["phone_nbr_search"].Length > 0)
+        {
+            searchPhoneNbr = Request.QueryString["phone_nbr_search"];
+            txtSearchPhoneNbr.Text = Request.QueryString["phone_nbr_search"];
+        }
+        bool searchPhoneNbrOnlyStartsWith = true;
+        if (Request.QueryString["phone_nbr_starts_with"] != null && Request.QueryString["phone_nbr_starts_with"].Length > 0)
+        {
+            searchPhoneNbrOnlyStartsWith = Request.QueryString["phone_nbr_starts_with"] == "0" ? false : true;
+            chkPhoneNbrSearchOnlyStartWith.Checked = searchPhoneNbrOnlyStartsWith;
+        }
+        else
+        {
+            chkPhoneNbrSearchOnlyStartWith.Checked = searchPhoneNbrOnlyStartsWith;
+        }
+
+        DataTable dt = RegisterReferrerDB.GetDataTable(0, -1, chkShowDeleted.Checked, new int[] { 191 }, searchSurname, searchSurnameOnlyStartsWith, "", "", searchProviderNbr, searchProviderNbrOnlyStartsWith, searchPhoneNbr, searchPhoneNbrOnlyStartsWith);
+
+        Hashtable regRefHash = PatientReferrerDB.GetHashtableByRegRef(true, false, false);
+        dt.Columns.Add("count", typeof(int));
+        for(int i=0; i<dt.Rows.Count; i++)
+        {
+            int regRefID = Convert.ToInt32(dt.Rows[i]["register_referrer_id"]);
+            dt.Rows[i]["count"] = regRefHash[regRefID] == null ? 0 : ((PatientReferrer[])regRefHash[regRefID]).Length;
+        }
+
+
+        // add suburb_name
+
+        Hashtable entityIDsHash = new Hashtable();
+        for (int i = 0; i < dt.Rows.Count; i++)
+            entityIDsHash[Convert.ToInt32(dt.Rows[i]["organisation_entity_id"])] = 1;
+
+        int[] entityIDs = new int[entityIDsHash.Keys.Count];
+        entityIDsHash.Keys.CopyTo(entityIDs, 0);
+
+        Hashtable emailHash = PatientsContactCacheDB.GetBullkAddress(entityIDs, -1);
+
+        dt.Columns.Add("suburb_name", typeof(string));
+        for (int i = 0; i < dt.Rows.Count; i++)
+        {
+            int entityID = Convert.ToInt32(dt.Rows[i]["organisation_entity_id"]);
+            string suburbName = GetSuburb(emailHash, entityID);
+            dt.Rows[i]["suburb_name"] = suburbName == null ? "" : suburbName;
+        }
+
+
+        Session["referrerinfolist_data"] = dt;
+
+        if (dt.Rows.Count > 0)
+        {
+            if (IsPostBack && Session["referrerinfolist_sortexpression"] != null && Session["referrerinfolist_sortexpression"].ToString().Length > 0)
+            {
+                DataView dataView = new DataView(dt);
+                dataView.Sort = Session["referrerinfolist_sortexpression"].ToString();
+                GrdReferrer.DataSource = dataView;
+            }
+            else
+            {
+                GrdReferrer.DataSource = dt;
+            }
+
+
+            try
+            {
+                GrdReferrer.DataBind();
+                GrdReferrer.PagerSettings.FirstPageText = "1";
+                GrdReferrer.PagerSettings.LastPageText = GrdReferrer.PageCount.ToString();
+                GrdReferrer.DataBind();
+            }
+            catch (Exception ex)
+            {
+                HideTableAndSetErrorMessage("", ex.ToString());
+            }
+        }
+        else
+        {
+            dt.Rows.Add(dt.NewRow());
+            GrdReferrer.DataSource = dt;
+            GrdReferrer.DataBind();
+
+            int TotalColumns = GrdReferrer.Rows[0].Cells.Count;
+            GrdReferrer.Rows[0].Cells.Clear();
+            GrdReferrer.Rows[0].Cells.Add(new TableCell());
+            GrdReferrer.Rows[0].Cells[0].ColumnSpan = TotalColumns;
+            GrdReferrer.Rows[0].Cells[0].Text = "No Record Found";
+        }
+    }
+    protected static string GetSuburb(Hashtable contactHash, int entityID)
+    {
+        if (Utilities.GetAddressType().ToString() == "Contact")
+        {
+            Contact[] contacts = (Contact[])contactHash[entityID];
+
+            if (contacts == null || contacts.Length == 0)
+                return null;
+
+            foreach (Contact c in contacts)
+            {
+                if (c.Suburb != null)
+                    return c.Suburb.Name;
+            }
+        }
+        else if (Utilities.GetAddressType().ToString() == "ContactAus")
+        {
+            ContactAus[] contacts = (ContactAus[])contactHash[entityID];
+
+            if (contacts == null || contacts.Length == 0)
+                return null;
+
+            foreach (ContactAus c in contacts)
+            {
+                if (c.Suburb != null)
+                    return c.Suburb.Name;
+            }
+        }
+        else
+            throw new Exception("Unknown AddressType in config: " + Utilities.GetAddressType().ToString().ToString());
+
+        return null;
+    }
+    protected void GrdReferrer_RowCreated(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType != DataControlRowType.Pager)
+        {
+            foreach (DataControlField col in GrdReferrer.Columns)
+            {
+                if (!chkShowDeleted.Checked)
+                    if (col.HeaderText.ToLower().Trim() == "deleted")
+                        e.Row.Cells[GrdReferrer.Columns.IndexOf(col)].CssClass = "hiddencol";
+
+                if (!UserView.GetInstance().IsAdminView)
+                {
+                    if (col.HeaderText.ToLower().Trim() == "last batch send treatment notes" ||
+                        col.HeaderText.ToLower().Trim() == "treatment notes for all patients")
+                            e.Row.Cells[GrdReferrer.Columns.IndexOf(col)].CssClass = "hiddencol";
+                }
+            }
+        }
+
+        if (!Utilities.IsDev() && e.Row.RowType != DataControlRowType.Pager)
+            e.Row.Cells[0].CssClass = "hiddencol";
+    }
+    protected void GrdReferrer_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        DataTable dt = Session["referrerinfolist_data"] as DataTable;
+        bool tblEmpty = (dt.Rows.Count == 1 && dt.Rows[0][0] == DBNull.Value);
+        if (!tblEmpty && e.Row.RowType == DataControlRowType.DataRow)
+        {
+            Label lblId = (Label)e.Row.FindControl("lblId");
+            DataRow[] foundRows = dt.Select("register_referrer_id=" + lblId.Text);
+            DataRow thisRow = foundRows[0];
+
+            DropDownList ddlTitle = (DropDownList)e.Row.FindControl("ddlTitle");
+            if (ddlTitle != null)
+            {
+                DataTable titles = DBBase.GetGenericDataTable_WithWhereOrderClause(null, "Title", Convert.ToInt32(thisRow["title_id"]) == 0 ? "" : " title_id <> 0 ", " descr ", "title_id", "descr");
+                ddlTitle.DataSource = titles;
+                ddlTitle.DataTextField = "descr";
+                ddlTitle.DataValueField = "title_id";
+                ddlTitle.DataBind();
+                ddlTitle.SelectedValue = thisRow["title_id"].ToString();
+            }
+
+            DropDownList ddlGender = (DropDownList)e.Row.FindControl("ddlGender");
+            if (ddlGender != null)
+            {
+                if (thisRow["gender"].ToString() != "")
+                    for (int i = ddlGender.Items.Count - 1; i >= 0; i--)
+                        if (ddlGender.Items[i].Value == "")
+                            ddlGender.Items.RemoveAt(i);
+            }
+
+            if (ddlTitle != null && ddlGender != null)
+                ddlTitle.Attributes["onchange"] = "title_changed_reset_gender('" + ddlTitle.ClientID + "','" + ddlGender.ClientID + "');";
+
+
+            HyperLink lnkContactInfo = (HyperLink)e.Row.FindControl("lnkContactInfo");
+            if (lnkContactInfo != null)
+            {
+                int entity_id = Convert.ToInt32(thisRow["organisation_entity_id"]);
+
+                string addEditContactListPage;
+                if (Utilities.GetAddressType().ToString() == "Contact")
+                    addEditContactListPage = "AddEditContactList.aspx";
+                else if (Utilities.GetAddressType().ToString() == "ContactAus")
+                    addEditContactListPage = "ContactAusListV2.aspx";
+                else
+                    throw new Exception("Unknown AddressType in config: " + Utilities.GetAddressType().ToString().ToString());
+
+                string allFeatures = "dialogWidth:525px;dialogHeight:430px;center:yes;resizable:no; scroll:no";
+                string js = "javascript:window.showModalDialog('"+addEditContactListPage+"?entity_type=referrer&id=" + entity_id.ToString() + "', '', '" + allFeatures + "');return false;";
+
+                lnkContactInfo.Visible = true;
+                lnkContactInfo.NavigateUrl = "  ";
+                lnkContactInfo.Text = "Clinic Contact";
+                lnkContactInfo.Attributes.Add("onclick", js);
+            }
+            
+
+
+            ImageButton btnDelete = (ImageButton)e.Row.FindControl("btnDelete");
+            if (btnDelete != null)
+            {
+                bool is_deleted = Convert.ToBoolean(thisRow["is_deleted"]);
+                if (is_deleted)
+                {
+                    btnDelete.CommandName = "_UnDelete";
+                    btnDelete.ImageUrl = "~/images/tick-24.png";
+                    btnDelete.AlternateText = "UnDelete";
+                    btnDelete.ToolTip = "UnDelete";
+                }
+            }
+
+            Utilities.AddConfirmationBox(e);
+            if ((e.Row.RowState & DataControlRowState.Edit) > 0)
+                Utilities.SetEditRowBackColour(e, System.Drawing.Color.LightGoldenrodYellow);
+        }
+        if (e.Row.RowType == DataControlRowType.Footer)
+        {
+            DataTable titles = DBBase.GetGenericDataTable_WithWhereOrderClause(null, "Title", " title_id <> 0 ", " descr ", "title_id", "descr");
+            DropDownList ddlTitle = (DropDownList)e.Row.FindControl("ddlNewTitle");
+            ddlTitle.DataSource = titles;
+            ddlTitle.DataBind();
+            ddlTitle.SelectedIndex = Utilities.IndexOf(ddlTitle, "dr", "dr.");
+        }
+    }
+    protected void GrdReferrer_RowCancelingEdit(object sender, GridViewCancelEditEventArgs e)
+    {
+        GrdReferrer.EditIndex = -1;
+        FillGrid();
+    }
+    protected void GrdReferrer_RowUpdating(object sender, GridViewUpdateEventArgs e)
+    {
+        Label        lblId                 = (Label)GrdReferrer.Rows[e.RowIndex].FindControl("lblId");
+        DropDownList ddlTitle              = (DropDownList)GrdReferrer.Rows[e.RowIndex].FindControl("ddlTitle");
+        TextBox      txtFirstname          = (TextBox)GrdReferrer.Rows[e.RowIndex].FindControl("txtFirstname");
+        TextBox      txtMiddlename         = (TextBox)GrdReferrer.Rows[e.RowIndex].FindControl("txtMiddlename");
+        TextBox      txtSurname            = (TextBox)GrdReferrer.Rows[e.RowIndex].FindControl("txtSurname");
+        DropDownList ddlGender             = (DropDownList)GrdReferrer.Rows[e.RowIndex].FindControl("ddlGender");
+
+        TextBox      txtName               = (TextBox)GrdReferrer.Rows[e.RowIndex].FindControl("txtName");
+        TextBox      txtABN                = (TextBox)GrdReferrer.Rows[e.RowIndex].FindControl("txtABN");
+        TextBox      txtACN                = (TextBox)GrdReferrer.Rows[e.RowIndex].FindControl("txtACN");
+
+        TextBox      txtProviderNumber     = (TextBox)GrdReferrer.Rows[e.RowIndex].FindControl("txtProviderNumber");
+        DropDownList ddlIsClinic           = (DropDownList)GrdReferrer.Rows[e.RowIndex].FindControl("ddlIsClinic");
+        CheckBox     chkIsReportEveryVisit = (CheckBox)GrdReferrer.Rows[e.RowIndex].FindControl("chkIsReportEveryVisit");
+        CheckBox     chkIsBatchSendAllPatientsTreatmentNotes = (CheckBox)GrdReferrer.Rows[e.RowIndex].FindControl("chkIsBatchSendAllPatientsTreatmentNotes");
+
+
+        int registger_referrer_id = Convert.ToInt32(lblId.Text);
+
+        DataTable dt = Session["referrerinfolist_data"] as DataTable;
+        DataRow[] foundRows = dt.Select("register_referrer_id=" + registger_referrer_id.ToString());
+        DataRow row = foundRows[0];
+
+        RegisterReferrer rr = RegisterReferrerDB.Load(row);
+        rr.Referrer = ReferrerDB.Load(row);
+        rr.Referrer.Person = PersonDB.Load(row, "", "person_entity_id");
+        rr.Referrer.Person.Title = IDandDescrDB.Load(row, "title_id", "descr");
+        if (row["organisation_id"] != DBNull.Value)
+            rr.Organisation = OrganisationDB.Load(row, "", "organisation_entity_id", "organisation_is_deleted");
+
+        PersonDB.Update(rr.Referrer.Person.PersonID, Convert.ToInt32(ddlTitle.SelectedValue), Utilities.FormatName(txtFirstname.Text), Utilities.FormatName(txtMiddlename.Text), Utilities.FormatName(txtSurname.Text), row["nickname"].ToString(), ddlGender.SelectedValue, row["dob"] == DBNull.Value ? DateTime.MinValue : Convert.ToDateTime(row["dob"]), DateTime.Now);
+        OrganisationDB.UpdateExtOrg(rr.Organisation.OrganisationID, rr.Organisation.OrganisationType.OrganisationTypeID, txtName.Text, txtACN.Text, txtABN.Text, DateTime.Now, rr.Organisation.IsDebtor, rr.Organisation.IsCreditor, rr.Organisation.BpayAccount, rr.Organisation.Comment);
+        RegisterReferrerDB.Update(rr.RegisterReferrerID, rr.Organisation.OrganisationID, rr.Referrer.ReferrerID, txtProviderNumber.Text, chkIsReportEveryVisit.Checked, chkIsBatchSendAllPatientsTreatmentNotes.Checked, rr.DateLastBatchSendAllPatientsTreatmentNotes);
+
+        GrdReferrer.EditIndex = -1;
+        FillGrid();
+
+    }
+    protected void GrdReferrer_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+        Label lblId = (Label)GrdReferrer.Rows[e.RowIndex].FindControl("lblId");
+        int register_referrer_id = Convert.ToInt32(lblId.Text);
+
+        try
+        {
+            RegisterReferrerDB.UpdateInactive(register_referrer_id);
+        }
+        catch (ForeignKeyConstraintException fkcEx)
+        {
+            if (Utilities.IsDev())
+                SetErrorMessage("Can not delete because other records depend on this : " + fkcEx.Message);
+            else
+                SetErrorMessage("Can not delete because other records depend on this");
+        }
+
+        FillGrid();
+    }
+    protected void GrdReferrer_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+        if (e.CommandName.Equals("Insert"))
+        {
+            DropDownList ddlTitle              = (DropDownList)GrdReferrer.FooterRow.FindControl("ddlNewTitle");
+            TextBox      txtFirstname          = (TextBox)GrdReferrer.FooterRow.FindControl("txtNewFirstname");
+            TextBox      txtMiddlename         = (TextBox)GrdReferrer.FooterRow.FindControl("txtNewMiddlename");
+            TextBox      txtSurname            = (TextBox)GrdReferrer.FooterRow.FindControl("txtNewSurname");
+            DropDownList ddlGender             = (DropDownList)GrdReferrer.FooterRow.FindControl("ddlNewGender");
+
+            TextBox      txtName               = (TextBox)GrdReferrer.FooterRow.FindControl("txtNewName");
+            TextBox      txtABN                = (TextBox)GrdReferrer.FooterRow.FindControl("txtNewABN");
+            TextBox      txtACN                = (TextBox)GrdReferrer.FooterRow.FindControl("txtNewACN");
+
+            TextBox      txtProviderNumber     = (TextBox)GrdReferrer.FooterRow.FindControl("txtNewProviderNumber");
+            DropDownList ddlIsClinic           = (DropDownList)GrdReferrer.FooterRow.FindControl("ddlNewIsClinic");
+            CheckBox     chkIsReportEveryVisit = (CheckBox)GrdReferrer.FooterRow.FindControl("chkNewIsReportEveryVisit");
+            CheckBox     chkIsBatchSendAllPatientsTreatmentNotes = (CheckBox)GrdReferrer.FooterRow.FindControl("chkNewIsBatchSendAllPatientsTreatmentNotes");
+
+
+            int person_id            = -1;
+            int referrer_id          = -1;
+            int organisation_id      =  0;
+            int register_referrer_id = -1;
+
+            try
+            {
+                Staff loggedInStaff = StaffDB.GetByID(Convert.ToInt32(Session["StaffID"]));
+                person_id = PersonDB.Insert(loggedInStaff.Person.PersonID, Convert.ToInt32(ddlTitle.SelectedValue), Utilities.FormatName(txtFirstname.Text), Utilities.FormatName(txtMiddlename.Text), Utilities.FormatName(txtSurname.Text), "", ddlGender.SelectedValue, new DateTime(1900, 1, 1));
+                referrer_id = ReferrerDB.Insert(person_id);
+                organisation_id = OrganisationDB.InsertExtOrg(191, txtName.Text, txtACN.Text, txtABN.Text, false, false, "", "");
+                register_referrer_id = RegisterReferrerDB.Insert(organisation_id, referrer_id, txtProviderNumber.Text, chkIsReportEveryVisit.Checked, chkIsBatchSendAllPatientsTreatmentNotes.Checked);
+
+                FillGrid();
+            }
+            catch (Exception)
+            {
+                // roll back - backwards of creation order
+                RegisterReferrerDB.Delete(register_referrer_id);
+                OrganisationDB.Delete(organisation_id);
+                ReferrerDB.Delete(referrer_id);
+                PersonDB.Delete(person_id);
+            }
+        }
+
+        if (e.CommandName.Equals("_Delete") || e.CommandName.Equals("_UnDelete"))
+        {
+            int register_referrer_id = Convert.ToInt32(e.CommandArgument);
+
+            try
+            {
+                if (e.CommandName.Equals("_Delete"))
+                    RegisterReferrerDB.UpdateInactive(register_referrer_id);
+                else
+                    RegisterReferrerDB.UpdateActive(register_referrer_id);
+            }
+            catch (ForeignKeyConstraintException fkcEx)
+            {
+                if (Utilities.IsDev())
+                    SetErrorMessage("Can not delete because other records depend on this : " + fkcEx.Message);
+                else
+                    SetErrorMessage("Can not delete because other records depend on this");
+            }
+
+            FillGrid();
+        }
+
+    }
+    protected void GrdReferrer_RowEditing(object sender, GridViewEditEventArgs e)
+    {
+        GrdReferrer.EditIndex = e.NewEditIndex;
+        FillGrid();
+    }
+    protected void GridView_Sorting(object sender, GridViewSortEventArgs e)
+    {
+        // dont allow sorting if in edit mode
+        if (GrdReferrer.EditIndex >= 0)
+            return;
+
+        DataTable dataTable = Session["referrerinfolist_data"] as DataTable;
+
+        if (dataTable != null)
+        {
+            if (Session["referrerinfolist_sortexpression"] == null)
+                Session["referrerinfolist_sortexpression"] = "";
+
+            DataView dataView = new DataView(dataTable);
+            string[] sortData = Session["referrerinfolist_sortexpression"].ToString().Trim().Split(' ');
+            string newSortExpr = (e.SortExpression == sortData[0] && sortData[1] == "ASC") ? "DESC" : "ASC";
+            dataView.Sort = e.SortExpression + " " + newSortExpr;
+            Session["referrerinfolist_sortexpression"] = e.SortExpression + " " + newSortExpr;
+
+            GrdReferrer.DataSource = dataView;
+            GrdReferrer.DataBind();
+        }
+    }
+    protected void GrdReferrer_PageIndexChanging(object sender, GridViewPageEventArgs e)
+    {
+        GrdReferrer.PageIndex = e.NewPageIndex;
+        FillGrid();
+    }
+
+
+    #endregion
+
+    #region btnSearchSurname, chkUsePaging, chkShowDeleted
+
+    protected void btnSearchSurname_Click(object sender, EventArgs e)
+    {
+        if (!Regex.IsMatch(txtSearchSurname.Text, @"^[a-zA-Z\-\'\s\.]*$"))
+        {
+            SetErrorMessage("Surname can only be letters and hyphens");
+            return;
+        }
+        else
+            HideErrorMessage();
+
+        string url = Request.RawUrl;
+        url = UrlParamModifier.AddEdit(url, "surname_search", txtSearchSurname.Text);
+        url = UrlParamModifier.AddEdit(url, "surname_starts_with", chkSurnameSearchOnlyStartWith.Checked ? "1" : "0");
+        Response.Redirect(url);
+    }
+    protected void btnClearSurnameSearch_Click(object sender, EventArgs e)
+    {
+        if (Request.QueryString["surname_search"] != null || Request.QueryString["surname_starts_with"] != null)
+        {
+            string url = Request.RawUrl;
+            url = UrlParamModifier.Remove(url, "surname_search");
+            url = UrlParamModifier.Remove(url, "surname_starts_with");
+            Response.Redirect(url);
+        }
+        else
+            txtSearchSurname.Text = "";
+    }
+
+    protected void btnSearchProviderNbr_Click(object sender, EventArgs e)
+    {
+        if (!Regex.IsMatch(txtSearchProviderNbr.Text, @"^[0-9a-zA-Z\-]*$"))
+        {
+            SetErrorMessage("Provider Nbr can only be letters and numbers");
+            return;
+        }
+        else
+            HideErrorMessage();
+
+        string url = Request.RawUrl;
+        url = UrlParamModifier.AddEdit(url, "provider_nbr_search", txtSearchProviderNbr.Text);
+        url = UrlParamModifier.AddEdit(url, "provider_nbr_starts_with", chkProviderNbrSearchOnlyStartWith.Checked ? "1" : "0");
+        Response.Redirect(url);
+    }
+    protected void btnClearProviderNbrSearch_Click(object sender, EventArgs e)
+    {
+        if (Request.QueryString["provider_nbr_search"] != null || Request.QueryString["provider_nbr_starts_with"] != null)
+        {
+            string url = Request.RawUrl;
+            url = UrlParamModifier.Remove(url, "provider_nbr_search");
+            url = UrlParamModifier.Remove(url, "provider_nbr_starts_with");
+            Response.Redirect(url);
+        }
+        else
+            txtSearchProviderNbr.Text = "";
+    }
+
+    protected void btnSearchPhoneNbr_Click(object sender, EventArgs e)
+    {
+        if (!Regex.IsMatch(txtSearchPhoneNbr.Text, @"^[0-9]*$"))
+        {
+            SetErrorMessage("Phone Nbr can only be numbers. No spaces, dashes or other characters");
+            return;
+        }
+        else
+            HideErrorMessage();
+
+        string url = Request.RawUrl;
+        url = UrlParamModifier.AddEdit(url, "phone_nbr_search", txtSearchPhoneNbr.Text);
+        url = UrlParamModifier.AddEdit(url, "phone_nbr_starts_with", chkPhoneNbrSearchOnlyStartWith.Checked ? "1" : "0");
+        Response.Redirect(url);
+    }
+    protected void btnClearPhoneNbrSearch_Click(object sender, EventArgs e)
+    {
+        if (Request.QueryString["phone_nbr_search"] != null || Request.QueryString["phone_nbr_starts_with"] != null)
+        {
+            string url = Request.RawUrl;
+            url = UrlParamModifier.Remove(url, "phone_nbr_search");
+            url = UrlParamModifier.Remove(url, "phone_nbr_starts_with");
+            Response.Redirect(url);
+        }
+        else
+            txtSearchPhoneNbr.Text = "";
+    }
+
+
+    protected void chkUsePaging_CheckedChanged(object sender, EventArgs e)
+    {
+        this.GrdReferrer.AllowPaging = chkUsePaging.Checked;
+        FillGrid();
+    }
+    protected void chkShowDeleted_CheckedChanged(object sender, EventArgs e)
+    {
+        FillGrid();
+    }
+
+    #endregion
+
+    #region Generate Batch Notes Sending
+
+    /*
+
+    protected void btnRunBatchSendTreatmentNotes_AllReferrers_SinceLast_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            DateTime startDate = GetStartDate(6, GetLastDateBatchSendTreatmentNotesAllReferrers());
+            DateTime endDate   = DateTime.Now;
+
+            RunBatchSendTreatmentNotes_AllReferrers(startDate, endDate);
+        }
+        catch (CustomMessageException cmEx)
+        {
+            SetErrorMessage(cmEx.Message);
+        }
+    }
+    protected void btnRunBatchSendTreatmentNotes_AllReferrers_Last6Months_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            DateTime startDate = DateTime.Now.AddMonths(-6);
+            DateTime endDate   = DateTime.Now;
+
+            RunBatchSendTreatmentNotes_AllReferrers(startDate, endDate);
+        }
+        catch (CustomMessageException cmEx)
+        {
+            SetErrorMessage(cmEx.Message);
+        }
+    }
+    protected void RunBatchSendTreatmentNotes_AllReferrers(DateTime startDate, DateTime endDate)
+    {
+        ArrayList noteFileList = new ArrayList();
+
+        try
+        {
+
+            // TODO: Send Letter By Email
+
+
+            string tmpLettersDirectory = Letter.GetTempLettersDirectory();
+            if (!Directory.Exists(tmpLettersDirectory))
+                throw new CustomMessageException("Temp letters directory doesn't exist");
+
+
+            // get all notes of all patients of this referrer
+            foreach (RegisterReferrer regReferrer in RegisterReferrerDB.GetAllByBatchSendAllTreatmentNotes(true))
+            {
+                foreach (Patient patient in PatientReferrerDB.GetActivePatientsOf(regReferrer.RegisterReferrerID))
+                {
+                    HealthCard[] hcs = HealthCardDB.GetAllByPatientID(patient.PatientID);
+                    HealthCard hc = hcs[0];
+
+                    Booking[] completedBookings = BookingDB.GetBetween(startDate.Date, endDate, null, null, patient, false, "187");
+                    foreach (Booking booking in completedBookings)
+                    {
+                        if (booking.NoteCount == 0)
+                            continue;
+
+                        Letter.FileContents fileContentsStandardTreatment = booking.GetTreatmentLetter(-1, hc, regReferrer.Referrer, Convert.ToInt32(Session["SiteID"]), Convert.ToInt32(Session["StaffID"]), false, 1);
+                        string tmpFileName_EPCTreatment = FileHelper.GetTempFileName(tmpLettersDirectory + fileContentsStandardTreatment.DocName);
+                        File.WriteAllBytes(tmpFileName_EPCTreatment, fileContentsStandardTreatment.Contents);
+                        noteFileList.Add(tmpFileName_EPCTreatment);
+                    }
+                }
+            }
+
+
+            SetErrorMessage("Generated " + noteFileList.Count + " Notes");
+            if (noteFileList.Count > 0)  // merge
+            {
+                string docName = "TreatmentNotes.doc";
+
+                string tmpFinalFileName = Letter.MergeMultipleDocuments((string[])noteFileList.ToArray(typeof(string)), tmpLettersDirectory + docName);
+                byte[] fileContents = System.IO.File.ReadAllBytes(tmpFinalFileName);
+
+                for (int i = noteFileList.Count - 1; i >= 0; i--)
+                {
+                    File.Delete(noteFileList[i].ToString());
+                    noteFileList.RemoveAt(i);
+                }
+                File.Delete(tmpFinalFileName);
+
+                Session["downloadFile_Contents"] = fileContents;
+                Session["downloadFile_DocName"] = docName;
+                Page.ClientScript.RegisterStartupScript(this.GetType(), "download", "<script language=javascript>window.open('DownloadFile.aspx','_blank','status=1,toolbar=0,menubar=0,location=1,scrollbars=1,resizable=1,width=30,height=30');</script>");
+
+                RegisterReferrerDB.UpdateLastBatchSendAllPatientsTreatmentNotes_All(endDate);
+                SetLastDateBatchSendTreatmentNotesAllReferrers(endDate);
+                FillGrid(); // because each referrers date that has send=true should have been updated
+            }
+
+
+            // don't allow this to be in production:
+            //
+            bool resetGlobalLastPrintedDate = false;
+            bool resetAllRegReferrersLastPrintedDate = false;
+
+            if (resetGlobalLastPrintedDate)
+                SetLastDateBatchSendTreatmentNotesAllReferrers(DateTime.MinValue);
+            if (resetAllRegReferrersLastPrintedDate)
+            {
+                RegisterReferrerDB.UpdateLastBatchSendAllPatientsTreatmentNotes_All(DateTime.MinValue);
+                FillGrid();
+            }
+
+        }
+        catch (CustomMessageException cmEx)
+        {
+            for(int i=noteFileList.Count-1; i>= 0; i--)
+            {
+                File.Delete(noteFileList[i].ToString());
+                noteFileList.RemoveAt(i);
+            }
+            SetErrorMessage(cmEx.Message);
+        }
+    }
+
+    protected void btnRunBatchSendTreatmentNotes_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            object argument = ((Button)sender).CommandArgument;
+            int register_referrer_id = Convert.ToInt32(argument);
+            RegisterReferrer regReferrer = RegisterReferrerDB.GetByID(register_referrer_id);
+            if (regReferrer == null)
+                throw new CustomMessageException("");
+
+            DateTime startDate = DateTime.Now.AddMonths(-6); // GetStartDate(6, regReferrer.DateLastBatchSendAllPatientsTreatmentNotes);
+            DateTime endDate = DateTime.Now;
+
+            RunBatchSendTreatmentNotes(regReferrer, startDate, endDate);
+        }
+        catch (CustomMessageException cmEx)
+        {
+            SetErrorMessage(cmEx.Message);
+        }
+
+    }
+    protected void RunBatchSendTreatmentNotes(RegisterReferrer regReferrer, DateTime startDate, DateTime endDate)
+    {
+        ArrayList noteFileList = new ArrayList();
+
+        try
+        {
+
+            // TODO: Send Letter By Email
+
+
+
+            string tmpLettersDirectory = Letter.GetTempLettersDirectory();
+            if (!Directory.Exists(tmpLettersDirectory))
+                throw new CustomMessageException("Temp letters directory doesn't exist");
+
+
+            // get all notes of all patients of this referrer
+            foreach (Patient patient in PatientReferrerDB.GetActivePatientsOf(regReferrer.RegisterReferrerID))
+            {
+                HealthCard[] hcs = HealthCardDB.GetAllByPatientID(patient.PatientID);
+                HealthCard hc = hcs[0];
+
+                Booking[] completedBookings = BookingDB.GetBetween(startDate.Date, endDate, null, null, patient, false, "187");
+                foreach (Booking booking in completedBookings)
+                {
+                    if (booking.NoteCount == 0)
+                        continue;
+
+                    Letter.FileContents fileContentsStandardTreatment = booking.GetTreatmentLetter(-1, hc, regReferrer.Referrer, Convert.ToInt32(Session["SiteID"]), Convert.ToInt32(Session["StaffID"]), false, 1);
+                    string tmpFileName_EPCTreatment = FileHelper.GetTempFileName(tmpLettersDirectory + fileContentsStandardTreatment.DocName);
+                    File.WriteAllBytes(tmpFileName_EPCTreatment, fileContentsStandardTreatment.Contents);
+                    noteFileList.Add(tmpFileName_EPCTreatment);
+                }
+            }
+
+            if (noteFileList.Count == 0)
+            {
+                SetErrorMessage("No treatment notes for: " + regReferrer.Referrer.Person.Fullname);
+                return;
+            }
+            else  // merge
+            {
+                SetErrorMessage("Treatment notes created for: " + regReferrer.Referrer.Person.Fullname);
+
+                string docName = "TreatmentNotes.doc";
+
+                string tmpFinalFileName = Letter.MergeMultipleDocuments((string[])noteFileList.ToArray(typeof(string)), tmpLettersDirectory + docName);
+                byte[] fileContents = System.IO.File.ReadAllBytes(tmpFinalFileName);
+
+                for (int i = noteFileList.Count - 1; i >= 0; i--)
+                {
+                    File.Delete(noteFileList[i].ToString());
+                    noteFileList.RemoveAt(i);
+                }
+                File.Delete(tmpFinalFileName);
+
+                Session["downloadFile_Contents"] = fileContents;
+                Session["downloadFile_DocName"] = docName;
+                Page.ClientScript.RegisterStartupScript(this.GetType(), "download", "<script language=javascript>window.open('DownloadFile.aspx','_blank','status=1,toolbar=0,menubar=0,location=1,scrollbars=1,resizable=1,width=30,height=30');</script>");
+
+            }
+
+            RegisterReferrerDB.UpdateLastBatchSendAllPatientsTreatmentNotes(regReferrer.RegisterReferrerID, endDate);
+            FillGrid();
+        }
+        catch (CustomMessageException cmEx)
+        {
+            for (int i = noteFileList.Count - 1; i >= 0; i--)
+            {
+                File.Delete(noteFileList[i].ToString());
+                noteFileList.RemoveAt(i);
+            }
+            SetErrorMessage(cmEx.Message);
+        }
+    }
+
+    protected DateTime GetStartDate(int maxMonths, DateTime lastSendDate)
+    {
+        bool hasLastSendDateAndNotOverMaxMonthsAgo = (lastSendDate != DateTime.MinValue && lastSendDate > DateTime.Now.AddMonths(-1 * maxMonths));
+        return hasLastSendDateAndNotOverMaxMonthsAgo ? lastSendDate : DateTime.Now.AddMonths(-1 * maxMonths);
+    }
+
+    */
+
+    #endregion
+
+    protected void btnMovePatients_Click(object sender, EventArgs e)
+    {
+        RegisterReferrer regRefFrom = RegisterReferrerDB.GetByID(Convert.ToInt32(hiddenMovePatientFrom.Value));
+        RegisterReferrer regRefTo   = RegisterReferrerDB.GetByID(Convert.ToInt32(hiddenMovePatientTo.Value));
+
+        PatientReferrerDB.UpdateMoveAllPatients(regRefFrom.RegisterReferrerID, regRefTo.RegisterReferrerID);
+        FillGrid();
+
+        SetErrorMessage("<font color=\"black\">Patients Moved From</font> &nbsp;&nbsp; " + regRefFrom.Referrer.Person.Firstname + " " + regRefFrom.Referrer.Person.Surname + "[" + regRefFrom.Organisation.Name + "] &nbsp;&nbsp;<font color=\"black\">to</font> &nbsp;&nbsp;" + regRefTo.Referrer.Person.Firstname + " " + regRefTo.Referrer.Person.Surname + "[" + regRefTo.Organisation.Name + "]");
+    }
+
+
+    #region SetErrorMessage, HideErrorMessage
+
+    private void HideTableAndSetErrorMessage(string errMsg = "", string details = "")
+    {
+        SetErrorMessage(errMsg, details);
+    }
+    private void SetErrorMessage(string errMsg = "", string details = "")
+    {
+        if (errMsg.Contains(Environment.NewLine))
+            errMsg = errMsg.Replace(Environment.NewLine, "<br />");
+
+        // double escape so shows up literally on webpage for 'alert' message
+        string detailsToDisplay = (details.Length == 0 ? "" : " <a href=\"#\" onclick=\"alert('" + details.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("'", "\\'").Replace("\"", "\\'") + "'); return false;\">Details</a>");
+
+        lblErrorMessage.Visible = true;
+        if (errMsg != null && errMsg.Length > 0)
+            lblErrorMessage.Text = errMsg + detailsToDisplay + "<br />";
+        else
+            lblErrorMessage.Text = "An error has occurred. Plase contact the system administrator. " + detailsToDisplay + "<br />";
+    }
+    private void HideErrorMessage()
+    {
+        lblErrorMessage.Visible = false;
+        lblErrorMessage.Text = "";
+    }
+
+    #endregion
+
+}

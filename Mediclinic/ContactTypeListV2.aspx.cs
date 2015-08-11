@@ -1,0 +1,265 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Configuration;
+using System.Text.RegularExpressions;
+using System.Collections;
+
+public partial class ContactTypeListV2 : System.Web.UI.Page
+{
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        try
+        {
+
+            if (!IsPostBack)
+                Utilities.SetNoCache(Response);
+            HideErrorMessage();
+            Utilities.UpdatePageHeaderV2(Page.Master, true);
+
+            if (!IsPostBack)
+            {
+                PagePermissions.EnforcePermissions_RequireAll(Session, Response, false, false, true, false, false, true);
+                Session.Remove("contacttype_sortexpression");
+                Session.Remove("contacttype_data");
+                FillContactTypeGrid();
+            }
+
+            this.GrdContactType.EnableViewState = true;
+
+        }
+        catch (CustomMessageException ex)
+        {
+            if (IsPostBack) SetErrorMessage(ex.Message);
+            else HideTableAndSetErrorMessage(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            if (IsPostBack) SetErrorMessage("", ex.ToString());
+            else HideTableAndSetErrorMessage("", ex.ToString());
+        }
+    }
+
+    #region GrdContactType
+
+    protected void FillContactTypeGrid()
+    {
+        DataTable dt_contact_type = ContactTypeDB.GetDataTable(-1);
+
+        Session["contacttype_data"] = dt_contact_type;
+
+        if (dt_contact_type.Rows.Count > 0)
+        {
+
+            if (IsPostBack && Session["contacttype_sortexpression"] != null && Session["contacttype_sortexpression"].ToString().Length > 0)
+            {
+                DataView dataView = new DataView(dt_contact_type);
+                dataView.Sort = Session["contacttype_sortexpression"].ToString();
+                GrdContactType.DataSource = dataView;
+            }
+            else
+            {
+                GrdContactType.DataSource = dt_contact_type;
+            }
+
+
+            try
+            {
+                GrdContactType.DataBind();
+            }
+            catch (Exception ex)
+            {
+                this.lblErrorMessage.Visible = true;
+                this.lblErrorMessage.Text = ex.ToString();
+            }
+        }
+        else
+        {
+            dt_contact_type.Rows.Add(dt_contact_type.NewRow());
+            GrdContactType.DataSource = dt_contact_type;
+            GrdContactType.DataBind();
+
+            int TotalColumns = GrdContactType.Rows[0].Cells.Count;
+            GrdContactType.Rows[0].Cells.Clear();
+            GrdContactType.Rows[0].Cells.Add(new TableCell());
+            GrdContactType.Rows[0].Cells[0].ColumnSpan = TotalColumns;
+            GrdContactType.Rows[0].Cells[0].Text = "No Record Found";
+        }
+    }
+    protected void GrdContactType_RowCreated(object sender, GridViewRowEventArgs e)
+    {
+        if (!Utilities.IsDev() && e.Row.RowType != DataControlRowType.Pager)
+            e.Row.Cells[0].CssClass = "hiddencol";
+    }
+    protected void GrdContactType_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        DataTable groups = DBBase.GetGenericDataTable_WithWhereOrderClause(null, "ContactTypeGroup", "", "descr", "contact_type_group_id", "descr");
+
+        DataTable dt_contact_type = Session["contacttype_data"] as DataTable;
+        bool tblEmpty = (dt_contact_type.Rows.Count == 1 && dt_contact_type.Rows[0][0] == DBNull.Value);
+        if (!tblEmpty && e.Row.RowType == DataControlRowType.DataRow)
+        {
+            Label lblId = (Label)e.Row.FindControl("lblContactTypeId");
+            DataRow[] foundRows = dt_contact_type.Select("at_contact_type_id=" + lblId.Text);
+            DataRow thisRow = foundRows[0];
+
+
+            DropDownList ddlContactTypeGroup = (DropDownList)e.Row.FindControl("ddlContactTypeGroup");
+            if (ddlContactTypeGroup != null)
+            {
+                foreach (DataRow row in groups.Rows)
+                    ddlContactTypeGroup.Items.Add(new ListItem(row["descr"].ToString(), row["contact_type_group_id"].ToString()));
+                ddlContactTypeGroup.SelectedValue = Convert.ToString(thisRow["at_contact_type_group_id"]);
+            }
+
+            DropDownList ddlDisplayOrder = (DropDownList)e.Row.FindControl("ddlDisplayOrder");
+            if (ddlDisplayOrder != null)
+            {
+                int lowest_display_order  = 0;
+                int highest_display_order = 50;
+
+                int display_order = Convert.ToInt32(thisRow["at_display_order"]);
+                if (display_order < lowest_display_order)
+                    ddlDisplayOrder.Items.Add(new ListItem(display_order.ToString(), display_order.ToString()));
+                for (int i = lowest_display_order; i <= highest_display_order; i++)
+                    ddlDisplayOrder.Items.Add(new ListItem(i.ToString(), i.ToString()));
+                if (display_order > highest_display_order)
+                    ddlDisplayOrder.Items.Add(new ListItem(display_order.ToString(), display_order.ToString()));
+
+                ddlDisplayOrder.SelectedValue = display_order.ToString();
+            }
+
+            Utilities.AddConfirmationBox(e);
+            if ((e.Row.RowState & DataControlRowState.Edit) > 0)
+                Utilities.SetEditRowBackColour(e, System.Drawing.Color.LightGoldenrodYellow);
+        }
+        if (e.Row.RowType == DataControlRowType.Footer)
+        {
+            DropDownList ddlContactTypeGroup = (DropDownList)e.Row.FindControl("ddlNewContactTypeGroup");
+            foreach (DataRow row in groups.Rows)
+                ddlContactTypeGroup.Items.Add(new ListItem(row["descr"].ToString(), row["contact_type_group_id"].ToString()));
+
+            DropDownList ddlDisplayOrder = (DropDownList)e.Row.FindControl("ddlNewDisplayOrder");
+            for (int i = 0; i <= 50; i++)
+                ddlDisplayOrder.Items.Add(new ListItem(i.ToString(), i.ToString()));
+        }
+    }
+    protected void GrdContactType_RowCancelingEdit(object sender, GridViewCancelEditEventArgs e)
+    {
+        GrdContactType.EditIndex = -1;
+        FillContactTypeGrid();
+    }
+    protected void GrdContactType_RowUpdating(object sender, GridViewUpdateEventArgs e)
+    {
+        Label lblId = (Label)GrdContactType.Rows[e.RowIndex].FindControl("lblContactTypeId");
+        TextBox txtDesc = (TextBox)GrdContactType.Rows[e.RowIndex].FindControl("txtDesc");
+        DropDownList ddlContactTypeGroup = (DropDownList)GrdContactType.Rows[e.RowIndex].FindControl("ddlContactTypeGroup");
+        DropDownList ddlDisplayOrder = (DropDownList)GrdContactType.Rows[e.RowIndex].FindControl("ddlDisplayOrder");
+
+        ContactTypeDB.Update(Convert.ToInt32(lblId.Text), Convert.ToInt32(ddlContactTypeGroup.SelectedValue), txtDesc.Text, Convert.ToInt32(ddlDisplayOrder.SelectedValue));
+
+        GrdContactType.EditIndex = -1;
+        FillContactTypeGrid();
+    }
+    protected void GrdContactType_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+        Label lblId = (Label)GrdContactType.Rows[e.RowIndex].FindControl("lbContactTypelId");
+        int contact_type_id = Convert.ToInt32(lblId.Text);
+
+        try
+        {
+            //ContactTypeDB.UpdateInactive(contact_type_id);
+        }
+        catch (ForeignKeyConstraintException fkcEx)
+        {
+            if (Utilities.IsDev())
+                SetErrorMessage("Can not delete because other records depend on this : " + fkcEx.Message);
+            else
+                SetErrorMessage("Can not delete because other records depend on this");
+        }
+
+        FillContactTypeGrid();
+    }
+    protected void GrdContactType_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+        if (e.CommandName.Equals("Insert"))
+        {
+            TextBox txtDesc = (TextBox)GrdContactType.FooterRow.FindControl("txtNewDesc");
+            DropDownList ddlContactTypeGroup = (DropDownList)GrdContactType.FooterRow.FindControl("ddlNewContactTypeGroup");
+            DropDownList ddlDisplayOrder = (DropDownList)GrdContactType.FooterRow.FindControl("ddlNewDisplayOrder");
+
+            ContactTypeDB.Insert(Convert.ToInt32(ddlContactTypeGroup.SelectedValue), txtDesc.Text, Convert.ToInt32(ddlDisplayOrder.SelectedValue));
+
+            FillContactTypeGrid();
+        }
+    }
+    protected void GrdContactType_RowEditing(object sender, GridViewEditEventArgs e)
+    {
+        GrdContactType.EditIndex = e.NewEditIndex;
+        FillContactTypeGrid();
+    }
+    protected void GrdContactType_Sorting(object sender, GridViewSortEventArgs e)
+    {
+        // dont allow sorting if in edit mode
+        if (GrdContactType.EditIndex >= 0)
+            return;
+
+        DataTable dataTable = Session["contacttype_data"] as DataTable;
+
+        if (dataTable != null)
+        {
+            if (Session["contacttype_sortexpression"] == null)
+                Session["contacttype_sortexpression"] = "";
+
+            DataView dataView = new DataView(dataTable);
+            string[] sortData = Session["contacttype_sortexpression"].ToString().Trim().Split(' ');
+            string newSortExpr = (e.SortExpression == sortData[0] && sortData[1] == "ASC") ? "DESC" : "ASC";
+            dataView.Sort = e.SortExpression + " " + newSortExpr;
+            Session["contacttype_sortexpression"] = e.SortExpression + " " + newSortExpr;
+
+            GrdContactType.DataSource = dataView;
+            GrdContactType.DataBind();
+        }
+    }
+    protected void GrdContactType_PageIndexChanging(object sender, GridViewPageEventArgs e)
+    {
+        GrdContactType.PageIndex = e.NewPageIndex;
+        FillContactTypeGrid();
+    }
+
+    #endregion
+
+    #region SetErrorMessage, HideErrorMessage
+
+    private void HideTableAndSetErrorMessage(string errMsg = "", string details = "")
+    {
+        SetErrorMessage(errMsg, details);
+    }
+    private void SetErrorMessage(string errMsg = "", string details = "")
+    {
+        if (errMsg.Contains(Environment.NewLine))
+            errMsg = errMsg.Replace(Environment.NewLine, "<br />");
+
+        // double escape so shows up literally on webpage for 'alert' message
+        string detailsToDisplay = (details.Length == 0 ? "" : " <a href=\"#\" onclick=\"alert('" + details.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("'", "\\'").Replace("\"", "\\'") + "'); return false;\">Details</a>");
+
+        lblErrorMessage.Visible = true;
+        if (errMsg != null && errMsg.Length > 0)
+            lblErrorMessage.Text = errMsg + detailsToDisplay + "<br />";
+        else
+            lblErrorMessage.Text = "An error has occurred. Plase contact the system administrator. " + detailsToDisplay + "<br />";
+    }
+    private void HideErrorMessage()
+    {
+        lblErrorMessage.Visible = false;
+        lblErrorMessage.Text = "";
+    }
+
+    #endregion
+
+}

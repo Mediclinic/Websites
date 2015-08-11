@@ -1,0 +1,38 @@
+﻿<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Right Click Demo</title>
+        <link rel="stylesheet" href="http://code.jquery.com/mobile/1.1.0/jquery.mobile-1.1.0.min.css" />
+        <link rel="stylesheet" type="text/css" href="http://dev.jtsage.com/cdn/simpledialog/latest/jquery.mobile.simpledialog.min.css" />
+        <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
+        <script type="text/javascript" src="http://code.jquery.com/mobile/1.1.0/jquery.mobile-1.1.0.min.js"></script>
+        <script type="text/javascript" src="http://dev.jtsage.com/cdn/simpledialog/latest/jquery.mobile.simpledialog2.min.js"></script>
+
+    </head>
+
+
+    <body>
+        <div data-role="content">	
+            <div id="testy"  class="touchableImage">
+                Test Here...
+            </div>
+        </div>
+        <script>
+            $(".touchableImage").on("taphold", function (e) {
+
+                //alert('aa');
+
+                //e.stopPropagation();
+                $(this).simpledialog2({
+                    mode: "blank",
+                    headerText: "Image Options",
+                    showModal: false,
+                    forceInput: true,
+                    headerClose: true,
+                    blankContent: "<ul data-role='listview'><li><a href=''>Send to Facebook</a></li><li><a href=''>Send to Twitter</a></li><li><a href=''>Send to Cat</a></li></ul>"
+                });
+            });
+        </script>
+    </body>
+</html>

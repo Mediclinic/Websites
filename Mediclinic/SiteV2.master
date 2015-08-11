@@ -1,0 +1,307 @@
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeFile="SiteV2.master.cs" Inherits="SiteMasterV2" %>
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <title></title>
+
+    <meta charset="utf-8" />
+    <link href="/StylesV2/bootstrap.min.css" rel="stylesheet" />
+    <link href="/Styles/date_picker.css" rel="stylesheet" type="text/css" />
+    <link href="/StylesV2/style.css" rel="stylesheet" />
+
+    <script type="text/javascript" src="/ScriptsV2/jquery-2.1.0.js" ></script>
+    <!--script type="text/javascript" src="Scripts/jquery-1.4.1.min.js"></!--script> <!-- used for slid-out-div .. but has problem s when added below this point -->
+    <script type="text/javascript" src="/ScriptsV2/jquery-migrate-1.2.1.js" ></script>
+    <script type="text/javascript" src="/ScriptsV2/supersleight-min.js" ></script>
+    <script type="text/javascript" src="/ScriptsV2/bootstrap.min.js" ></script>
+    <script type="text/javascript" src="/ScriptsV2/plugins.js"></script>
+    <script type="text/javascript" src="/Scripts/date_picker.js" ></script>
+    <script type="text/javascript">initAll();</script>
+    <script type="text/javascript" src="/Scripts/set_focus_color.js"></script>
+    <script type="text/javascript" src="/Scripts/addloadevent.js" ></script>
+    <script type="text/javascript" src="/ScriptsV2/autodivheight.js" ></script>
+    <!--script type="text/javascript" src="/ScriptsV2/showModalDialog.js"></script--->
+
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server">
+    </asp:ContentPlaceHolder>
+
+    <script type="text/javascript">
+
+        //addLoadEvent(show_menu);
+        addLoadEvent(function () { document.getElementById("div_menu").style.display = "block"; });
+
+        function is_aged_care() { return document.getElementById("lblSiteIsAgedCare").value == "1"; }
+        function is_clinics()   { return document.getElementById("lblSiteIsClinic").value   == "1"; }
+
+        function show_hide(id, show) {
+            if (show == null) {
+                obj = document.getElementById(id);
+                obj.style.display = (obj.style.display == "none") ? "" : "none";
+            } else {
+                obj = document.getElementById(id);
+                obj.style.display = show ? "" : "none";
+            }
+        }
+
+        function open_new_tab(URL) {
+            var win = window.open(URL, '_blank');
+            win.focus();
+        }
+
+        function ajax_check_session_timed_out() {
+
+            var xmlhttp = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
+            xmlhttp.open("GET", "/AJAX/AjaxCheckTimedOut.aspx", false);
+            xmlhttp.send();
+
+            var response = String(xmlhttp.responseText);
+            if (response == "SessionTimedOutException")
+                return true;
+            return response != "0";
+        }
+
+        function menu_showontyropage(obj) {
+
+            if (!isTyro)
+                return;
+
+            var oj = obj.parentNode;
+            if (oj.getAttribute('class') == 'dropdown') {
+                oj.setAttribute('class', 'dropdown open');
+            } else {
+                oj.setAttribute('class', 'dropdown');
+            }
+        }
+
+    </script>
+
+</head>
+<body>
+    <div id="mainsection" runat="server" class="mainsection">
+    <form id="form1" runat="server">
+    <asp:HiddenField ID="lblSiteIsClinic" runat="server" />
+    <asp:HiddenField ID="lblSiteIsAgedCare" runat="server" />
+
+
+    <div class="clearfix">
+        <div id="banner" runat="server" style="background: url(../imagesV2/comp_logo.png) no-repeat center center;">
+            <div id="banner_message">
+                <span class="banner_text"><asp:Label ID="lblSiteName" runat="server"/></span>
+                <div class="quick_access">
+                    <asp:Label ID="lblDataStoredAusServersMsg" runat="server">ALL DATA STORED IN AUSTRALIA ON AUSTRALIAN SERVERS</asp:Label>
+                    &nbsp;&nbsp;
+                    &nbsp;<asp:HyperLink ID="lnkLiveSupport" runat="server" NavigateUrl="http://203.213.66.106/~houseofi/dev/mediclinicTeamViewer/" style="background-color:yellow;font-size:large;">Live Support</asp:HyperLink>&nbsp;
+                    <div style="height:3px;"></div>
+                </div>
+            </div>
+            <div id="quick_info_access">
+                <div id="spn_login_display" runat="server">
+                    <span class="banner_welcome_text"><asp:Label ID="lblUsername" runat="server" Font-Bold="True" Font-Size="Larger" />&nbsp; <span style="font-weight:normal;">at</span> &nbsp;<asp:Label ID="lblSiteOrOrg" runat="server" Font-Bold="True" Font-Size="Larger"></asp:Label></span><br/>
+                    <div class="quick_access">
+
+                        <table style="width:100%;">
+                            <tr>
+                                <td style="text-align:left;">
+
+                                    <asp:Label ID="lnkSelectSite_OpenBracket" runat="server">[ </asp:Label>
+                                    <asp:HyperLink ID="lnkSelectSite" runat="server" NavigateUrl="~/Account/SelectSiteV2.aspx">Change Site</asp:HyperLink>
+                                    <asp:Label ID="lnkSelectSite_CloseBracket" runat="server"> ]</asp:Label>
+
+                                    <asp:Label ID="lnkSelectOrg_OpenBracket" runat="server">[ </asp:Label>
+                                    <asp:HyperLink ID="lnkSelectOrg" runat="server" NavigateUrl="~/Account/SelectOrgV2.aspx">Change Org</asp:HyperLink>
+                                    <asp:Label ID="lnkSelectOrg_CloseBracket" runat="server"> ]</asp:Label>
+
+                                    <asp:Label ID="lnkChangePwd_OpenBracket" runat="server">[ </asp:Label>
+                                    <asp:HyperLink ID="lnkChangePwd" runat="server" NavigateUrl="~/Account/ChangePasswordV2.aspx">Change Password</asp:HyperLink>
+                                    <asp:Label ID="lnkChangePwd_CloseBracket" runat="server"> ]</asp:Label>
+
+                                    [ <a href="~/Account/LogoutV2.aspx" id="HeadLoginStatus" runat="server">Log Out</a> ]
+
+                                </td>
+                                <td style="text-align:right;">
+                                    <asp:Label ID="lblPageLoadTime" runat="server"/>
+                                </td>
+                            </tr>
+                        </table>
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <nav id="nav" runat="server" class="clearfix">
+
+            <div id="div_menu" runat="server">
+                <div id="div_menu2" runat="server">
+
+                    <ul id="nav_ul" runat="server" class="nav">
+
+                        <li id="mh_staff" runat="server" class="dropdown">
+                            <a href="javascript:;" data-toggle="dropdown" onclick="menu_showontyropage(this); return false;" class="dropdown-toggle">Staff<b class="caret"></b></a>
+                            <ul class="dropdown-menu">
+                                <li><a href="/StaffListV2.aspx">Staff List - Internal</a></li>
+                                <li><a href="/StaffListExternalV2.aspx">Staff List - External</a></li>
+                                <li><a href="/StaffDetailV2.aspx?type=add">Add Staff Member - Internal</a></li>
+                                <li><a href="/StaffDetailExternalV2.aspx?type=add">Add Staff Member - External</a></li>
+                                <li><a href="/EmailEmployeesV2.aspx">Email All Staff</a></li>
+                                <li runat="server" visible="false"><a href="/CostCentreListV2.aspx">Cost Centres</a></li>
+                                <li><a href="/StaffStatsV2.aspx">Statistics</a></li>
+                                <li><a href="/StaffLoginsV2.aspx">User Logins</a></li>
+                            </ul>
+                        </li><li id="mh_staff_spacer" runat="server" class="nav_spacer"></li>
+
+                        <li id="mh_organisation" runat="server" class="dropdown">
+                            <a href="javascript:;" data-toggle="dropdown" onclick="menu_showontyropage(this); return false;" class="dropdown-toggle"><asp:Label ID="lblMenuOrganisations" runat="server">Organisations</asp:Label><b class="caret"></b></a>
+                            <ul class="dropdown-menu">
+                                <li><asp:HyperLink ID="lnkMenuOrganisationList" runat="server">Organisations List</asp:HyperLink></li>
+                                <li><asp:HyperLink ID="lnkMenuAddOrganisation" runat="server">Add Organisations</asp:HyperLink></li>
+                                <li><asp:HyperLink ID="lnkMenuOrganisationCustomerTypes" runat="server" NavigateUrl="~/OrganisationCustomerTypeListV2.aspx">Organisations Customer Types</asp:HyperLink></li>
+                                <li><a href="/OrganisationStatsV2.aspx">Statistics</a></li>
+                                <li style="color:white;"><div style="height:2px;width:100%;background:#ededed;"></div></li>
+                                <li><a href="/OrganisationListV2.aspx?type=ins">Insurance Companies List</a></li>
+                                <li><a href="/OrganisationDetailV2.aspx?type=add&orgtype=ins">Add Insurance Company</a></li>
+                            </ul>
+                        </li><li id="mh_organisation_spacer" runat="server" class="nav_spacer"></li>
+
+                        <li id="mh_patients" runat="server" class="dropdown">
+                            <a href="javascript:;" data-toggle="dropdown" onclick="menu_showontyropage(this); return false;" class="dropdown-toggle"><asp:Label ID="lblMenuPatients" runat="server">Patients</asp:Label><b class="caret"></b></a>
+                            <ul class="dropdown-menu">
+                                <li><asp:HyperLink ID="lnkMenuPatientList" runat="server" NavigateUrl="~/PatientListV2.aspx">Patient List</asp:HyperLink></li>
+                                <li><asp:HyperLink ID="lnkMenuPatientAdd"  runat="server" NavigateUrl="~/PatientAddV2.aspx">Add Patient</asp:HyperLink></li>
+                                <li id="mi_patient_add_with_id" runat="server"><asp:HyperLink ID="lnkMenuPatientAddWithID"  runat="server" NavigateUrl="~/PatientAddV3.aspx">Add Patient <b>WITH ID</b></asp:HyperLink></li>
+                                <li id="mi_patient_cond_list" runat="server"><a href="/ConditionListV2.aspx">Patient Conditions Full List</a></li>
+                                <li id="mi_patient_ac_types"  runat="server"><a href="/OfferingListV2.aspx?is_ac_res_types=1">Resident Types</a></li>
+                                <li id="mi_patient_ac_types_prices_per_fac" runat="server"><a href="/RegisterOfferingToOrganisationV2.aspx?is_ac_res_types=1">Resident Types - Set Specific Prices Per Facility/Wing/Unit</a></li>
+                            </ul>
+                        </li><li id="mh_patients_space" runat="server" class="nav_spacer"></li>
+
+                        <li id="mh_referrers" runat="server" class="dropdown">
+                            <a href="javascript:;" data-toggle="dropdown" onclick="menu_showontyropage(this); return false;" class="dropdown-toggle">Referrers<b class="caret"></b></a>
+                            <ul class="dropdown-menu">
+                                <li><a href="/ReferrerList_DoctorsV2.aspx">Referrer List (Doctors)</a></li>
+                                <li><a href="/ReferrerList_ClinicsV2.aspx">Referrer List (Clinics)</a></li>
+                                <li><a href="/ReferrerList_DoctorClinicV2.aspx">Referrer List (Doctor-Clinic)</a></li>
+                                <li><a href="/ReferrerAddV2.aspx">Add Referrer</a></li>
+                                <li id="mi_referrer_epc_letters_generate_unsent_list" runat="server"><a href="/ReferrerEPCLetters_GenerateUnsentV2.aspx">Referral Letters - Generate Unsent</a></li>
+                                <li id="mi_referrer_epc_letters_reprint_list"         runat="server"><a href="/ReferrerEPCLetters_ReprintV2.aspx">Referral Letters - Re-Print</a></li>
+                            </ul>
+                        </li><li id="mh_referrers_space" runat="server" class="nav_spacer"></li>
+
+                        <li id="mh_bookings" runat="server" class="dropdown">
+                            <a href="javascript:;" data-toggle="dropdown" onclick="menu_showontyropage(this); return false;" class="dropdown-toggle"><asp:Label ID="lblMenuBookings" runat="server">Bookings & Sales</asp:Label><b class="caret"></b></a>
+                            <ul class="dropdown-menu">
+                                <li id="mi_bookings_call_center"                          runat="server"><a id="mi_link_bookings_call_center" runat="server" href="/CallCenterV2.aspx">Call Centre</a></li>
+                                <li><a id="mi_link_next_available"                        runat="server" href="/BookingNextAvailableV2.aspx">Next Available Booking</a></li>
+                                <li><a id="mi_link_bookings"                              runat="server" href="/SelectOrganisationsV2.aspx">Booking Sheet</a></li>
+                                <li id="mi_bookings_list"                                 runat="server"><a id="mi_link_bookings_list" runat="server" href="/BookingsListV2.aspx">Bookings List</a></li>
+                                <li id="mi_bookings_report"                               runat="server"><a href="/Report_BookingsV2.aspx">Bookings Report</a></li>
+                                <li id="mi_bookings_schedule_report"                      runat="server"><a href="/Report_ScheduleV2.aspx">Schedule Report</a></li>
+                                <li id="mi_bookings_hours_worked_report"                  runat="server"><a href="/Report_HoursWorkedV2.aspx">Hours Worked Report</a></li>
+                                <li id="mi_bookings_change_edit_reason"                   runat="server"><a href="/BookingChangeHistoryReasonListV2.aspx">Booking Edit Reason List</a></li>					
+                                <li id="mi_bookings_change_unavailability_reason"         runat="server"><a href="/BookingUnavailabilityReasonListV2.aspx">Booking Unavailability Reason List</a></li>
+                                <li id="mi_bookings_offerings_seperator"                  runat="server" style="color:white;"><div style="height:2px;width:100%;background:#ededed;"></div></li>
+                                <li id="mi_bookings_offerings_products_and_services_list" runat="server"><a id="mi_link_offerings_products_and_services_list" runat="server" href="/OfferingListV2.aspx">Products & Services List</a></li>
+                                <li id="mi_bookings_offerings_set_specific_prices"        runat="server"><a id="mi_link_offerings_set_specific_prices" runat="server" href="/RegisterOfferingToOrganisationV2.aspx">Set Specific Prices Per Clinic</a></li>
+                                <li id="mi_bookings_offerings_stock"                      runat="server"><a id="mi_link_offerings_stock"               runat="server" href="/StockListV2.aspx">Stock</a></li>
+                                <li id="mi_bookings_offerings_outstanding_orders"         runat="server"><a id="mi_link_offerings_outstanding_orders"  runat="server" href="/OfferingOrderListV2.aspx">Orders</a></li>
+                                <li id="mi_bookings_offerings_invoice_cash_add"           runat="server"><a id="mi_link_offerings_invoice_cash_add" runat="server" href="/InvoiceCashAddV2.aspx">Cash Sale</a></li>
+                            </ul>
+                        </li><li id="mh_bookings_space" runat="server" class="nav_spacer"></li>
+
+                        <li id="mh_sales" runat="server" class="dropdown">
+                            <a href="javascript:;" data-toggle="dropdown" onclick="menu_showontyropage(this); return false;" class="dropdown-toggle">Sales<b class="caret"></b></a>
+                            <ul class="dropdown-menu">
+                                <li><a id="mi_link_sales_invoice_cash_add" runat="server" href="/InvoiceCashAddV2.aspx">Cash Sale</a></li>
+                            </ul>
+                        </li><li id="mh_sales_space" runat="server" class="nav_spacer"></li>
+
+                        <li id="mh_financials" runat="server" class="dropdown">
+                            <a href="javascript:;" data-toggle="dropdown" onclick="menu_showontyropage(this); return false;" class="dropdown-toggle">Financials<b class="caret"></b></a>
+                            <ul class="dropdown-menu">
+                                <li><a href="/InvoiceListV2.aspx">All Invoices</a></li>
+                                <li><a href="/InvoiceListV2.aspx?inc_medicare=1&inc_dva=0&inc_tac=0&inc_private=0">Medicare Invoices</a></li>
+                                <li><a href="/InvoiceListV2.aspx?inc_medicare=0&inc_dva=1&inc_tac=0&inc_private=0">DVA Invoices</a></li>
+                                <li><a href="/InvoiceListV2.aspx?inc_medicare=0&inc_dva=0&inc_tac=1&inc_private=0">Insurance Invoices</a></li>
+                                <li><a href="/InvoiceListV2.aspx?only_rejected=1">Rejected Invoices</a></li>
+                                <li><a href="/InvoicesOutstandingV2.aspx">Outstanding Invoices</a></li>
+                                <li><a href="/StaffOfferingsListV2.aspx">Staff Commission</a></li>
+                                <li><a href="/InvoiceLineListV2.aspx">Invoice Items</a></li>
+                                <li><a href="/ReceiptsListV2.aspx">Receipts</a></li>
+                                <li id="mi_financials_ezidebit_info"        runat="server"><a href="/EzidebitInfoV2.aspx">Ezidebit Info</a></li>
+                                <li id="mi_financials_claim_nbr_allocation" runat="server"><a href="/ClaimNumbersAllocationV2.aspx">Claim Numbers Allocation</a></li>
+                                <li id="mi_financials_claim_nbrs_allocated" runat="server"><a href="/ClaimNumbersAllocation_AllDBsV2.aspx">Claim Numbers Allocated</a></li>
+                                <li id="mi_financials_hinx_generation"      runat="server"><a href="/HinxGenerationV2.aspx">Hinx Files</a></li>
+                            </ul>
+                        </li><li id="mh_financials_spacer" runat="server" class="nav_spacer"></li>
+
+                        <li id="mh_letters" runat="server" class="dropdown">
+                            <a href="javascript:;" data-toggle="dropdown" onclick="menu_showontyropage(this); return false;" class="dropdown-toggle">Letters<b class="caret"></b></a>
+                            <ul class="dropdown-menu">
+                                <li id="mi_letters_maintain"                      runat="server"><a href="/Letters_MaintainV2.aspx?org=0">Maintain Letters</a></li>
+                                <li id="mi_letters_maintain_treatment_letters"    runat="server"><a href="/Letters_MaintainTreatmentLettersV2.aspx?org=0">Treatment Letters</a></li>
+                                <li id="mi_letters_print"                         runat="server"><a id="mi_link_letters_print" runat="server" href="/Letters_PrintV2.aspx">Print Letter</a></li>
+                                <li id="mi_letters_print_batch"                   runat="server"><a href="/Letters_PrintBatchV2.aspx">Marketing (To Patients)</a></li>
+                                <li id="mi_letters_print_batch_referrers"         runat="server"><a href="/Letters_PrintBatchReferrersV2.aspx">Marketing (To Referrers)</a></li>
+                                <li id="mi_letters_recall"                        runat="server"><a href="/Letters_RecallV2.aspx">Recall Letters</a></li>
+                                <li id="mi_letters_service_specific_bk_reminders" runat="server"><a href="/Letters_ServiceSpecificBookingRemindersToSendV2.aspx">Service-Specific Booking Reminder Letters To Send</a></li>
+                                <li id="mi_letters_sent_history"                  runat="server"><a id="mi_link_letters_sent_history" runat="server" href="/Letters_SentHistoryV2.aspx">Letters Sent History</a></li>
+                            </ul>
+                        </li><li id="mh_letters_space" runat="server" class="nav_spacer"></li>
+
+                        <li id="mh_sms_and_email" runat="server" class="dropdown">
+                            <a href="javascript:;" data-toggle="dropdown" onclick="menu_showontyropage(this); return false;" class="dropdown-toggle">SMS &amp; Email<b class="caret"></b></a>
+                            <ul class="dropdown-menu">
+                                <li><a href="Notifications_SMSCreditV2.aspx">SMS Credit</a></li>
+                                <li><a href="Notifications_PTRemindersToSendV2.aspx">PT Reminders To Send</a></li>
+                                <li><a href="Notifications_PTReminderSMSHistoryV2.aspx">PT SMS Reminder History</a></li>
+                                <li><a href="Notifications_PTReminderEmailHistoryV2.aspx">PT Email Reminder History</a></li>
+                                <li><a href="Notifications_PTBirthdaysToSendV2.aspx">PT Birthdays To Send</a></li>
+                                <li><a href="Notifications_PTBirthdaySMSHistoryV2.aspx">PT SMS Birthday History</a></li>
+                                <li><a href="Notifications_PTBirthdayEmailHistoryV2.aspx">PT Email Birthday History</a></li>
+                                <li><a href="Notifications_PTWeeklyBirthdaysAutoEmailingV2.aspx">PT Weekly Birthdays List Auto Emailing</a></li>
+                                <li><a href="Notifications_StaffReminderSMSHistoryV2.aspx">Staff SMS Reminder History</a></li>
+                                <li><a href="Notifications_StaffReminderEmailHistoryV2.aspx">Staff Email Reminder History</a></li>
+                            </ul>
+                        </li><li id="mh_sms_and_email_spacer" runat="server" class="nav_spacer"></li>
+
+                        <li id="mh_site_and_settings" runat="server" class="dropdown">
+                            <a href="javascript:;" data-toggle="dropdown" onclick="menu_showontyropage(this); return false;" class="dropdown-toggle">Site &amp; Settings<b class="caret"></b></a>
+                            <ul class="dropdown-menu">
+                                <li id="mi_website_settings"   runat="server"><a href="/SettingsV2.aspx">Website Settings</a></li>
+                                <li><a href="/SiteListV2.aspx">Sites</a></li>
+                                <li><a href="/BookingSheetBlockoutV2.aspx?is_popup=0">System-Wide Unavailabilities</a></li>
+                                <li id="mi_create_new_site"    runat="server"><a href="/CreateNewSiteV2.aspx">*** Create New Site ***</a></li>
+                                <li id="mi_add_aged_care_site" runat="server"><a href="/AgedCareSiteAddV2.aspx">*** Add Aged Care Site ***</a></li>
+                                <li id="mi_add_new_field"      runat="server"><a href="/FieldAddV2.aspx">*** Add New Profession ***</a></li>
+                            </ul>
+                        </li>
+
+                        <!-- Only For external staff -->
+                        <li id="mh_ext_patient_list" runat="server" class="dropdown"><asp:HyperLink ID="lnkMenuPatientListExt" runat="server" NavigateUrl="~/PatientListV2.aspx">Patient List</asp:HyperLink></li><li id="mh_ext_patient_list_space" runat="server" class="nav_spacer"></li>
+                        <li id="mh_ext_patient_add"  runat="server" class="dropdown"><asp:HyperLink ID="lnkMenuPatientAddExt"  runat="server" NavigateUrl="~/PatientAddV2.aspx">Add Patient</asp:HyperLink></li><li id="mh_ext_patient_add_space" runat="server" class="nav_spacer"></li>
+
+                        <li id="mh_ext_next_booking" runat="server" class="dropdown"><asp:HyperLink ID="lnkMenuNextBookingExt" runat="server" NavigateUrl="~/BookingNextAvailableV2.aspx">Next Available</asp:HyperLink></li><li id="mh_ext_next_booking_space" runat="server" class="nav_spacer"></li>
+                        <li id="mh_ext_bookings"     runat="server" class="dropdown"><asp:HyperLink ID="lnkMenuBookingsExt"    runat="server" NavigateUrl="~/BookingsV2.aspx">Bookings</asp:HyperLink></li><li id="mh_ext_bookings_space" runat="server" class="nav_spacer"></li>
+                        
+                        <li id="mh_ext_return_to_callcenter_space_pre" runat="server" style="min-width:1px;"></li>
+                        <li id="mh_ext_return_to_callcenter" runat="server" class="dropdown"><asp:LinkButton ID="lnkBackToCallCenter" runat="server" OnClick="lnkBackToCallCenter_Click">CC</asp:LinkButton></li>
+                        <li id="mh_ext_return_to_callcenter_space_post" runat="server" class="nav_spacer"></li>
+                        <!-- End menu for external staff -->
+
+                    </ul>
+
+                </div>
+            </div>
+
+        </nav>
+    </div>
+
+    <asp:ContentPlaceHolder ID="MainContent" runat="server"/>
+
+    </form>
+    <footer id="footer" runat="server"></footer>
+</div>
+</body>
+</html>

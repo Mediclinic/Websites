@@ -1,0 +1,269 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Configuration;
+using System.Text.RegularExpressions;
+using System.Collections;
+
+public partial class OrganisationListPopupV2 : System.Web.UI.Page
+{
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        try
+        {
+
+            if (!IsPostBack)
+                Utilities.SetNoCache(Response);
+            HideErrorMessage();
+            Utilities.UpdatePageHeaderV2(Page.Master, true);
+
+            if (!IsPostBack)
+            {
+                Session.Remove("organisationlist_sortexpression");
+                Session.Remove("organisationlist_data");
+                FillOrganisationGrid();
+                td_select_clinics_or_agedcare.Visible = false; // Convert.ToBoolean(Session["IsAdmin"]);
+                txtSearchOrganisation.Focus();
+            }
+
+            this.GrdOrganisation.EnableViewState = true;
+
+        }
+        catch (CustomMessageException ex)
+        {
+            if (IsPostBack) SetErrorMessage(ex.Message);
+            else HideTableAndSetErrorMessage(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            if (IsPostBack) SetErrorMessage("", ex.ToString());
+            else HideTableAndSetErrorMessage("", ex.ToString());
+        }
+    }
+
+    #region GetUrlParams
+
+    protected bool IsValidFormPatient()
+    {
+        string patientID = Request.QueryString["patient"];
+        return patientID != null && Regex.IsMatch(patientID, @"^\d+$") && OrganisationDB.Exists(Convert.ToInt32(patientID));
+    }
+    protected int GetFormPatient(bool checkIsValid = true)
+    {
+        if (checkIsValid && !IsValidFormPatient())
+            throw new Exception("Invalid url patient");
+        return Convert.ToInt32(Request.QueryString["patient"]);
+    }
+
+    #endregion
+
+    #region GrdOrganisation
+
+    protected void FillOrganisationGrid()
+    {
+        UserView userView = UserView.GetInstance();
+
+        lblHeading.Text = !userView.IsAgedCareView ? "Facilitys" : "Clinics";
+
+        int patientID = IsValidFormPatient() ? GetFormPatient(false) : -1;
+        DataTable dt = patientID == -1 ?
+            OrganisationDB.GetDataTable(0, false, true, !userView.IsClinicView && !userView.IsGPView, !userView.IsAgedCareView, true, true, txtSearchOrganisation.Text.Trim(), chkOrganisationSearchOnlyStartWith.Checked) :
+            RegisterPatientDB.GetDataTable_OrganisationsOf(patientID, true, !userView.IsClinicView && !userView.IsGPView, !userView.IsAgedCareView, true, true, txtSearchOrganisation.Text.Trim(), chkOrganisationSearchOnlyStartWith.Checked);
+
+        Session["organisationlist_data"] = dt;
+
+        if (dt.Rows.Count > 0)
+        {
+
+            if (IsPostBack && Session["organisationlist_sortexpression"] != null && Session["organisationlist_sortexpression"].ToString().Length > 0)
+            {
+                DataView dataView = new DataView(dt);
+                dataView.Sort = Session["organisationlist_sortexpression"].ToString();
+                GrdOrganisation.DataSource = dataView;
+            }
+            else
+            {
+                GrdOrganisation.DataSource = dt;
+            }
+
+
+            try
+            {
+                GrdOrganisation.DataBind();
+                GrdOrganisation.PagerSettings.FirstPageText = "1";
+                GrdOrganisation.PagerSettings.LastPageText = GrdOrganisation.PageCount.ToString();
+                GrdOrganisation.DataBind();
+            }
+            catch (Exception ex)
+            {
+                this.lblErrorMessage.Visible = true;
+                this.lblErrorMessage.Text = ex.ToString();
+            }
+        }
+        else
+        {
+            dt.Rows.Add(dt.NewRow());
+            GrdOrganisation.DataSource = dt;
+            GrdOrganisation.DataBind();
+
+            int TotalColumns = GrdOrganisation.Rows[0].Cells.Count;
+            GrdOrganisation.Rows[0].Cells.Clear();
+            GrdOrganisation.Rows[0].Cells.Add(new TableCell());
+            GrdOrganisation.Rows[0].Cells[0].ColumnSpan = TotalColumns;
+            GrdOrganisation.Rows[0].Cells[0].Text = "No Record Found";
+        }
+    }
+    protected void GrdOrganisation_RowCreated(object sender, GridViewRowEventArgs e)
+    {
+        if (!Utilities.IsDev() && e.Row.RowType != DataControlRowType.Pager)
+        {
+            e.Row.Cells[0].CssClass = "hiddencol";
+        }
+    }
+    protected void GrdOrganisation_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        DataTable dt = Session["organisationlist_data"] as DataTable;
+        bool tblEmpty = (dt.Rows.Count == 1 && dt.Rows[0][0] == DBNull.Value);
+        if (!tblEmpty && e.Row.RowType == DataControlRowType.DataRow)
+        {
+            Label lblId = (Label)e.Row.FindControl("lblId");
+            DataRow[] foundRows = dt.Select("organisation_id=" + lblId.Text);
+            DataRow thisRow = foundRows[0];
+
+
+            Button btnSelect = (Button)e.Row.FindControl("btnSelect");
+            if (btnSelect != null)
+                btnSelect.OnClientClick = "javascript:select_organisation('" + thisRow["organisation_id"].ToString() + ":" + thisRow["name"].ToString() + "');";
+
+
+            Utilities.AddConfirmationBox(e);
+            if ((e.Row.RowState & DataControlRowState.Edit) > 0)
+                Utilities.SetEditRowBackColour(e, System.Drawing.Color.LightGoldenrodYellow);
+        }
+        if (e.Row.RowType == DataControlRowType.Footer)
+        {
+        }
+    }
+    protected void GrdOrganisation_RowCancelingEdit(object sender, GridViewCancelEditEventArgs e)
+    {
+        GrdOrganisation.EditIndex = -1;
+        FillOrganisationGrid();
+    }
+    protected void GrdOrganisation_RowUpdating(object sender, GridViewUpdateEventArgs e)
+    {
+    }
+    protected void GrdOrganisation_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+    }
+    protected void GrdOrganisation_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+    }
+    protected void GrdOrganisation_RowEditing(object sender, GridViewEditEventArgs e)
+    {
+        GrdOrganisation.EditIndex = e.NewEditIndex;
+        FillOrganisationGrid();
+    }
+    protected void GrdOrganisation_Sorting(object sender, GridViewSortEventArgs e)
+    {
+        // dont allow sorting if in edit mode
+        if (GrdOrganisation.EditIndex >= 0)
+            return;
+
+        DataTable dataTable = Session["organisationlist_data"] as DataTable;
+
+        if (dataTable != null)
+        {
+            if (Session["organisationlist_sortexpression"] == null)
+                Session["organisationlist_sortexpression"] = "";
+
+            DataView dataView = new DataView(dataTable);
+            string[] sortData = Session["organisationlist_sortexpression"].ToString().Trim().Split(' ');
+            string newSortExpr = (e.SortExpression == sortData[0] && sortData[1] == "ASC") ? "DESC" : "ASC";
+            dataView.Sort = e.SortExpression + " " + newSortExpr;
+            Session["organisationlist_sortexpression"] = e.SortExpression + " " + newSortExpr;
+
+            GrdOrganisation.DataSource = dataView;
+            GrdOrganisation.DataBind();
+        }
+    }
+    protected void GrdOrganisation_PageIndexChanging(object sender, GridViewPageEventArgs e)
+    {
+        GrdOrganisation.PageIndex = e.NewPageIndex;
+        FillOrganisationGrid();
+    }
+
+    #endregion
+
+    #region btnSearch_Click, btnClearSearch_Click
+
+    protected void chkIncClinics_CheckedChanged(object sender, EventArgs e)
+    {
+        FillOrganisationGrid();
+    }
+    protected void chkIncAgedCare_CheckedChanged(object sender, EventArgs e)
+    {
+        FillOrganisationGrid();
+    }
+
+    protected void btnSearchOrganisation_Click(object sender, EventArgs e)
+    {
+        if (!Regex.IsMatch(txtSearchOrganisation.Text, @"^[a-zA-Z\-\']*$"))
+        {
+            SetErrorMessage("Search text can only be letters and hyphens");
+            return;
+        }
+        else if (txtSearchOrganisation.Text.Trim().Length == 0)
+        {
+            SetErrorMessage("No search text entered");
+            return;
+        }
+        else
+            HideErrorMessage();
+
+
+        FillOrganisationGrid();
+    }
+    protected void btnClearOrganisationSearch_Click(object sender, EventArgs e)
+    {
+        txtSearchOrganisation.Text = string.Empty;
+
+        FillOrganisationGrid();
+    }
+
+    #endregion
+
+
+    #region SetErrorMessage, HideErrorMessage
+
+    private void HideTableAndSetErrorMessage(string errMsg = "", string details = "")
+    {
+        SetErrorMessage(errMsg, details);
+    }
+    private void SetErrorMessage(string errMsg = "", string details = "")
+    {
+        if (errMsg.Contains(Environment.NewLine))
+            errMsg = errMsg.Replace(Environment.NewLine, "<br />");
+
+        // double escape so shows up literally on webpage for 'alert' message
+        string detailsToDisplay = (details.Length == 0 ? "" : " <a href=\"#\" onclick=\"alert('" + details.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("'", "\\'").Replace("\"", "\\'") + "'); return false;\">Details</a>");
+
+        lblErrorMessage.Visible = true;
+        if (errMsg != null && errMsg.Length > 0)
+            lblErrorMessage.Text = errMsg + detailsToDisplay + "<br />";
+        else
+            lblErrorMessage.Text = "An error has occurred. Plase contact the system administrator. " + detailsToDisplay + "<br />";
+    }
+    private void HideErrorMessage()
+    {
+        lblErrorMessage.Visible = false;
+        lblErrorMessage.Text = "";
+    }
+
+    #endregion
+
+}

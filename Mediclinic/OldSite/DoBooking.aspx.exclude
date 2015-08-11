@@ -1,0 +1,22 @@
+﻿<%@ Page Title="StaffInfo" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true"
+    CodeFile="DoBooking.aspx.cs" Inherits="DoBooking" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <h2>
+       Making A Booking
+    </h2>
+
+    <br />
+    <br />
+    <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+    <br />
+    <br />
+    <asp:LinkButton ID="lnkBackToBookingSheet" runat="server" Text="Back To Booking Page"></asp:LinkButton>
+    
+
+
+
+</asp:Content>

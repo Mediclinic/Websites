@@ -1,0 +1,856 @@
+﻿<%@ Page Title="Bookings" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="BookingsForClinic.aspx.cs" Inherits="BookingsForClinic" EnableEventValidation="false" %>
+<%@ Register TagPrefix="UC" TagName="BookingModalElementControl" Src="~/Bookings/BookingModalElementControl.ascx" %>
+<%@ Register TagPrefix="UC" TagName="BookingKeyControl" Src="~/Bookings/BookingKeyControl.ascx" %>
+<%@ Register TagPrefix="UC" TagName="HealthCardInfoControl" Src="~/Controls/HealthCardInfoControl.ascx" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+
+    <link href="Styles/date_picker.css" rel="stylesheet" type="text/css" />
+    <link href="Styles/booking_modal_box.css" rel="stylesheet" type="text/css" />
+
+    <script type="text/javascript" src="Scripts/jquery-1.4.1.js" ></script>
+    <script type="text/javascript" src="Scripts/jquery-1.4.1.min.js"></script> <!-- used for slid-out-div .. but has problem swhen added below this point -->
+    <script type="text/javascript" src="Scripts/FUNZIONANTE.js"></script>
+    <script type="text/javascript" src="Scripts/bookings.js"></script>
+    <script type="text/javascript" src="Scripts/test_context_menus.js"></script>
+    <script type="text/javascript" src="Scripts/date_picker.js"></script>
+    <script type="text/javascript" src="Scripts/get_details_of_person.js"></script>
+
+
+    <!-- Start: slide-out-div for waiting patients list -->
+
+    <script type="text/javascript" src="Scripts/jquery.tabSlideOut.v1.3.js"></script>
+    <script type="text/javascript" src="Scripts/slide_out_pt_waiting_list.js"></script>
+
+    <style type="text/css" media="screen">
+        .slide-out-div {
+            padding: 20px;
+            width: 250px;
+            background: #f2f2f2;
+            border: #29216d 2px solid;
+        }
+	</style>
+
+    <script type="text/javascript">
+        setInterval(ajax_update_waiting_patient_list, 45 * 1000); // runs every 20 sec and runs on init.
+    </script>
+
+    <!-- End: slide-out-div for waiting patients list -->
+
+
+    <script type="text/javascript">
+
+        var page_type = "bookings_for_clinic";
+
+        var min_height_to_allow_resize = 750;
+
+        window.onresize = function(event) {
+            resize_booking_sheet();
+        }
+
+        window.onload = function() { 
+
+            // hide initially - can't do this in div setting display=none - interferes w construction of slide-out-div & then can't set to block to be visible
+            document.getElementById("slide_out_div").style.display = "none"; 
+            ajax_update_waiting_patient_list();
+
+            resize_booking_sheet(true); 
+
+
+            // for letters downloading to client, need to have it reload fully, and when done, the 
+            // javascript here reloads to send download to user which prevents the new page display (re-)load
+            if (document.getElementById("hiddenFieldReloadPage").value == "1")
+                window.location.href = window.location.href;
+        };
+
+
+        var doit; 
+        function resize_booking_sheet(onload)
+        {
+            resize_width();
+
+
+            if (onload)
+            {
+                fit_top_screen();
+            }
+            else
+            {
+                clearTimeout(doit);
+                doit = setTimeout(fit_top_screen, 200);
+            }
+
+        }
+
+        function dblclick(t_id)
+        {
+            show_modal_add_box(t_id, false);
+        }
+
+        function resize_width()
+        {
+            var controlID          = 'main_panel';
+            var secondaryControlID = 'header_panel';
+
+            var curText       = document.getElementById(controlID).style.width;
+            var curVal        = parseInt(curText.endsWith("px") ? curText.substring(0, curText.length-2) : curText);
+            var curTextEnding = curText.endsWith("px") ? curText.substring(curText.length-2) : "";
+
+            var newWidth = document.documentElement.clientWidth - 40;
+            document.getElementById(controlID).style.width = newWidth + curTextEnding;
+
+            // if width of screen is wider than width of the booking sheet, put the scroll bar (ie the panel width) equal to the booking sheet
+            // ratehr than the panel bar being way on the end of the screen beyond the booking sheet width
+            if (newWidth > document.getElementById('main_table').clientWidth)
+            {
+                newWidth = document.getElementById('main_table').clientWidth;
+                document.getElementById(controlID).style.width = newWidth + curTextEnding;
+
+                scrollbarWidth = document.getElementById(controlID).offsetWidth - document.getElementById(controlID).clientWidth;
+                if (scrollbarWidth > 0)
+                    document.getElementById(controlID).style.width = (newWidth + scrollbarWidth + 2) + curTextEnding;
+            }
+
+            // upate the header div with date/org/staff names ... to match
+            scrollbarWidth = document.getElementById(controlID).offsetWidth - document.getElementById(controlID).clientWidth;
+            curText       = document.getElementById(controlID).style.width;
+            curVal        = curText.endsWith("px") ? curText.substring(0, curText.length-2) : curText;
+            document.getElementById(secondaryControlID).style.width = (parseInt(curVal) - scrollbarWidth) + curTextEnding;
+        }
+
+        // -------------------------------
+
+        // key press events
+
+        var isCtrl = false; 
+        document.onkeyup=function(e){ 
+            if(e.which == 17) isCtrl=false;
+        } 
+        document.onkeydown=function(e){ 
+            if(e.which == 17) isCtrl=true; 
+            if (e.which == 38 && isCtrl == true) { // alert("ctrl-up");
+                set_booking_sheet_focused(false);
+                // return false;  // stops any further action from keystroke
+            }
+            if (e.which == 40 && isCtrl == true) { // alert("ctrl-down");
+                set_booking_sheet_focused(true);
+                // return false;  // stops any further action from keystroke
+            }
+
+            if (e.which == 27) { //alert("esc");
+                var wasChecked = chkShowDetails.checked;
+                chkShowDetails.checked = !wasChecked;
+                show_hide_booking_details(!wasChecked);
+                if (wasChecked)
+                    removeExcessFromPanelHeight('main_panel');
+                // return false;  // stops any further action from keystroke
+            }
+        }
+
+        // -------------------------------
+
+        function set_booking_sheet_focused(checked) {
+
+            chkBookingSheetFocused.checked = checked;
+
+            if (!checked)
+                fit_top_screen();
+            else
+                fit_bottum_screen();
+        }
+
+        function fit_top_screen()
+        {
+            document.body.scrollTop = document.documentElement.scrollTop = 0; // scroll to top
+            update_to_max_height_no_scrollbars(min_height_to_allow_resize);
+            resize_width();
+            //resize_booking_sheet();
+        }
+
+
+
+        function fit_bottum_screen()
+        {
+            var controlID          = 'main_panel';
+            var secondaryControlID = 'header_panel';
+
+            var curText       = document.getElementById(controlID).style.height;
+            var curVal        = parseInt(curText.endsWith("px") ? curText.substring(0, curText.length-2) : curText);
+            var curTextEnding = curText.endsWith("px") ? curText.substring(curText.length-2) : "";
+
+            var newHeight = document.documentElement.clientHeight - 110;
+            document.getElementById(controlID).style.height = newHeight + curTextEnding;
+
+            document.getElementById('pnlBookingArea').scrollIntoView();
+        }
+
+        function update_to_max_height_no_scrollbars(min_window_height)
+        {
+            // update height of sheet so window just barely has no vertical scroll
+
+            var controlID = 'main_panel';
+
+            var curText       = document.getElementById(controlID).style.height;
+            var curVal        = parseInt(curText.endsWith("px") ? curText.substring(0, curText.length-2) : curText);
+            var curTextEnding = curText.endsWith("px") ? curText.substring(curText.length-2) : "";
+
+            var newVal = curVal;
+
+            newVal = resize_vertical(false, newVal, 256, curTextEnding, controlID, min_window_height);
+            newVal = resize_vertical(true,  newVal, 64,  curTextEnding, controlID, min_window_height);
+            newVal = resize_vertical(false, newVal, 16,  curTextEnding, controlID, min_window_height);
+            newVal = resize_vertical(true,  newVal, 4,   curTextEnding, controlID, min_window_height);
+        }
+        function resize_vertical(whileHasScroll, newVal, stepSize, curTextEnding, controlID, min_window_height)
+        {
+            if (document.documentElement.clientHeight < min_window_height)
+                return newVal;
+
+            var hasVScroll = document.documentElement.scrollHeight > document.documentElement.clientHeight;
+
+            if (whileHasScroll)
+            {
+                while (document.documentElement.clientHeight >= min_window_height && (newVal - stepSize) > 0 && hasVScroll)
+                {
+                    newVal -= stepSize;
+                    document.getElementById(controlID).style.height = newVal + curTextEnding;
+
+                    hasVScroll = document.documentElement.scrollHeight > document.documentElement.clientHeight;
+                }
+            }
+            else
+            {
+                while (document.documentElement.clientHeight >= min_window_height && !hasVScroll)
+                {
+                    newVal += stepSize;
+                    document.getElementById(controlID).style.height = newVal + curTextEnding;
+
+                    hasVScroll = document.documentElement.scrollHeight > document.documentElement.clientHeight;
+                }
+            }
+
+            return newVal;
+        }
+
+        function removeExcessFromPanelHeight(controlID)
+        {
+            if (document.getElementById(controlID).scrollHeight <= document.getElementById(controlID).clientHeight)  // if no scroll bars, remove excess at the end of the panel to fit contents
+            {
+                var curText       = document.getElementById(controlID).style.height;
+                var curVal        = parseInt(curText.endsWith("px") ? curText.substring(0, curText.length-2) : curText);
+                var curTextEnding = curText.endsWith("px") ? curText.substring(curText.length-2) : "";
+
+                var newVal = curVal;
+
+                newVal = resize_remove_vertical_excess(false, newVal, 1024, curTextEnding, controlID, min_window_height);
+                newVal = resize_remove_vertical_excess(true,  newVal, 264,  curTextEnding, controlID, min_window_height);
+                newVal = resize_remove_vertical_excess(false, newVal, 64,   curTextEnding, controlID, min_window_height);
+                newVal = resize_remove_vertical_excess(true,  newVal, 16,   curTextEnding, controlID, min_window_height);
+                newVal = resize_remove_vertical_excess(false, newVal, 4,    curTextEnding, controlID, min_window_height);
+                newVal = resize_remove_vertical_excess(false, newVal, 1,    curTextEnding, controlID, min_window_height);
+            }
+        }
+        function resize_remove_vertical_excess(whileHasScroll, newVal, stepSize, curTextEnding, controlID)
+        {
+            var hasVScroll = document.getElementById(controlID).scrollHeight > document.getElementById(controlID).clientHeight;
+
+            if (!whileHasScroll)
+            {
+                while (!hasVScroll) // while no scroll, reduce by step until has scroll
+                {
+                    newVal -= stepSize;
+                    document.getElementById(controlID).style.height = newVal + curTextEnding;
+
+                    hasVScroll = document.getElementById(controlID).scrollHeight > document.getElementById(controlID).clientHeight;
+                }
+            }
+            else
+            {
+                while (hasVScroll) // while has scroll, increase by step until no scroll
+                {
+                    newVal += stepSize;
+                    document.getElementById(controlID).style.height = newVal + curTextEnding;
+
+                    hasVScroll = document.getElementById(controlID).scrollHeight > document.getElementById(controlID).clientHeight;
+                }
+            }
+
+            return newVal;
+        }
+
+        // ---------------------------------------------------------------------------------------------
+
+        function live_search(str)
+        {
+            if (str.length==0)
+            {
+                document.getElementById("div_livesearch").innerHTML = "";
+                document.getElementById("div_livesearch").style.border = "0px";
+                return;
+            }
+            if (window.XMLHttpRequest)
+            {// code for IE7+, Firefox, Chrome, Opera, Safari
+                xmlhttp=new XMLHttpRequest();
+            }
+            else
+            {// code for IE6, IE5
+                xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+            }
+            xmlhttp.onreadystatechange=function()
+            {
+                if (xmlhttp.readyState==4 && xmlhttp.status==200)
+                {
+                    var response = String(xmlhttp.responseText);
+                    if (response == "SessionTimedOutException")
+                        window.location.href = window.location.href;  // reload page
+                    document.getElementById("div_livesearch").innerHTML = response;
+                    document.getElementById("div_livesearch").style.border = "1px solid #A5ACB2";
+                }
+            }
+
+            // need to remove patient id from url, then use below to put in current url with patient id as below
+            // and add in scroll pos, etc
+
+            var new_url = window.location.href;
+            new_url = set_url_field(new_url, "scroll_pos",            document.getElementById('scrollValues').value);
+            new_url = set_url_field(new_url, "is_collapsed",          document.getElementById("chkShowDetails").checked         ? "0" : "1");
+            new_url = set_url_field(new_url, "patient",              "[patient_id]");
+            new_url = update_url_field(element_exists('ddlFields') && get_ddl_value("ddlFields") != "-1", new_url, "field", element_exists('ddlFields') ? get_ddl_value("ddlFields") : "");
+            new_url = update_url_field(element_exists('ddlServices') && get_ddl_value("ddlServices") != "-1", new_url, "offering", element_exists('ddlServices') ? get_ddl_value("ddlServices") : "");
+
+            xmlhttp.open("GET", "/AJAX/AjaxLivePatientSurnameSearch.aspx?q=" + str + "&max_results=80&link_href=" + encodeURIComponent(new_url) + "&link_onclick=", true);
+            xmlhttp.send();
+        }
+
+        function clear_live_search() {
+            document.getElementById("div_livesearch").innerHTML = "";
+            document.getElementById("div_livesearch").style.border = "0px";
+            document.getElementById("txtSearchFullName").value = "";
+            document.getElementById("txtSearchFullName").style.backgroundImage = "url('/images/textbox_watermark_surname_first.png')";
+        }
+
+        function clear_selected_patient() {
+            var new_url = window.location.href;
+            new_url = set_url_field(new_url, "scroll_pos",            document.getElementById('scrollValues').value);
+            new_url = set_url_field(new_url, "is_collapsed",          document.getElementById("chkShowDetails").checked         ? "0" : "1");
+            new_url = set_url_field(new_url, "patient", "-1");
+            new_url = update_url_field(element_exists('ddlFields') && get_ddl_value("ddlFields") != "-1", new_url, "field", element_exists('ddlFields') ? get_ddl_value("ddlFields") : "");
+            new_url = update_url_field(element_exists('ddlServices') && get_ddl_value("ddlServices") != "-1", new_url, "offering", element_exists('ddlServices') ? get_ddl_value("ddlServices") : "");
+            window.location.href = new_url;
+        }
+
+        function set_watermark(txtbox, val)
+        {
+            txtbox.style.backgroundImage= (txtbox.value.length == 0 && val) ? "url('/images/textbox_watermark_surname_first.png')" : "";
+        }
+
+
+        // ---------------------------------------------------------------------------------------------
+
+
+
+
+        // to make the flashing text.  every 1000ms : turn on for 700ms - then turn off 
+        window.addEventListener("load", function () {
+            setInterval(function () {
+
+                document.getElementById('lblFlashingText').style.visibility='visible';
+
+                setTimeout(function () {
+                    document.getElementById('lblFlashingText').style.visibility='hidden';
+                }, 700);
+
+            }, 1000);
+        }, false);
+
+
+        function get_patient() {
+
+            var IsAdmin = <% = Session["IsAdmin"].ToString().ToLower() %>; 
+
+            var org_ids = document.getElementById('lblOrgIDs').innerHTML;
+            var retVal = IsAdmin ?
+                window.showModalDialog("PatientListPopup.aspx", 'Show Popup Window', "dialogHeight:700px;dialogWidth:700px;resizable:yes;center:yes;")
+                :
+                window.showModalDialog("PatientListPopup.aspx?orgs=" + org_ids, 'Show Popup Window', "dialogHeight:700px;dialogWidth:700px;resizable:yes;center:yes;");
+
+            if (typeof retVal === "undefined" || retVal == null)
+                return;
+
+            var index = retVal.indexOf(":");
+            document.getElementById('txtPatientID').value = retVal.substring(0, index);
+            document.getElementById('txtUpdatePatientName').value = retVal.substring(index + 1);
+
+
+            var new_url = window.location.href;
+            new_url = set_url_field(new_url, "patient", retVal.substring(0, index));
+            new_url = set_url_field(new_url, "scroll_pos", document.getElementById('scrollValues').value);
+            new_url = update_url_field(get_ddl_value("ddlFields") != "-1", new_url, "field", get_ddl_value("ddlFields"));
+            new_url = update_url_field(get_ddl_value("ddlServices") != "-1", new_url, "offering", get_ddl_value("ddlServices"));
+            window.location.href = new_url;
+
+            set_textbox_style('txtUpdatePatientName', false);
+        }
+
+        function clear_patient() {
+            document.getElementById('txtPatientID').value = '';
+            document.getElementById('txtUpdatePatientName').value = '';
+
+            // hide before it posts back
+            document.getElementById('tdEPCsRemaining').style.display = "none";
+
+            var new_url = window.location.href;
+            new_url = remove_url_field(new_url, "patient");
+            new_url = set_url_field(new_url, "scroll_pos", document.getElementById('scrollValues').value);
+            new_url = update_url_field(get_ddl_value("ddlFields") != "-1", new_url, "field", get_ddl_value("ddlFields"));
+            new_url = update_url_field(get_ddl_value("ddlServices") != "-1", new_url, "offering", get_ddl_value("ddlServices"));
+            window.location.href = new_url;
+
+            set_textbox_style('txtUpdatePatientName', true);
+        }
+
+        function quick_add() {
+            var retVal = window.showModalDialog("AddEditPatient.aspx?type=add&surname="+document.getElementById('txtSearchFullName').value.trim(), '', "dialogHeight:900px;dialogWidth:1550px;resizable:yes;center:yes;");
+            live_search(document.getElementById('txtSearchFullName').value);
+        }
+
+        function set_textbox_style(textboxID, is_empty) {
+            if (!is_empty)
+                document.getElementById(textboxID).style.cssText = "font-weight:bold;border:none;background-color:transparent;";
+            else
+                document.getElementById(textboxID).style.cssText = ""; //  "width:230px;";
+        }
+
+        function show_hide_booking_details(checked) {
+            var regEx = /lbl_\d+_\d+_\d{4}_\d{2}_\d{2}_\d{4}/i;    //  "lbl_2301_4_2012_06_27_0800"
+
+            var regEx_lblPatientName = /lblPatientName_\d+_\d+_\d{4}_\d{2}_\d{2}_\d{4}/i;    //  "lblPatientName_2301_4_2012_06_27_0800"
+            
+
+            var tds = document.getElementById("main_table").getElementsByTagName('td');
+            for (var i = 0; i < tds.length; i++) {
+                for (var j = 0; j < tds[i].childNodes.length; j++) {
+                    var elem = tds[i].childNodes[j];
+                    if (regEx.test(elem.id))
+                        elem.style.display = (checked) ? "block" : "none";
+                    if (regEx_lblPatientName.test(elem.id))
+                        elem.style.display = (checked) ? "none" : "block";
+
+                }
+            }
+        }
+
+        function show_hide_colour_key(checked) {
+            document.getElementById("bookingKeySection").style.display      = checked ? "" : "none";
+            document.getElementById("bookingKeySectionSpace").style.display = checked ? "none" : "";
+            ajax_update_show_hide_colour_key(checked);
+        }
+        function ajax_update_show_hide_colour_key(show) {
+
+            var xmlhttp;
+            if (window.XMLHttpRequest) {// code for IE7+, Firefox, Chrome, Opera, Safari
+                xmlhttp = new XMLHttpRequest();
+            }
+            else {// code for IE6, IE5
+                xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+            }
+            xmlhttp.onreadystatechange = function () { ; } // do nothing with response
+
+            xmlhttp.open("GET", "/AJAX/AjaxUpdateStaffBookingPage.aspx?show=" + (show ? "1" : "0"), true);
+            xmlhttp.send();
+        }
+
+    </script>
+
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <asp:HiddenField ID="hiddenFieldReloadPage" runat="server" />
+
+    <asp:Label ID="lblOrgIDs" runat="server" CssClass="hiddencol"></asp:Label>
+    <asp:Label ID="lblOrgTypeIDs" runat="server" CssClass="hiddencol"></asp:Label>
+    <asp:Label ID="lblOrgNames" runat="server" CssClass="hiddencol"></asp:Label>
+    <asp:Label ID="lblProviderNames" runat="server" CssClass="hiddencol"></asp:Label>
+    <asp:Label ID="lblProviderIDs" runat="server" CssClass="hiddencol"></asp:Label>
+    <asp:Label ID="lblSelectedOrgID" runat="server" CssClass="hiddencol"></asp:Label>
+    <asp:Label ID="lblSelectedOrgTypeID" runat="server" CssClass="hiddencol"></asp:Label>
+    <asp:Label ID="lblSelectedProviderID" runat="server" CssClass="hiddencol"></asp:Label>
+    <asp:Label ID="lblEditBooking_Duration" runat="server" CssClass="hiddencol"></asp:Label>
+    <asp:Label ID="lblEditBooking_Org" runat="server" CssClass="hiddencol"></asp:Label>
+    <asp:Label ID="lblEditBooking_IsConfirmed" runat="server" CssClass="hiddencol"></asp:Label>
+    <asp:Label ID="lblEditBooking_IsAgedCare" runat="server" CssClass="hiddencol">0</asp:Label>
+    <input type="hidden" id="scrollValues" name="scrollValues" runat="server" value="0" />
+
+    <asp:HiddenField ID="printOrEmailInvoiceBookingID" runat="server" Value="-1" />
+    <asp:Button ID="btnPrintInvoice" runat="server" CssClass="hiddencol" OnClick="btnPrintInvoice_Click" />
+    <asp:Button ID="btnEmailInvoice" runat="server" CssClass="hiddencol" OnClick="btnEmailInvoice_Click" />
+
+
+    <UC:BookingModalElementControl ID="bookingModalElementControl" runat="server" />
+
+
+    <table id="user_input_table" runat="server" border="0" cellpadding="0" cellspacing="0" width="100%" height="175px" >
+
+        <tr valign="top">
+            <td>
+
+                <table border="0" cellpadding="0" cellspacing="0">
+                    <tr valign="top">
+                        <td>
+                            <table border="0" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="left" class="nowrap"><h2 id="heading" runat="server">Bookings</h2></td>
+                                    <td id="td_heading_space1" runat="server" style="width:20px">&nbsp;&nbsp;&nbsp;</td>
+                                    <td id="td_heading_link_identity" runat="server" align="left" class="nowrap"><h2><asp:Label ID="lblEntity" runat="server"></asp:Label></h2></td>                    
+                                    <td id="td_heading_space2" runat="server" style="width:20px">&nbsp;&nbsp;&nbsp;</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td><asp:label ID="lblOrgAddress" runat="server"></asp:label></td>
+                    </tr>
+
+
+                    <tr style="height:15px;">
+                        <td></td>
+                    </tr>
+                    <tr id="rowFieldListTitle" runat="server" style="height:15px;">
+                        <td><asp:label ID="lblFieldTitle" runat="server">Select A Field:</asp:label>
+                        </td>
+                    </tr>
+                    <tr id="rowFieldList" runat="server" style="height:22px;" valign="top">
+                        <td><asp:DropDownList ID="ddlFields" runat="server" AutoPostBack="True" OnSelectedIndexChanged="ddlFields_SelectedIndexChanged"></asp:DropDownList></td>
+                    </tr>
+                    <tr style="height:5px;">
+                        <td></td>
+                    </tr>
+                    <tr id="rowServiceListTitle" runat="server" style="height:15px;">
+                        <td><asp:label ID="lblServiceTitle" runat="server">Select A Service Here:</asp:label></td>
+                    </tr>
+                    <tr id="rowServiceList" runat="server" style="height:22px;" valign="top">
+                        <td><asp:DropDownList ID="ddlServices" runat="server"></asp:DropDownList></td>
+                    </tr>
+                    <tr style="height:25px;">
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td id="td_patient_flashing_message" runat="server" align="left">
+                            <table cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td style="width:15px;"></td>
+                                    <td valign="middle">
+                                        <asp:ImageButton ID="lnkFlashingText" runat="server" AlternateText="Edit Flashing Text For This Patient" ToolTip="Edit Flashing Text For This Patient" />
+                                        <asp:Button ID="btnUpdateFlashingTextIcon" runat="server" CssClass="hiddencol" onclick="btnUpdateFlashingTextIcon_Click" />
+                                    </td>
+                                    <td style="width:10px;"></td>
+                                    <td valign="top">
+                                        <b><asp:Label ID="lblFlashingText" runat="server" ForeColor="Red" /></b>
+                                    </td>
+                                </tr>
+
+                            </table>
+                        </td>
+                        <td id="td_stop_edit_btn" runat="server" align="center"><asp:Label ID="Label1" runat="server" Width="150" /><asp:Button ID="btnStopEdit" runat="server" Height="25px" Font-Bold="True" Text="Cancel Edit / Move" onclick="btnStopEdit_Click" BackColor="Pink"/></td>
+                    </tr>
+
+                </table>
+
+            </td>
+
+            <td id="colPatientInfoSpace" runat="server" style="width:5px;"></td>
+
+            <td id="colPatientInfo" runat="server">
+
+
+                <div style="line-height:5px;width:380px;">&nbsp;</div>
+
+                <!--
+                <br />
+
+                <table id="tblPatientInfoEmpty" runat="server" visible="False" border="0" cellpadding="0" cellspacing="0" style="width:380px">
+                    <tr><td></td></tr>
+                </table>
+                -->
+
+
+
+
+
+                <table id="tblPatientSearch" runat="server" border="0" cellpadding="0" cellspacing="0" style="width:380px;">
+
+                    <tr>
+                        <td align="left">
+
+                            <table border="0" cellpadding="0" cellspacing="0">
+
+                                <tr>
+                                    <td class="nowrap" align="left">Get Patient</td>
+                                    <td class="nowrap" align="left" style="width:10px"></td>
+                                    <td class="nowrap" align="left">
+                                        <asp:TextBox ID="txtSearchFullName" runat="server" onblur="set_watermark(this, true);" onfocus="set_watermark(this, false);"  onkeyup="live_search(this.value)" autocomplete="off" onkeydown="return (event.keyCode!=13);" style="background-image:url('/images/textbox_watermark_surname_first.png');"></asp:TextBox>
+                                        <div id="div_livesearch" style="position:absolute;background:#FFFFFF;"></div>
+                                    </td>
+                                    <td class="nowrap" align="left" style="width:5px"></td>
+                                    <td class="nowrap" align="left">
+                                        <button name="btnClearFullNameSearch" onclick="clear_live_search(); return false;">Clear</button>
+                                        <input type="submit" value="Add" onclick="quick_add(); return false;" />
+                                    </td>
+                                    <td class="nowrap" style="min-width:5px"></td>
+                                </tr>
+
+                                <tr style="height:3px;">
+                                    <td colspan="6"></td>
+                                </tr>
+
+
+                                <tr id="tr_selected_patient_row" runat="server">
+                                    <td class="nowrap" align="left">Selected Patient</td>
+                                    <td class="nowrap" align="left"></td>
+                                    <td class="nowrap" align="left"><asp:Label ID="lblSelectedPatientName" runat="server"></asp:Label></td>
+                                    <td class="nowrap" align="left"></td>
+                                    <td class="nowrap" align="left"><asp:Button ID="btnClearSelectedPatient" runat="server" Text="Clear" OnClientClick="javascript:clear_selected_patient();return false;" /></td>
+                                    <td class="nowrap"></td>
+                                </tr>
+
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr style="height:3px;">
+                        <td></td>
+                    </tr>
+                    <tr id="healthcardInfoRow" runat="server">
+                        <td>
+                            <UC:HealthCardInfoControl ID="healthCardInfoControl" runat="server" />
+                        </td>
+                    </tr>
+
+                </table>
+
+
+                <table id="tblPatientInfo" runat="server" border="0" cellpadding="0" cellspacing="0" style="width:380px" class="hiddencol">
+                    <tr>
+                        <td>Patient:</td>
+                        <td style="width:6px"></td>
+                        <td>
+                            <asp:TextBox ID="txtPatientID" runat="server" CssClass="hiddencol" />
+                            <asp:TextBox ID="txtUpdatePatientName" runat="server" Enabled="False" />
+                        </td>
+                        <td>
+                            <asp:Button ID="btnPatientListPopup" runat="server" Text="Get Patient" OnClientClick="javascript:get_patient(); return false;"/>
+                            <asp:Button ID="btnClearPatient"     runat="server" Text="Clear"       OnClientClick="javascript:clear_patient();return false;" />
+                        </td>
+                    </tr>
+                    <tr style="height:5px;">
+                        <td colspan="4"></td>
+                    </tr>
+                    <tr id="healthcardInfoRow_OLD" runat="server">
+                        <td colspan="4">
+                            
+                        </td>
+                    </tr>
+                </table>
+
+
+                <table id="tblInvoicesOwingMessage" runat="server" border="0" cellpadding="0" cellspacing="0" style="width:380px;">
+
+                    <tr>
+                        <td colspan="2"><div style="line-height:6px;">&nbsp;</div></td>
+                    </tr>
+
+                    <tr>
+                        <td style="width:75%;" align="center">
+                            <asp:Label ID="lblInvoicesOwingMessage" runat="server"></asp:Label>
+                        </td>
+                        <td style="width:25%;"></td>
+                    </tr>
+                </table>
+
+            </td>
+
+            <td align="right" style="width:5px;"></td>
+
+            <td align="right">
+
+                <table border="0" cellpadding="0" cellspacing="0">
+                    <tr valign="top">
+                        <td>
+
+                            <asp:Panel ID="pnlSubmitButtonSelection" runat="server" DefaultButton="btnUpdateDisplayOptions">
+                            <table border="0" cellpadding="0" cellspacing="0" style="width:240px;">
+                                <tr valign="bottom"">
+                                    <td valign="bottom">
+                            
+                                        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                            <tr>
+                                                <td align="left" valign="bottom">Start Date:</td>
+                                                <td align="right" valign="bottom"><asp:ImageButton ID="txtStartDate_Picker" runat="server" ImageUrl="~/images/Calendar-icon-24px.png" /></td>
+                                            </tr>
+                                        </table>
+                            
+                                    </td>
+                                    <td align="left" valign="bottom">
+                                        <asp:TextBox ID="txtStartDate" runat="server" Columns="10"></asp:TextBox>
+                            
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Days To Display: </td>
+                                    <td align="left"><asp:DropDownList ID="ddlDaysToDisplay" runat="server" onchange="reload_booking_page_ndays();"></asp:DropDownList></td>
+                                </tr>
+                                <tr>
+                                    <td class="nowrap">Show Unavailable Staff: </td>
+                                    <td align="left"><asp:CheckBox ID="chkShowUnavailableStaff" runat="server" onclick="reload_booking_page_show_unavailable_staff();" /></td>
+                                </tr>
+                                <tr>
+                                    <td>Show Bk Details: </td>
+                                    <td align="left">
+                                        <%-- <asp:CheckBox ID="chkShowDetails"   runat="server" Checked="True" Visible="True" />  --%>
+                                        <asp:CheckBox ID="chkShowDetails" runat="server" Checked="True" onclick="show_hide_booking_details(this.checked);" />
+                                        &nbsp;
+                                        <asp:LinkButton ID="btnHoverShowDetailToolTip" runat="server" Text="?" ToolTip="Can toggle by using the escape key." OnClientClick="javascript:return false;" />
+
+                                        <!-- "Can toggle by using the escape key.&#013;Can also use ctrl + up/down to change the display." -->
+
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Show Colour Key: </td>
+                                    <td align="left">
+                                        <asp:CheckBox ID="chkShowColourKey" runat="server" Checked="True" onclick="show_hide_colour_key(this.checked);" />
+                                    </td>
+                                </tr>
+
+
+
+                                <tr>
+                                    <td colspan="2">
+                                        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                            <tr>
+                                                <td style="width:75%" align="center">
+                                                    <asp:Button ID="btnUpdateDisplayOptions" runat="server" Text="Refresh Page" OnClick="btnUpdateDisplayOptions_Click"/>
+                                                </td>
+                                                <td style="width:25%">
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+
+                                <tr style="height:13px;">
+                                    <td colspan="2"></td>
+                                </tr>
+
+                                <tr>
+                                    <td colspan="2">
+                                        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                            <tr>
+
+                                                <td style="width:25%" align="center">
+                                                    <asp:ImageButton ID="btnMoveDateToday" runat="server" CommandArgument="Today" OnCommand="btnMoveDate_Command" ImageUrl="~/images/today_blue.png" AlternateText="Go" />
+                                                </td>
+
+                                                <td style="width:75%" align="center">
+
+                                                    <table border="0" cellpadding="0" cellspacing="0">
+                                                        <tr>
+                                                            <td><asp:ImageButton ID="btnMoveDateBackwards" runat="server" CommandArgument="Backwards" OnCommand="btnMoveDate_Command" ImageUrl="~/images/arrow_left_16.png" AlternateText="Go" /></td>
+                                                            <td style="width:5px;"></td>
+                                                            <td>
+                                                                <asp:DropDownList ID="ddlMoveDateNum" runat="server">
+                                                                    <asp:ListItem Text="1" Value="1"/>
+                                                                    <asp:ListItem Text="2" Value="2"/>
+                                                                    <asp:ListItem Text="3" Value="3"/>
+                                                                    <asp:ListItem Text="4" Value="4"/>
+                                                                    <asp:ListItem Text="5" Value="5"/>
+                                                                    <asp:ListItem Text="6" Value="6"/>
+                                                                    <asp:ListItem Text="7" Value="7"/>
+                                                                    <asp:ListItem Text="8" Value="8"/>
+                                                                    <asp:ListItem Text="9" Value="9"/>
+                                                                    <asp:ListItem Text="10" Value="10"/>
+                                                                    <asp:ListItem Text="11" Value="11"/>
+                                                                    <asp:ListItem Text="12" Value="12"/>
+                                                                </asp:DropDownList>
+                                                            </td>
+                                                            <td style="width:1px;"></td>
+                                                            <td>
+                                                                <asp:DropDownList ID="ddlMoveDateType" runat="server">
+                                                                    <asp:ListItem Text="Day(s)" Value="Days"/>
+                                                                    <asp:ListItem Text="Week(s)" Value="Weeks" Selected="True"/>
+                                                                    <asp:ListItem Text="Month(s)" Value="Months"/>
+                                                                    <asp:ListItem Text="Year(s)" Value="Years"/>
+                                                                </asp:DropDownList>
+                                                            </td>
+                                                            <td style="width:5px;"></td>
+                                                            <td><asp:ImageButton ID="btnMoveDateForwards" runat="server" CommandArgument="Forwards" OnCommand="btnMoveDate_Command" ImageUrl="~/images/arrow_right_16.png" AlternateText="Go" /></td>
+                                                        </tr>
+
+                                                    </table>
+                                            
+                                                </td>
+
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+
+
+                            </table>
+                            </asp:Panel>
+
+                        </td>
+                        <td align="right" style="width:20px;">&nbsp;</td>
+                        <td id="bookingKeySectionSpace" runat="server" align="right" style="display:none;width:30px;">&nbsp;</td>
+                        <td id="bookingKeySection" runat="server">
+                            <UC:BookingKeyControl ID="bookingKeyControl" runat="server" />
+                        </td>
+                    </tr>
+                </table>
+            
+            </td>
+
+        </tr>
+    </table>
+
+    <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+    <br />
+
+    <div id="pnlBookingArea"><!-- this div just used for anchoring. anchoring to the table scrolls the page to the start of the table  -->
+    <table border="0" cellpadding="0" cellspacing="0">
+        <tr>
+            <td>
+                <asp:Panel ID="header_panel" runat="server" ScrollBars="Auto" Width="1497"   onscroll="JavaScript:elementOnScrollLeft(this);">
+                <table border="1" cellpadding="0" cellspacing="0" id="header_table" runat="server" width="1480"></table>
+                </asp:Panel>
+                <asp:Panel ID="main_panel" runat="server" ScrollBars="Auto" Height="550" Width="1497" onscroll="JavaScript:elementOnScroll(this);elementOnScrollLeft(this);" >
+                <table border="1" cellpadding="0" cellspacing="0" id="main_table" runat="server" width="1480"></table>
+                </asp:Panel>
+            </td>
+        </tr>
+    </table>
+    </div>
+
+    <!-- Start: Slide Out Waiting List -->
+
+    <asp:HiddenField ID="hidden_is_provider_login" runat="server" />
+    <asp:HiddenField ID="hidden_staff_id" runat="server" />
+    <asp:HiddenField ID="hidden_org_id" runat="server" />
+
+    <div id="slide_out_div" class="slide-out-div">
+        <a class="handle" href="http://link-for-non-js-users">Content</a>
+
+        <table border="0" cellpadding="0" cellspacing="0" style="height:75px">
+            <tr>
+                <td valign="top">
+                    <div id="div_patient_wait_list_table"></div>
+                </td>
+            </tr>
+        </table>
+
+    </div>
+
+    <!-- End: Slide Out Waiting List -->
+
+</asp:Content>

@@ -1,0 +1,250 @@
+﻿
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+CREATE PROCEDURE uspMerging_UpdateStaff 
+
+     @staff_id1             int
+    ,@staff_id2             int
+
+AS
+
+Declare @entity_id1       int
+Declare @person_id1       int
+Declare @entity_id2       int
+Declare @person_id2       int
+Declare @count_referrer  int
+Declare @count_patient   int
+
+BEGIN TRAN
+
+
+	update Booking                    set 	added_by     = @staff_id1    WHERE added_by = @staff_id2;
+	update Booking                    set 	confirmed_by = @staff_id1   WHERE confirmed_by = @staff_id2;
+	update Booking                    set 	deleted_by   = @staff_id1   WHERE deleted_by   = @staff_id2;
+	update Booking                    set 	provider     = @staff_id1   WHERE provider     = @staff_id2;
+	update BookingChangeHistory       set 	moved_by     = @staff_id1   WHERE moved_by     = @staff_id2;
+	update BookingPatient             set 	added_by     = @staff_id1   WHERE added_by     = @staff_id2;
+	update BookingPatient             set 	deleted_by   = @staff_id1   WHERE deleted_by   = @staff_id2;
+	update BookingPatientOffering     set 	added_by     = @staff_id1   WHERE added_by     = @staff_id2;
+	update BookingPatientOffering     set 	deleted_by   = @staff_id1   WHERE deleted_by   = @staff_id2;
+	update CreditNote                 set 	reversed_by  = @staff_id1   WHERE reversed_by  = @staff_id2;
+	update CreditNote                 set 	staff_id     = @staff_id1   WHERE staff_id     = @staff_id2;
+
+	update HealthCard                 set 	added_or_last_modified_by = @staff_id1 WHERE added_or_last_modified_by = @staff_id2;
+
+	update HealthCardEPCChangeHistory set 	staff_id     = @staff_id1   WHERE staff_id     = @staff_id2;
+	update HealthCardEPCRemaining     set 	deleted_by   = @staff_id1   WHERE deleted_by   = @staff_id2;
+
+	update HealthCardEPCRemainingChangeHistory set 	staff_id = @staff_id1 WHERE staff_id = @staff_id2;
+
+	update Invoice                    set 	reversed_by  = @staff_id1   WHERE reversed_by = @staff_id2;
+	update Invoice                    set 	staff_id     = @staff_id1   WHERE staff_id    = @staff_id2;
+	update LetterPrintHistory         set 	staff_id     = @staff_id1   WHERE staff_id    = @staff_id2;
+	update Note                       set 	added_by     = @staff_id1   WHERE added_by    = @staff_id2;
+	update Note                       set 	modified_by  = @staff_id1   WHERE modified_by = @staff_id2;
+	update Overpayment                set 	staff_id     = @staff_id1   WHERE staff_id    = @staff_id2;
+
+	update PatientHistory             set 	modified_from_this_by = @staff_id1 WHERE modified_from_this_by = @staff_id2;
+
+	update Receipt                    set 	reversed_by  = @staff_id1   WHERE reversed_by = @staff_id2;
+	update Receipt                    set 	staff_id     = @staff_id1   WHERE staff_id    = @staff_id2;
+	update Refund                     set 	staff_id     = @staff_id1   WHERE staff_id    = @staff_id2;
+	update RegisterStaff              set 	staff_id     = @staff_id1   WHERE staff_id    = @staff_id2;
+	update StaffOfferings             set 	staff_id     = @staff_id1   WHERE staff_id    = @staff_id2;
+	DELETE StaffSiteRestriction                                         WHERE staff_id    = @staff_id2;
+	update StockUpdateHistory         set 	added_by     = @staff_id1   WHERE added_by    = @staff_id2;
+	update Suburb                     set 	amended_by   = @staff_id1   WHERE amended_by  = @staff_id2;
+	update UserLogin                  set 	staff_id     = @staff_id1   WHERE staff_id    = @staff_id2;
+
+	
+
+
+	SET @person_id1      = (SELECT person_id FROM Staff   WHERE staff_id  = @staff_id1)
+	SET @entity_id1      = (SELECT entity_id FROM Person  WHERE person_id = @person_id1)
+	SET @person_id2      = (SELECT person_id FROM Staff   WHERE staff_id  = @staff_id2)
+	SET @entity_id2      = (SELECT entity_id FROM Person  WHERE person_id = @person_id2)
+	SET @count_referrer = (SELECT count(*) FROM Referrer WHERE person_id = @person_id2)
+	SET @count_patient  = (SELECT count(*) FROM Patient  WHERE person_id = @person_id2)
+
+	update Person set added_by = @person_id1 WHERE added_by  = @person_id2;
+
+
+	DELETE Staff WHERE staff_id = @staff_id2;
+
+    IF @count_referrer = 0 AND @count_patient = 0
+    BEGIN
+
+		-- delete stuff associated with the entity
+		DELETE Booking      WHERE entity_id = @entity_id2;
+		DELETE ContactAus   WHERE entity_id = @entity_id2;
+		DELETE ContactOld   WHERE entity_id = @entity_id2;
+		DELETE Invoice      WHERE entity_id = @entity_id2;
+		DELETE Note         WHERE entity_id = @entity_id2;
+		DELETE Organisation WHERE entity_id = @entity_id2;
+		DELETE Person       WHERE entity_id = @entity_id2;
+		DELETE POSMachine   WHERE entity_id = @entity_id2;
+		DELETE Site         WHERE entity_id = @entity_id2;
+
+		-- delete them
+		DELETE Person WHERE person_id = @person_id2;
+		DELETE Entity WHERE entity_id = @entity_id2;
+
+    END
+
+COMMIT TRAN
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+exec uspMerging_UpdateStaff 76,279;
+exec uspMerging_UpdateStaff 100,295;
+exec uspMerging_UpdateStaff 33,233;
+exec uspMerging_UpdateStaff 18,218;
+exec uspMerging_UpdateStaff 7,207;
+exec uspMerging_UpdateStaff 60,293;
+exec uspMerging_UpdateStaff 69,272;
+exec uspMerging_UpdateStaff 31,231;
+exec uspMerging_UpdateStaff 70,232;
+exec uspMerging_UpdateStaff 71,273;
+exec uspMerging_UpdateStaff 94,292;
+exec uspMerging_UpdateStaff 23,223;
+exec uspMerging_UpdateStaff 35,235;
+exec uspMerging_UpdateStaff 92,289;
+exec uspMerging_UpdateStaff 91,287;
+exec uspMerging_UpdateStaff 11,211;
+exec uspMerging_UpdateStaff 61,261;
+exec uspMerging_UpdateStaff 39,239;
+exec uspMerging_UpdateStaff 53,253;
+exec uspMerging_UpdateStaff 16,216;
+exec uspMerging_UpdateStaff 27,227;
+exec uspMerging_UpdateStaff 105,299;
+exec uspMerging_UpdateStaff 57,257;
+exec uspMerging_UpdateStaff 25,225;
+exec uspMerging_UpdateStaff 93,290;
+exec uspMerging_UpdateStaff 26,226;
+exec uspMerging_UpdateStaff 98,265;
+exec uspMerging_UpdateStaff 56,256;
+exec uspMerging_UpdateStaff 30,230;
+exec uspMerging_UpdateStaff 63,251;
+exec uspMerging_UpdateStaff 5,205;
+exec uspMerging_UpdateStaff 68,271;
+exec uspMerging_UpdateStaff 22,222;
+exec uspMerging_UpdateStaff 34,234;
+exec uspMerging_UpdateStaff 1,201;
+exec uspMerging_UpdateStaff 97,297;
+exec uspMerging_UpdateStaff 67,267;
+exec uspMerging_UpdateStaff 40,240;
+exec uspMerging_UpdateStaff 95,263;
+exec uspMerging_UpdateStaff 86,283;
+exec uspMerging_UpdateStaff 32,250;
+exec uspMerging_UpdateStaff 74,254;
+exec uspMerging_UpdateStaff 59,259;
+exec uspMerging_UpdateStaff 45,245;
+exec uspMerging_UpdateStaff 42,242;
+exec uspMerging_UpdateStaff 83,282;
+exec uspMerging_UpdateStaff 6,206;
+exec uspMerging_UpdateStaff 106,300;
+exec uspMerging_UpdateStaff 107,301;
+exec uspMerging_UpdateStaff 17,217;
+exec uspMerging_UpdateStaff 24,224;
+exec uspMerging_UpdateStaff 12,212;
+exec uspMerging_UpdateStaff 101,296;
+exec uspMerging_UpdateStaff 58,258;
+exec uspMerging_UpdateStaff 77,278;
+exec uspMerging_UpdateStaff 77,277;
+exec uspMerging_UpdateStaff 4,204;
+exec uspMerging_UpdateStaff 78,281;
+exec uspMerging_UpdateStaff 99,294;
+exec uspMerging_UpdateStaff 88,266;
+exec uspMerging_UpdateStaff 8,208;
+exec uspMerging_UpdateStaff 104,298;
+exec uspMerging_UpdateStaff 96,291;
+exec uspMerging_UpdateStaff 21,221;
+exec uspMerging_UpdateStaff 13,213;
+exec uspMerging_UpdateStaff 19,220;
+exec uspMerging_UpdateStaff 49,249;
+exec uspMerging_UpdateStaff 48,248;
+exec uspMerging_UpdateStaff 55,209;
+exec uspMerging_UpdateStaff 29,229;
+exec uspMerging_UpdateStaff 20,219;
+exec uspMerging_UpdateStaff 10,210;
+exec uspMerging_UpdateStaff 47,247;
+exec uspMerging_UpdateStaff 15,215;
+exec uspMerging_UpdateStaff 38,238;
+exec uspMerging_UpdateStaff 37,237;
+exec uspMerging_UpdateStaff 28,228;
+exec uspMerging_UpdateStaff 89,284;
+exec uspMerging_UpdateStaff 72,286;
+exec uspMerging_UpdateStaff 2,202;
+exec uspMerging_UpdateStaff 3,203;
+exec uspMerging_UpdateStaff 95,214;
+exec uspMerging_UpdateStaff 52,252;
+exec uspMerging_UpdateStaff 102,303;
+exec uspMerging_UpdateStaff 103,302;
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+CREATE PROCEDURE uspMerging_UpdateLetter
+
+     @letter_id1           int
+    ,@letter_id2           int
+
+AS
+
+BEGIN TRAN
+
+	update Invoice                 set reject_letter_id                  = @letter_id1  WHERE reject_letter_id                  = @letter_id2;
+	update LetterPrintHistory      set letter_id                         = @letter_id1  WHERE letter_id                         = @letter_id2;
+	update LetterTreatmentTemplate set first_letter_id                   = @letter_id1  WHERE first_letter_id                   = @letter_id2;
+	update LetterTreatmentTemplate set last_letter_id                    = @letter_id1  WHERE last_letter_id                    = @letter_id2;
+	update LetterTreatmentTemplate set last_letter_when_replacing_epc_id = @letter_id1  WHERE last_letter_when_replacing_epc_id = @letter_id2;
+	update LetterTreatmentTemplate set treatment_notes_letter_id         = @letter_id1  WHERE treatment_notes_letter_id         = @letter_id2;
+	update Offering                set reminder_letter_id                = @letter_id1  WHERE reminder_letter_id                = @letter_id2;
+
+	DELETE Letter WHERE letter_id = @letter_id2;
+
+COMMIT TRAN
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+exec uspMerging_UpdateLetter 1,32;
+exec uspMerging_UpdateLetter 2,33;
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+CREATE PROCEDURE uspMerging_UpdateOffering
+
+     @offering_id1       int
+    ,@offering_id2       int
+
+AS
+
+BEGIN TRAN
+
+	update Booking                 set 	offering_id        = @offering_id1 WHERE offering_id        = @offering_id2;
+	update BookingPatientOffering  set 	offering_id        = @offering_id1 WHERE offering_id        = @offering_id2;
+	update InvoiceLine             set 	offering_id        = @offering_id1 WHERE offering_id        = @offering_id2;
+	update OrganisationOfferings   set 	offering_id        = @offering_id1 WHERE offering_id        = @offering_id2;
+	update Patient                 set 	ac_inv_offering_id = @offering_id1 WHERE ac_inv_offering_id = @offering_id2;
+	update Patient                 set 	ac_pat_offering_id = @offering_id1 WHERE ac_pat_offering_id = @offering_id2; 
+	update PatientHistory          set 	ac_inv_offering_id = @offering_id1 WHERE ac_inv_offering_id = @offering_id2;
+	update PatientHistory          set 	ac_pat_offering_id = @offering_id1 WHERE ac_pat_offering_id = @offering_id2;
+	update StaffOfferings          set 	offering_id        = @offering_id1 WHERE offering_id        = @offering_id2;
+	update Stock                   set 	offering_id        = @offering_id1 WHERE offering_id        = @offering_id2;
+	update StockUpdateHistory      set 	offering_id        = @offering_id1 WHERE offering_id        = @offering_id2;
+
+	DELETE Offering WHERE offering_id = @offering_id2;
+
+COMMIT TRAN
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+
+exec uspMerging_UpdateOffering 192,334;
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------

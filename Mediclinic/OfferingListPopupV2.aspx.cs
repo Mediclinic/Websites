@@ -1,0 +1,230 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Configuration;
+using System.Text.RegularExpressions;
+using System.Collections;
+
+public partial class OfferingListPopupV2 : System.Web.UI.Page
+{
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        try
+        {
+
+            if (!IsPostBack)
+                Utilities.SetNoCache(Response);
+            HideErrorMessage();
+            Utilities.UpdatePageHeaderV2(Page.Master, true);
+
+            if (!IsPostBack)
+            {
+                Session.Remove("offeringlist_sortexpression");
+                Session.Remove("offeringlist_data");
+                FillOfferingGrid();
+            }
+
+            this.GrdOffering.EnableViewState = true;
+
+        }
+        catch (CustomMessageException ex)
+        {
+            if (IsPostBack) SetErrorMessage(ex.Message);
+            else HideTableAndSetErrorMessage(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            if (IsPostBack) SetErrorMessage("", ex.ToString());
+            else HideTableAndSetErrorMessage("", ex.ToString());
+        }
+    }
+
+    #region GrdOffering
+
+    protected void FillOfferingGrid()
+    {
+        UserView userView = UserView.GetInstance();
+
+        DataTable dt = OfferingDB.GetDataTable(false, userView.IsAgedCareView ? "3,4" : "1,3", "63,89", false, txtSearchOffering.Text.Trim(), chkOfferingSearchOnlyStartWith.Checked);
+        Session["offeringlist_data"] = dt;
+
+        if (dt.Rows.Count > 0)
+        {
+
+            if (IsPostBack && Session["offeringlist_sortexpression"] != null && Session["offeringlist_sortexpression"].ToString().Length > 0)
+            {
+                DataView dataView = new DataView(dt);
+                dataView.Sort = Session["offeringlist_sortexpression"].ToString();
+                GrdOffering.DataSource = dataView;
+            }
+            else
+            {
+                GrdOffering.DataSource = dt;
+            }
+
+
+            try
+            {
+                GrdOffering.DataBind();
+                GrdOffering.PagerSettings.FirstPageText = "1";
+                GrdOffering.PagerSettings.LastPageText = GrdOffering.PageCount.ToString();
+                GrdOffering.DataBind();
+            }
+            catch (Exception ex)
+            {
+                this.lblErrorMessage.Visible = true;
+                this.lblErrorMessage.Text = ex.ToString();
+            }
+        }
+        else
+        {
+            dt.Rows.Add(dt.NewRow());
+            GrdOffering.DataSource = dt;
+            GrdOffering.DataBind();
+
+            int TotalColumns = GrdOffering.Rows[0].Cells.Count;
+            GrdOffering.Rows[0].Cells.Clear();
+            GrdOffering.Rows[0].Cells.Add(new TableCell());
+            GrdOffering.Rows[0].Cells[0].ColumnSpan = TotalColumns;
+            GrdOffering.Rows[0].Cells[0].Text = "No Record Found";
+        }
+    }
+    protected void GrdOffering_RowCreated(object sender, GridViewRowEventArgs e)
+    {
+        if (!Utilities.IsDev() && e.Row.RowType != DataControlRowType.Pager)
+        {
+            e.Row.Cells[0].CssClass = "hiddencol";
+        }
+    }
+    protected void GrdOffering_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        DataTable dt = Session["offeringlist_data"] as DataTable;
+        bool tblEmpty = (dt.Rows.Count == 1 && dt.Rows[0][0] == DBNull.Value);
+        if (!tblEmpty && e.Row.RowType == DataControlRowType.DataRow)
+        {
+            Label lblId = (Label)e.Row.FindControl("lblId");
+            DataRow[] foundRows = dt.Select("o_offering_id=" + lblId.Text);
+            DataRow thisRow = foundRows[0];
+
+
+            Button btnSelect = (Button)e.Row.FindControl("btnSelect");
+            if (btnSelect != null)
+                btnSelect.OnClientClick = "javascript:select_offering('" + thisRow["o_offering_id"].ToString() + ":" + thisRow["o_name"].ToString() + "');";
+
+
+            Utilities.AddConfirmationBox(e);
+            if ((e.Row.RowState & DataControlRowState.Edit) > 0)
+                Utilities.SetEditRowBackColour(e, System.Drawing.Color.LightGoldenrodYellow);
+        }
+        if (e.Row.RowType == DataControlRowType.Footer)
+        {
+        }
+    }
+    protected void GrdOffering_RowCancelingEdit(object sender, GridViewCancelEditEventArgs e)
+    {
+        GrdOffering.EditIndex = -1;
+        FillOfferingGrid();
+    }
+    protected void GrdOffering_RowUpdating(object sender, GridViewUpdateEventArgs e)
+    {
+    }
+    protected void GrdOffering_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+    }
+    protected void GrdOffering_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+    }
+    protected void GrdOffering_RowEditing(object sender, GridViewEditEventArgs e)
+    {
+        GrdOffering.EditIndex = e.NewEditIndex;
+        FillOfferingGrid();
+    }
+    protected void GrdOffering_Sorting(object sender, GridViewSortEventArgs e)
+    {
+        // dont allow sorting if in edit mode
+        if (GrdOffering.EditIndex >= 0)
+            return;
+
+        DataTable dataTable = Session["offeringlist_data"] as DataTable;
+
+        if (dataTable != null)
+        {
+            if (Session["offeringlist_sortexpression"] == null)
+                Session["offeringlist_sortexpression"] = "";
+
+            DataView dataView = new DataView(dataTable);
+            string[] sortData = Session["offeringlist_sortexpression"].ToString().Trim().Split(' ');
+            string newSortExpr = (e.SortExpression == sortData[0] && sortData[1] == "ASC") ? "DESC" : "ASC";
+            dataView.Sort = e.SortExpression + " " + newSortExpr;
+            Session["offeringlist_sortexpression"] = e.SortExpression + " " + newSortExpr;
+
+            GrdOffering.DataSource = dataView;
+            GrdOffering.DataBind();
+        }
+    }
+    protected void GrdOffering_PageIndexChanging(object sender, GridViewPageEventArgs e)
+    {
+        GrdOffering.PageIndex = e.NewPageIndex;
+        FillOfferingGrid();
+    }
+
+    #endregion
+
+    #region btnSearch_Click, btnClearSearch_Click
+
+    protected void btnSearchOffering_Click(object sender, EventArgs e)
+    {
+        if (txtSearchOffering.Text.Trim().Length == 0)
+        {
+            SetErrorMessage("No search text entered");
+            return;
+        }
+        else
+            HideErrorMessage();
+
+
+        FillOfferingGrid();
+    }
+    protected void btnClearOfferingSearch_Click(object sender, EventArgs e)
+    {
+        txtSearchOffering.Text = string.Empty;
+
+        FillOfferingGrid();
+    }
+
+    #endregion
+
+    #region SetErrorMessage, HideErrorMessage
+
+    private void HideTableAndSetErrorMessage(string errMsg = "", string details = "")
+    {
+        SetErrorMessage(errMsg, details);
+    }
+    private void SetErrorMessage(string errMsg = "", string details = "")
+    {
+        if (errMsg.Contains(Environment.NewLine))
+            errMsg = errMsg.Replace(Environment.NewLine, "<br />");
+
+        // double escape so shows up literally on webpage for 'alert' message
+        string detailsToDisplay = (details.Length == 0 ? "" : " <a href=\"#\" onclick=\"alert('" + details.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("'", "\\'").Replace("\"", "\\'") + "'); return false;\">Details</a>");
+
+        lblErrorMessage.Visible = true;
+        if (errMsg != null && errMsg.Length > 0)
+            lblErrorMessage.Text = errMsg + detailsToDisplay + "<br />";
+        else
+            lblErrorMessage.Text = "An error has occurred. Plase contact the system administrator. " + detailsToDisplay + "<br />";
+    }
+    private void HideErrorMessage()
+    {
+        lblErrorMessage.Visible = false;
+        lblErrorMessage.Text = "";
+    }
+
+    #endregion
+
+}

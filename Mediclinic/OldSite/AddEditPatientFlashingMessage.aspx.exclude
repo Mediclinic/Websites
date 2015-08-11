@@ -1,0 +1,38 @@
+﻿<%@ Page Title="Add Edit Offering Popup Message" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="AddEditPatientFlashingMessage.aspx.cs" Inherits="AddEditPatientFlashingMessage" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+    <h2 ID="Heading" runat="server">
+        Flashing Message
+    </h2>
+
+    <asp:ValidationSummary ID="EditValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditValidationSummary" Visible="false"/>
+    <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+
+    <br />
+    <table id="maintable" runat="server">
+        <tr valign="top">
+            <td>Message</td>
+            <td style="width:8px;"></td>
+            <td><asp:TextBox ID="txtFlashingText" runat="server" Columns="50" /></td>
+            <td style="width:8px;"></td>
+            <td><asp:Button ID="btnClear" runat="server" Text="Clear" OnClientClick="document.getElementById('txtFlashingText').value='';return false;" /></td>
+        </tr>
+
+        <tr style="height:10px;">
+            <td colspan="3"></td>
+        </tr>
+
+        <tr>
+            <td colspan="3" align="center">
+                <br />  
+                <asp:Button ID="btnSubmit" runat="server" Text="Submit" onclick="btnSubmit_Click" CausesValidation="True" ValidationGroup="EditValidationSummary" />
+                <asp:Button ID="btnCancel" runat="server" Text="Cancel" onclick="btnCancel_Click"  OnClientClick="window.returnValue=false;self.close();" />
+                <br />              
+            </td>
+        </tr>
+
+    </table>
+
+</asp:Content>

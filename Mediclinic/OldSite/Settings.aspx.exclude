@@ -1,0 +1,335 @@
+﻿<%@ Page Title="Home Page" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="Settings.aspx.cs" Inherits="Settings" ValidateRequest="false" %>
+<%@ Register TagPrefix="FTB" Namespace="FreeTextBoxControls" Assembly="FreeTextBox" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <table border="0" cellpadding="0" cellspacing="0">
+        <tr valign="bottom">
+            <td>
+                <h2>Website Settings</h2>
+            </td>
+            <td style="width:65px;"></td>
+            <td>
+                <asp:Label ID="lblErrorMessage" runat="server" CssClass="failureNotification"></asp:Label>
+            </td>
+        </tr>
+    </table>
+    
+
+    <asp:ValidationSummary ID="ValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="ValidationSummary"/>
+    <br />
+
+
+    <asp:Panel ID="pnlDefaultButton" runat="server" DefaultButton="btnUpdate">
+    <table>
+        <tr id="tr_MedicareMaxNbrServicesPerYear" runat="server">
+            <td class="nowrap">
+                    <asp:RequiredFieldValidator ID="txtMedicareMaxNbrServicesPerYearRequired" runat="server" CssClass="failureNotification"  
+                        ControlToValidate="txtMedicareMaxNbrServicesPerYear" 
+                        ErrorMessage="Medicare Max Nbr Services Per Year is required."
+                        Display="Dynamic"
+                        ValidationGroup="ValidationSummary">*</asp:RequiredFieldValidator>
+                    <asp:CompareValidator ID="txtMedicareMaxNbrServicesPerYearIsInteger" runat="server" CssClass="failureNotification" 
+                        ControlToValidate="txtMedicareMaxNbrServicesPerYear" 
+                        Operator="DataTypeCheck" Type="Integer"
+                        ErrorMessage="Medicare Max Nbr Services Per Year must be an integer."
+                        Display="Dynamic"
+                        ValidationGroup="ValidationSummary">*</asp:CompareValidator>
+            </td>
+            <td>Medicare Max Nbr Services Per Year</td>
+            <td style="width:10px;"></td>
+            <td><asp:TextBox ID="txtMedicareMaxNbrServicesPerYear" runat="server" Columns="12"></asp:TextBox></td>
+        </tr>
+        <tr id="tr_AutoMedicareClaiming" runat="server">
+            <td></td>
+            <td>Auto Medicare Claiming</td>
+            <td></td>
+            <td><asp:CheckBox ID="chkAutoMedicareClaiming" runat="server"></asp:CheckBox></td>
+        </tr>
+        <tr id="tr_MedicareEclaimsLicenseNbr" runat="server">
+            <td class="nowrap">
+                    <asp:RequiredFieldValidator ID="txtMedicareEclaimsLicenseNbrRequired" runat="server" CssClass="failureNotification"  
+                        ControlToValidate="txtMedicareEclaimsLicenseNbr" 
+                        ErrorMessage="Medicare Eclaims License Nbr is required."
+                        Display="Dynamic"
+                        ValidationGroup="ValidationSummary">*</asp:RequiredFieldValidator>
+                    <asp:RegularExpressionValidator ID="txtMedicareEclaimsLicenseNbrRegex" runat="server" CssClass="failureNotification" 
+                        ControlToValidate="txtMedicareEclaimsLicenseNbr"
+                        ValidationExpression="^[0-9a-zA-Z\-_]+$"
+                        ErrorMessage="Medicare Eclaims License Nbr can only be alphanumeric, hyphens, or underscore."
+                        Display="Dynamic"
+                        ValidationGroup="ValidationSummary">*</asp:RegularExpressionValidator>
+            </td>
+            <td>Medicare Eclaims License Nbr</td>
+            <td></td>
+            <td><asp:TextBox ID="txtMedicareEclaimsLicenseNbr" runat="server" Columns="12"></asp:TextBox></td>
+        </tr>
+        <tr id="tr_MaxNbrProviders" runat="server">
+            <td class="nowrap">
+                    <asp:RequiredFieldValidator ID="txtMaxNbrProvidersRequired" runat="server" CssClass="failureNotification"  
+                        ControlToValidate="txtMaxNbrProviders" 
+                        ErrorMessage="Max Nbr Providers is required."
+                        Display="Dynamic"
+                        ValidationGroup="ValidationSummary">*</asp:RequiredFieldValidator>
+                    <asp:CompareValidator ID="txtMaxNbrProvidersIsInteger" runat="server" CssClass="failureNotification" 
+                        ControlToValidate="txtMaxNbrProviders" 
+                        Operator="DataTypeCheck" Type="Integer"
+                        ErrorMessage="Max Nbr Providers must be an integer."
+                        Display="Dynamic"
+                        ValidationGroup="ValidationSummary">*</asp:CompareValidator>
+            </td>
+            <td>Max Nbr Providers</td>
+            <td></td>
+            <td><asp:TextBox ID="txtMaxNbrProviders" runat="server" Columns="12"></asp:TextBox></td>
+        </tr>
+        <tr id="tr_SMSPrice" runat="server">
+            <td class="nowrap">
+                    <asp:RequiredFieldValidator ID="txtSMSPriceRequired" runat="server" CssClass="failureNotification"  
+                        ControlToValidate="txtSMSPrice" 
+                        ErrorMessage="SMS Price is required."
+                        Display="Dynamic"
+                        ValidationGroup="ValidationSummary">*</asp:RequiredFieldValidator>
+                    <asp:RangeValidator ID="txtSMSPriceRange" runat="server" CssClass="failureNotification" 
+                        ControlToValidate="txtSMSPrice"
+                        Type="Currency" MinimumValue="0.00" MaximumValue="999.99" 
+                        ErrorMessage="SMS Price must be between 0.00 and 999.99" 
+                        Display="Dynamic"
+                        ValidationGroup="ValidationSummary">*</asp:RangeValidator>
+            </td>
+            <td>SMS Price</td>
+            <td></td>
+            <td><asp:TextBox ID="txtSMSPrice" runat="server" Columns="12"></asp:TextBox></td>
+        </tr>
+        <tr id="tr_StockWarningNotificationEmailAddress" runat="server" class="hiddencol">
+            <td></td>
+            <td>Stock Warning Notification Email Address</td>
+            <td></td>
+            <td><asp:TextBox ID="txtStockWarningNotificationEmailAddress" runat="server" Columns="40"></asp:TextBox></td>
+        </tr>
+        <tr id="tr_AllowAddSiteClinic" runat="server" class="hiddencol">
+            <td></td>
+            <td>Allow Adding Site Clinic</td>
+            <td></td>
+            <td><asp:CheckBox ID="chkAllowAddSiteClinic" runat="server"></asp:CheckBox></td>
+        </tr>
+        <tr id="tr_AllowAddSiteAgedCare" runat="server" class="hiddencol">
+            <td></td>
+            <td>Allow Adding Site AgedCare</td>
+            <td></td>
+            <td><asp:CheckBox ID="chkAllowAddSiteAgedCare" runat="server"></asp:CheckBox></td>
+        </tr>
+        <tr id="tr_DayOfMonthPaymentDue" runat="server">
+            <td></td>
+            <td>Day Of Month Payemnt Due</td>
+            <td></td>
+            <td><asp:DropDownList ID="ddlDayOfMonthPaymentDue" runat="server"/></td>
+        </tr>
+
+
+        <tr id="tr_SpaceTrailingStakeholderFields" runat="server">
+            <td style="height:25px" colspan="4"></td>
+        </tr>
+
+        <tr>
+            <td class="nowrap">
+                    <asp:RequiredFieldValidator ID="txtSiteRequired" runat="server" CssClass="failureNotification"  
+                        ControlToValidate="txtSite" 
+                        ErrorMessage="Site Name is required."
+                        Display="Dynamic"
+                        ValidationGroup="ValidationSummary">*</asp:RequiredFieldValidator>
+            </td>
+            <td>Site Name</td>
+            <td></td>
+            <td><asp:TextBox ID="txtSite" runat="server" Columns="40"></asp:TextBox></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>CSS Page</td>
+            <td></td>
+            <td><asp:DropDownList ID="ddlCSS" runat="server" /></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>Banner Message</td>
+            <td></td>
+            <td><asp:TextBox ID="txtBannerMessage" runat="server" Columns="40"></asp:TextBox></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>Show Banner Message</td>
+            <td></td>
+            <td><asp:CheckBox ID="chkShowBannerMessage" runat="server"></asp:CheckBox></td>
+        </tr>
+        <tr>
+            <td class="nowrap">
+                    <asp:RequiredFieldValidator ID="txtEmail_FromNameRequired" runat="server" CssClass="failureNotification"  
+                        ControlToValidate="txtEmail_FromName" 
+                        ErrorMessage="Email - From Name is required."
+                        Display="Dynamic"
+                        ValidationGroup="ValidationSummary">*</asp:RequiredFieldValidator>
+            </td>
+            <td>Email - From Name</td>
+            <td></td>
+            <td><asp:TextBox ID="txtEmail_FromName" runat="server" Columns="40"></asp:TextBox></td>
+        </tr>
+        <tr>
+            <td class="nowrap">
+                    <asp:RequiredFieldValidator ID="txtEmail_FromEmailRequired" runat="server" CssClass="failureNotification"  
+                        ControlToValidate="txtEmail_FromEmail" 
+                        ErrorMessage="Email - From Email is required."
+                        Display="Dynamic"
+                        ValidationGroup="ValidationSummary">*</asp:RequiredFieldValidator>
+            </td>
+            <td>Email - From Email (pt emails sent from this address)</td>
+            <td></td>
+            <td><asp:TextBox ID="txtEmail_FromEmail" runat="server" Columns="40"></asp:TextBox></td>
+        </tr>
+        <tr>
+            <td class="nowrap">
+                    <asp:RequiredFieldValidator ID="txtAdminAlertEmail_ToRequired" runat="server" CssClass="failureNotification"  
+                        ControlToValidate="txtAdminAlertEmail_To" 
+                        ErrorMessage="Admin Alert Email is required."
+                        Display="Dynamic"
+                        ValidationGroup="ValidationSummary">*</asp:RequiredFieldValidator>
+            </td>
+            <td>Admin Alert Email (admin alerts eg deleted bookings sent here)</td>
+            <td></td>
+            <td><asp:TextBox ID="txtAdminAlertEmail_To" runat="server" Columns="40"></asp:TextBox></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>Enable Deleted/Reversed Booking Alerts</td>
+            <td></td>
+            <td><asp:CheckBox ID="chkEnableDeletedBookingsAlerts" runat="server"></asp:CheckBox></td>
+        </tr>
+
+
+        <tr>
+            <td></td>
+            <td>Service Specific Booking Reminder Letters To Batch - Email Address</td>
+            <td></td>
+            <td><asp:TextBox ID="txtServiceSpecificBookingReminderLettersToBatch_EmailAddress" runat="server" Columns="40"></asp:TextBox></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>Default State When Adding/Searching Suburbs</td>
+            <td></td>
+            <td><asp:DropDownList ID="ddlDefaultState" runat="server" /></td>
+        </tr>
+
+        <tr>
+            <td></td>
+            <td>SMS Credit Notification Email Address</td>
+            <td></td>
+            <td><asp:TextBox ID="txtSMSCreditNotificationEmailAddress" runat="server" Columns="40"></asp:TextBox></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>SMS Credit Out Of Balance - SendEmail</td>
+            <td></td>
+            <td><asp:CheckBox ID="chkSMSCreditOutOfBalance_SendEmail" runat="server"></asp:CheckBox></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>SMS Credit Low Balance - Send Email</td>
+            <td></td>
+            <td><asp:CheckBox ID="chkSMSCreditLowBalance_SendEmail" runat="server"></asp:CheckBox></td>
+        </tr>
+        <tr>
+            <td class="nowrap">
+                    <asp:RequiredFieldValidator ID="txtSMSCreditLowBalance_ThresholdRequired" runat="server" CssClass="failureNotification"  
+                        ControlToValidate="txtSMSCreditLowBalance_Threshold" 
+                        ErrorMessage="SMS Credit Low Balance Threshold is required."
+                        Display="Dynamic"
+                        ValidationGroup="ValidationSummary">*</asp:RequiredFieldValidator>
+                    <asp:RangeValidator ID="txtSMSCreditLowBalance_ThresholdRange" runat="server" CssClass="failureNotification" 
+                        ControlToValidate="txtSMSCreditLowBalance_Threshold"
+                        Type="Currency" MinimumValue="0.00" MaximumValue="9999.99" 
+                        ErrorMessage="SMS Credit Low Balance Threshold must be between 0.00 and 9999.99" 
+                        Display="Dynamic"
+                        ValidationGroup="ValidationSummary">*</asp:RangeValidator>
+            </td>
+            <td>SMS Credit Low Balance Threshold</td>
+            <td></td>
+            <td><asp:TextBox ID="txtSMSCreditLowBalance_Threshold" runat="server" Columns="12"></asp:TextBox></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>Enable Daily Booking Reminder SMS's For Patients</td>
+            <td></td>
+            <td><asp:CheckBox ID="chkEnableDailyBookingReminderSMS" runat="server"></asp:CheckBox></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>Enable Daily Booking Reminder Emails For Patients</td>
+            <td></td>
+            <td><asp:CheckBox ID="chkEnableDailyBookingReminderEmails" runat="server"></asp:CheckBox></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>Enable Daily Booking Reminder SMS's For Staff</td>
+            <td></td>
+            <td><asp:CheckBox ID="chkEnableDailyStaffBookingReminderSMS" runat="server"></asp:CheckBox></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>Enable Daily Booking Reminder Emails For Staff</td>
+            <td></td>
+            <td><asp:CheckBox ID="chkEnableDailyStaffBookingReminderEmails" runat="server"></asp:CheckBox></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>Enable Birthday SMS's</td>
+            <td></td>
+            <td><asp:CheckBox ID="chkEnableBirthdaySMS" runat="server"></asp:CheckBox></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>Enable Birthday Emails</td>
+            <td></td>
+            <td><asp:CheckBox ID="chkEnableBirthdayEmails" runat="server"></asp:CheckBox></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>Invoice Gap Payments</td>
+            <td></td>
+            <td><asp:CheckBox ID="chkInvoiceGapPayments" runat="server"></asp:CheckBox></td>
+        </tr>
+        <tr>
+            <td style="height:30px" colspan="4"></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td valign="top">Letters Email Deafult Subject Line</td>
+            <td></td>
+            <td>
+                <asp:TextBox ID="txtLettersEmailDeafultSubjectLine" runat="server" Columns="40"/>
+            </td>
+        </tr>
+        <tr>
+            <td></td>
+            <td valign="top">Letters Email Signature</td>
+            <td></td>
+            <td>
+                <FTB:FreeTextBox id="FreeTextBox1" runat="Server" Text="" Width="525px" Height="275px" />
+            </td>
+        </tr>
+
+
+
+        <tr>
+            <td style="height:30px" colspan="4"></td>
+        </tr>
+
+        <tr>
+            <td colspan="4" align="center"><asp:Button ID="btnUpdate" runat="server" Text="Update" OnClientClick="document.getElementById('lblErrorMessage').innerHTML = '';" OnClick="btnUpdate_Click" CausesValidation="True" ValidationGroup="ValidationSummary" /></td>
+        </tr>
+
+    </table>
+    </asp:Panel>
+
+
+</asp:Content>
+

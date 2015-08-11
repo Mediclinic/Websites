@@ -1,0 +1,190 @@
+﻿<%@ Page Title="Home Page" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="CreateNewSite.aspx.cs" Inherits="_Default" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script type="text/javascript">
+
+        function capitalize_first(txtbox) {
+            txtbox.value = txtbox.value.charAt(0).toUpperCase() + txtbox.value.slice(1);
+        }
+
+        function adjustOffset(el, offset) {
+            var val = el.value, newOffset = offset;
+            if (val.indexOf("\r\n") > -1) {
+                var matches = val.replace(/\r\n/g, "\n").slice(0, offset).match(/\n/g);
+                newOffset += matches ? matches.length : 0;
+            }
+            return newOffset;
+        };
+        setCaretToPos = function (input, selectionStart, selectionEnd) {
+            input.focus();
+            if (input.setSelectionRange) {
+                selectionStart = adjustOffset(input, selectionStart);
+                selectionEnd = adjustOffset(input, selectionEnd);
+                input.setSelectionRange(selectionStart, selectionEnd);
+
+            } else if (input.createTextRange) {
+                var range = input.createTextRange();
+                range.collapse(true);
+                range.moveEnd('character', selectionEnd);
+                range.moveStart('character', selectionStart);
+                range.select();
+            }
+        };
+        function SetEnd(elemId) {
+            var elem = document.getElementById(elemId);
+            setTimeout(setCaretToPos(elem, elem.value.length, elem.value.length), 100);
+        }
+
+    </script>
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <center>
+    <table border="0" cellpadding="0" cellspacing="0">
+        <tr>
+            <td>
+
+                <br />
+                <h2>Create New DB</h2>
+
+                <br /><br />
+
+                <table border="0" cellpadding="0" cellspacing="0">
+                    <tr align="left">
+                        <td>Company Name</td>
+                        <td><asp:TextBox ID="txtCompanyName" runat="server" Columns="40" ></asp:TextBox></td>
+                    </tr>
+                    <tr align="left">
+                        <td>Firstname</td>
+                        <td><asp:TextBox ID="txtInitialStaffFirstname" runat="server" Columns="40" onkeyup="capitalize_first(this);" ></asp:TextBox></td>
+                    </tr>
+                    <tr align="left">
+                        <td>Surname</td>
+                        <td><asp:TextBox ID="txtInitialStaffSurname" runat="server" Columns="40" onkeyup="capitalize_first(this);" ></asp:TextBox></td>
+                    </tr>
+                    <tr align="left">
+                        <td>Personal Email</td>
+                        <td><asp:TextBox ID="txtPersonalEmail" runat="server" Columns="40" onblur="if (document.getElementById('txtCompanyEmail').value == '') { document.getElementById('txtCompanyEmail').value = document.getElementById('txtPersonalEmail').value; }; SetEnd('txtCompanyEmail');" ></asp:TextBox> deleted bookings alerts, etc, sent here</td>
+                    </tr>
+                    <tr align="left">
+                        <td>Company Email</td>
+                        <td><asp:TextBox ID="txtCompanyEmail" runat="server" Columns="40" ></asp:TextBox> referrer letters sent 'from' this address</td>
+                    </tr>
+
+                    <tr align="left" style="height:12px">
+                        <td colspan="3"></td>
+                    </tr>
+
+                    <tr align="left">
+                        <td>Auto Generate Medicare Invoice Claim Nbrs</td>
+                        <td><asp:CheckBox ID="lblAutoGenerateMedicareInvoiceClaimNbrs" runat="server" /></td>
+                    </tr>
+                    <tr align="left">
+                        <td>Medicare Eclaims License Nbr</td>
+                        <td><asp:TextBox ID="txtMedicareEclaimsLicenseNbr" runat="server" Columns="10" ></asp:TextBox></td>
+                    </tr>
+                    <tr align="left">
+                        <td>SMS Price</td>
+                        <td><asp:TextBox ID="txtSMSPrice" runat="server" Columns="10" ></asp:TextBox> eg 0.15</td>
+                    </tr>
+                    <tr align="left">
+                        <td>Max Nbr Providers</td>
+                        <td><asp:TextBox ID="txtMaxNbrProviders" runat="server" Columns="10" ></asp:TextBox> eg 5</td>
+                    </tr>
+
+                    <tr style="height:12px">
+                        <td colspan="3"></td>
+                    </tr>
+
+                    <tr align="left">
+                        <td>Banner Message</td>
+                        <td><asp:TextBox ID="txtBannerMessage" runat="server" Columns="40" ></asp:TextBox></td>
+                    </tr>
+                    <tr align="left">
+                        <td>Show Banner Message</td>
+                        <td>
+                            <asp:DropDownList ID="ddlShowBannerMessage" runat="server">
+                                <asp:ListItem Text="No" Value="False" />
+                                <asp:ListItem Text="Yes" Value="True" />
+                            </asp:DropDownList>
+                        </td>
+                    </tr>
+
+
+                    <tr align="left" style="height:12px">
+                        <td colspan="3"></td>
+                    </tr>
+
+                    <tr align="left">
+                        <td>Field 1</td>
+                        <td><asp:DropDownList ID="ddlField1" runat="server"></asp:DropDownList></td>
+                    </tr>
+                    <tr align="left">
+                        <td>Field 2</td>
+                        <td><asp:DropDownList ID="ddlField2" runat="server"></asp:DropDownList></td>
+                    </tr>
+                    <tr align="left">
+                        <td>Field 3</td>
+                        <td><asp:DropDownList ID="ddlField3" runat="server"></asp:DropDownList></td>
+                    </tr>
+                    <tr align="left">
+                        <td>Field 4</td>
+                        <td><asp:DropDownList ID="ddlField4" runat="server"></asp:DropDownList></td>
+                    </tr>
+
+                    <tr style="height:20px">
+                        <td colspan="3"></td>
+                    </tr>
+
+
+                    <tr>
+                        <td colspan="2" align="center">
+                            <asp:Button ID="btnSubmit" runat="server" Text="Create DB" OnClick="btnSubmit_Click" />
+                            <br />
+                            <br />
+                        </td>
+                    </tr>
+                </table>
+
+
+            </td>
+        </tr>
+    </table>
+
+    <table border="0" cellpadding="0" cellspacing="0">
+        <tr>
+            <td><asp:Label ID="lblResultMessage" runat="server"></asp:Label></td>
+        </tr>
+    </table>
+
+
+    <br />
+    <hr width="50%" />
+
+    <h2>For Bulk Emails</h2>
+    <br />
+
+    <table border="0" cellpadding="0" cellspacing="0">
+        <tr><td><asp:CheckBox ID="chkIncOurDB" runat="server" Text="Inc Our DB" TextAlign="Right" Checked="true" /></td></tr>
+    </table>
+    <br />
+    <table border="0" cellpadding="0" cellspacing="0">
+        <tr>
+            <td><asp:Button ID="btnExportAllUsersAllSites" runat="server" Text="Export All Users All Sites" OnClick="btnExportAllUsersAllSites_Click" /></td>
+        </tr>
+    </table>
+    <br />
+    <table border="0" cellpadding="0" cellspacing="0">
+        <tr>
+            <td><asp:Label ID="lblResultMessage2" runat="server"></asp:Label></td>
+        </tr>
+    </table>
+    
+
+    
+
+
+    <center>
+
+</asp:Content>
+

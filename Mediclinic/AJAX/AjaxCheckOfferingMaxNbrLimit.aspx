@@ -1,0 +1,1 @@
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="AjaxCheckOfferingMaxNbrLimit.aspx.cs" Inherits="AjaxCheckOfferingMaxNbrLimit" %>

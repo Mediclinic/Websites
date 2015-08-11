@@ -1,0 +1,311 @@
+﻿
+-- problem is .... could have different patients now .. and patients are added to fucking RegisterReferrer rows .. not to this 
+-- prob need to add to temp table .... join with RegisterReferrer ... and add in those fields ... and get where reg_ref_id is 70000 + o_reg_ref_id
+
+
+
+
+--> DELETE RegisterReferrer WHERE organisation_id IN (1429,4429)
+
+
+*************************************************************************************
+*************************************************************************************
+
+CREATE TABLE RegRefTemp
+(
+ dupeCount                int,
+ o_register_referrer_id   int,
+
+ o_referrer_id            int,
+ o_organisation_id        int,
+ o_person_id              int,
+ o_person_entity_id       int,
+ o_organisation_entity_id int,
+ o_is_deleted             int,
+ o_is_deleted2            int,
+ 
+ o_firstname              varchar(100),
+ o_surname                varchar(100),
+ 
+ person_id                int,
+ entity_id                int,
+ added_by                 int,
+ title_id                 int,
+ firstname                varchar(100),
+ middlename               varchar(100),
+ surname                  varchar(100),
+ nickname                 varchar(100),
+ gender                   varchar(1),
+ dob                      datetime,
+ person_date_added        datetime,
+ person_date_modified     datetime,
+ 
+ referrer_id              int,
+ person_id2               int,
+ referrer_date_added      datetime,
+ is_deleted               bit,
+ 
+ register_referrer_id                               int,
+ organisation_id                                    int,
+ referrer_id2                                       int,
+ provider_number                                    varchar(50),
+ report_every_visit_to_referrer                     bit,
+ batch_send_all_patients_treatment_notes            bit,
+ date_last_batch_send_all_patients_treatment_notes  datetime,
+ register_referrer_date_added                       datetime,
+ is_deleted2                                        bit
+ 
+)
+
+
+*************************************************************************************
+*************************************************************************************
+
+
+DECLARE @tmptbl TABLE
+(
+ dupeCount               int,
+ o_register_referrer_id  int,
+
+ o_referrer_id           int,
+ o_organisation_id       int,
+ o_person_id              int,
+ o_person_entity_id       int,
+ o_organisation_entity_id int,
+ o_is_deleted             int,
+ o_is_deleted2            int,
+ 
+ o_firstname              varchar(100),
+ o_surname                varchar(100),
+ 
+ person_id                int,
+ entity_id                int,
+ added_by                 int,
+ title_id                 int,
+ firstname                varchar(100),
+ middlename               varchar(100),
+ surname                  varchar(100),
+ nickname                 varchar(100),
+ gender                   varchar(1),
+ dob                      datetime,
+ person_date_added        datetime,
+ person_date_modified     datetime,
+ 
+ referrer_id              int,
+ person_id2               int,
+ referrer_date_added      datetime,
+ is_deleted               bit,
+ 
+ register_referrer_id                               int,
+ organisation_id                                    int,
+ referrer_id2                                       int,
+ provider_number                                    varchar(50),
+ report_every_visit_to_referrer                     bit,
+ batch_send_all_patients_treatment_notes            bit,
+ date_last_batch_send_all_patients_treatment_notes  datetime,
+ register_referrer_date_added                       datetime,
+ is_deleted2                                        bit
+ 
+)
+
+
+INSERT INTO RegRefTemp
+SELECT
+
+ (
+ SELECT COUNT(*) 
+ FROM RegisterReferrer rr2
+     LEFT JOIN Referrer r2 ON rr2.referrer_id = r2.referrer_id
+     LEFT JOIN Person   p2 ON r2.person_id = p2.person_id
+ WHERE 
+        p.surname             = p2.surname 
+	AND p.firstname           = p2.firstname 
+	AND p.person_date_added   = p2.person_date_added 
+	AND r.referrer_date_added = r2.referrer_date_added
+	AND rr.register_referrer_date_added = rr2.register_referrer_date_added
+	AND p.firstname <> '' AND p.surname <> '' 
+	AND (r.referrer_id           < 40000 AND r2.referrer_id           = (r.referrer_id           + 40000))
+	AND (rr.register_referrer_id < 70000 AND rr2.register_referrer_id = (rr.register_referrer_id + 70000))
+	AND (rr.organisation_id      < 3000 AND rr2.organisation_id       = (rr.organisation_id      + 3000 ))
+ ) AS dupeCount,
+
+ (
+ SELECT TOP 1 rr2.register_referrer_id
+ FROM RegisterReferrer rr2
+     LEFT JOIN Referrer r2 ON rr2.referrer_id = r2.referrer_id
+     LEFT JOIN Person p2 ON r2.person_id = p2.person_id
+ WHERE 
+        p.surname            = p2.surname 
+	AND p.firstname          = p2.firstname 
+	AND p.person_date_added  = p2.person_date_added 
+	AND r.referrer_date_added = r2.referrer_date_added
+	AND rr.register_referrer_date_added = rr2.register_referrer_date_added
+	AND p.firstname <> '' AND p.surname <> '' 
+	AND (r.referrer_id           < 40000 AND r2.referrer_id           = (r.referrer_id           + 40000))
+	AND (rr.register_referrer_id < 70000 AND rr2.register_referrer_id = (rr.register_referrer_id + 70000))
+	AND (rr.organisation_id      < 3000 AND rr2.organisation_id       = (rr.organisation_id      + 3000 ))
+ ) AS o_register_referrer_id,
+
+ NULL,
+ NULL,
+ NULL,
+ NULL,
+ NULL,
+ NULL,
+ NULL,
+ NULL,
+ NULL,
+
+ p.person_id,
+ p.entity_id,
+ p.added_by,
+ p.title_id,
+ p.firstname,
+ p.middlename,
+ p.surname,
+ p.nickname,
+ p.gender,
+ p.dob,
+ p.person_date_added,
+ p.person_date_modified,
+ 
+ r.referrer_id,
+ r.person_id,
+ r.referrer_date_added,
+ r.is_deleted,
+ 
+ rr.register_referrer_id,
+ rr.organisation_id,
+ rr.referrer_id,
+ rr.provider_number,
+ rr.report_every_visit_to_referrer,
+ rr.batch_send_all_patients_treatment_notes,
+ rr.date_last_batch_send_all_patients_treatment_notes,
+ rr.register_referrer_date_added,
+ rr.is_deleted
+ 
+
+FROM RegisterReferrer rr
+     LEFT JOIN Referrer r ON rr.referrer_id = r.referrer_id
+     LEFT JOIN Person p ON r.person_id = p.person_id
+ORDER BY p.surname, p.firstname 
+
+
+UPDATE
+    tmptbl
+SET
+    o_organisation_id        = rr.organisation_id,
+    o_referrer_id            = rr.referrer_id,
+	o_person_id              = r.person_id,
+	o_person_entity_id       = p.entity_id,
+	o_organisation_entity_id = o.entity_id,
+	o_is_deleted2            = rr.is_deleted,
+	o_is_deleted             = r.is_deleted,
+    o_firstname              = p.firstname,
+    o_surname                = p.surname
+FROM
+    RegRefTemp tmptbl
+    LEFT JOIN RegisterReferrer rr ON tmptbl.o_register_referrer_id = rr.register_referrer_id
+    LEFT JOIN Referrer         r  ON rr.referrer_id         = r.referrer_id
+    LEFT JOIN Person           p  ON r.person_id            = p.person_id    
+    LEFT JOIN Organisation     o  ON rr.organisation_id     = o.organisation_id
+    
+
+DELETE RegRefTemp
+WHERE dupeCount <> 1 OR is_deleted = 1 OR o_is_deleted = 1 OR is_deleted2 = 1 OR o_is_deleted2 = 1
+
+
+SELECT  * 
+FROM RegRefTemp
+
+
+*************************************************************************************
+*************************************************************************************
+
+
+
+-- udpate all regref
+-- delete regref
+
+-- try delete all ref    ... unless has regref linking it ... then change to other regref
+-- try delete all org    ... unless has regref linking it ... then change to other org
+-- try delete all person ... unless has 
+
+
+
+UPDATE pr
+SET    register_referrer_id = tmptbl.register_referrer_id
+FROM   PatientReferrer pr
+       LEFT JOIN RegRefTemp tmptbl on pr.register_referrer_id = tmptbl.o_register_referrer_id
+WHERE  pr.register_referrer_id = tmptbl.o_register_referrer_id
+
+UPDATE pr
+SET    register_referrer_id = tmptbl.register_referrer_id
+FROM   LetterPrintHistory pr
+       LEFT JOIN RegRefTemp tmptbl on pr.register_referrer_id = tmptbl.o_register_referrer_id
+WHERE  pr.register_referrer_id = tmptbl.o_register_referrer_id
+
+DELETE RegisterReferrer WHERE register_referrer_id IN (SELECT o_register_referrer_id FROM RegRefTemp)
+
+
+
+UPDATE rr
+SET    referrer_id = tmptbl.referrer_id
+FROM   RegisterReferrer rr
+       LEFT JOIN RegRefTemp tmptbl on rr.referrer_id = tmptbl.o_referrer_id
+WHERE  rr.referrer_id = tmptbl.o_referrer_id
+
+DELETE RegisterReferrer WHERE referrer_id IN (SELECT o_referrer_id FROM RegRefTemp)
+
+Delete Referrer WHERE referrer_id in (select o_referrer_id from RegRefTemp)
+
+
+
+UPDATE rr
+SET    organisation_id = tmptbl.organisation_id
+FROM   RegisterReferrer rr
+       LEFT JOIN RegRefTemp tmptbl on rr.organisation_id = tmptbl.o_organisation_id
+WHERE  rr.organisation_id = tmptbl.o_organisation_id
+
+
+UPDATE pr
+SET    organisation_id = tmptbl.organisation_id
+FROM   PatientReferrer pr
+       LEFT JOIN RegRefTemp tmptbl on pr.organisation_id = tmptbl.o_organisation_id
+WHERE  pr.organisation_id = tmptbl.o_organisation_id
+
+
+DELETE Organisation WHERE organisation_id IN (SELECT o_organisation_id FROM RegRefTemp)
+
+
+
+DELETE Person 
+WHERE  person_id IN     (SELECT o_person_id FROM RegRefTemp)
+  AND  person_id NOT IN (SELECT person_id   FROM Patient WHERE person_id IN (SELECT o_person_id FROM RegRefTemp))
+  AND  person_id NOT IN (SELECT person_id   FROM Staff   WHERE person_id IN (SELECT o_person_id FROM RegRefTemp))
+
+DELETE ContactAus  
+WHERE entity_id IN     (SELECT o_person_entity_id from RegRefTemp)
+  AND entity_id NOT IN (SELECT entity_id FROM Person WHERE entity_id IN (SELECT o_person_entity_id FROM RegRefTemp))
+
+DELETE Entity 
+WHERE entity_id IN     (SELECT o_person_entity_id from RegRefTemp)
+  AND entity_id NOT IN (SELECT entity_id FROM Person WHERE entity_id IN (SELECT o_person_entity_id FROM RegRefTemp))
+
+
+
+DELETE ContactAus  
+WHERE entity_id IN     (select o_organisation_entity_id from RegRefTemp)
+  AND entity_id NOT IN (select entity_id FROM Organisation WHERE entity_id IN (SELECT o_organisation_entity_id FROM RegRefTemp))
+
+DELETE Note  
+WHERE entity_id IN     (select o_organisation_entity_id from RegRefTemp)
+  AND entity_id NOT IN (select entity_id FROM Organisation WHERE entity_id IN (SELECT o_organisation_entity_id FROM RegRefTemp))
+
+DELETE Entity 
+WHERE entity_id IN     (select o_organisation_entity_id from RegRefTemp)
+  AND entity_id NOT IN (select entity_id FROM Organisation WHERE entity_id IN (SELECT o_organisation_entity_id FROM RegRefTemp))
+
+
+
+--> I think thats it!!

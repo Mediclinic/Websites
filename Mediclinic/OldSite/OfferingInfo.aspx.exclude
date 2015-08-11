@@ -1,0 +1,534 @@
+﻿<%@ Page Title="Products & Services" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="OfferingInfo.aspx.cs" Inherits="OfferingInfo" %>
+<%@ Register TagPrefix="UC" TagName="IconKeyControl" Src="~/Controls/IconKeyControl.ascx" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script type="text/javascript">
+
+        function set_if_empty_price(txtMedicareCharge, txtDvaCharge, txtTacCharge) {
+
+            if (txtMedicareCharge.value.trim() == '')
+                txtMedicareCharge.value = "0.00";
+            if (txtDvaCharge.value.trim() == '')
+                txtDvaCharge.value = "0.00";
+            if (txtTacCharge.value.trim() == '')
+                txtTacCharge.value = "0.00";
+        }
+
+        String.prototype.trim = function () {
+            return this.replace(/^\s+|\s+$/g, "");
+        }
+
+        function validate_and_confirm(message, validation_group) {
+            var validated = Page_ClientValidate(validation_group);
+            if (validated) {
+                return confirm(message);
+            }
+        }
+
+    </script>
+
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr valign="bottom">
+            <td>
+        
+                 <h2 id="heading" runat="server">
+                   Products & Services
+                </h2>
+
+                <table border="0" cellpadding="0" cellspacing="8"  id="tr_extendedSearch" runat="server">
+                    <tr  id="tr_basicSearch" runat="server">
+                        <td><asp:LinkButton ID="btnHoverToolTip" runat="server" Text="?" ToolTip="Display only those with organisations containing the entered text" OnClientClick="javascript:return false;" /></td>
+                        <td><asp:Label ID="lblSearch" runat="server">Search By Name: </asp:Label></td>
+                        <td><asp:TextBox ID="txtSearchName" runat="server"></asp:TextBox></td>
+                        <td><asp:CheckBox ID="chkSearchOnlyStartWith" runat="server" Text="starts with" Font-Size="X-Small" /></td>
+                        <td><asp:Button ID="btnSearchName" runat="server" Text="Search" onclick="btnSearchName_Click" /></td>
+                        <td><asp:Button ID="btnClearNameSearch" runat="server" Text="Clear" onclick="btnClearNameSearch_Click" /></td>
+                        <td style="width:60px"></td>
+                        <td><asp:CheckBox ID="chkUsePaging" runat="server" Text="use paging" Font-Size="X-Small" AutoPostBack="True" OnCheckedChanged="chkUsePaging_CheckedChanged" Checked="True" /></td>
+                        <td style="width:25px"></td>
+                        <td><asp:CheckBox ID="chkShowDeleted" runat="server" Text="show deleted" Font-Size="X-Small" AutoPostBack="True" OnCheckedChanged="chkShowDeleted_CheckedChanged" Checked="False" /></td>
+                        <td style="width:60px"></td>
+                        <td>
+                            <asp:TextBox ID="txtNewPrice" runat="server" Width="50px"></asp:TextBox>
+                            <asp:RequiredFieldValidator ID="txtNewPriceRequired" runat="server" CssClass="failureNotification"  
+                                    ControlToValidate="txtNewPrice" 
+                                    ErrorMessage="Price is required."
+                                    Display="Dynamic"
+                                    ValidationGroup="EditMcPriceValidationSummary">*</asp:RequiredFieldValidator>
+                            <asp:RangeValidator ID="txtNewPriceIsCurrency" runat="server" CssClass="failureNotification" 
+                                ControlToValidate="txtNewPrice"
+                               Type="Currency" MinimumValue="0.00" MaximumValue="999999.99" 
+                                ErrorMessage="Price must be a number."
+                                Display="Dynamic"
+                                ValidationGroup="EditMcPriceValidationSummary">*</asp:RangeValidator>
+                            <asp:Button ID="btnUpdateMedicarePrice" runat="server" CausesValidation="True" ValidationGroup="EditMcPriceValidationSummary" OnCommand="btnUpdatePrice_Command" CommandName="UpdateMedicarePriceAll" Text="Update All MC" OnClientClick="return validate_and_confirm('Are you sure that you want to update the Medicare price for ALL products and services to $' + parseFloat(document.getElementById('txtNewPrice').value, 10).toFixed(2) + ' ?', 'EditOfferingValidationSummary');" />
+                        </td>
+                    </tr>
+                </table>
+
+            </td>
+
+            <td align="right">
+
+                <table border="0" cellpadding="0" cellspacing="8"  runat="server">
+                    <tr>
+                        <td>
+                            <UC:IconKeyControl ID="iconKeyControl" runat="server" />
+                        </td>
+                    </tr>
+                </table>
+
+            </td>
+
+        </tr>
+    </table>
+
+
+    <asp:ValidationSummary ID="EditOfferingValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditOfferingValidationSummary"/>
+    <asp:ValidationSummary ID="AddOfferingValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="AddOfferingValidationGroup"/>
+    <asp:ValidationSummary ID="EditMcPriceValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditMcPriceValidationSummary"/>
+    <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+
+    <p>
+        <asp:GridView ID="GrdOffering" runat="server" 
+             AutoGenerateColumns="False" DataKeyNames="o_offering_id" 
+             OnRowCancelingEdit="GrdOffering_RowCancelingEdit" 
+             OnRowDataBound="GrdOffering_RowDataBound" 
+             OnRowEditing="GrdOffering_RowEditing" 
+             OnRowUpdating="GrdOffering_RowUpdating" ShowFooter="True" 
+             OnRowCommand="GrdOffering_RowCommand" 
+             OnRowDeleting="GrdOffering_RowDeleting" 
+             OnRowCreated="GrdOffering_RowCreated"
+             AllowSorting="True" 
+             OnSorting="GridView_Sorting"
+             RowStyle-VerticalAlign="top" 
+             AllowPaging="True"
+             OnPageIndexChanging="GrdOffering_PageIndexChanging"
+             PageSize="16"
+             ClientIDMode="Predictable">
+             <PagerSettings Mode="NumericFirstLast" FirstPageText="First" PreviousPageText="Previous" NextPageText="Next" LastPageText="Last" />
+
+
+            <Columns> 
+
+                <asp:TemplateField HeaderText="ID"  HeaderStyle-HorizontalAlign="Left" SortExpression="o_offering_id" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:Label ID="lblId" runat="server" Text='<%# Bind("o_offering_id") %>'></asp:Label>
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblId" runat="server" Text='<%# Bind("o_offering_id") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Name" HeaderStyle-HorizontalAlign="Left" SortExpression="o_name" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:TextBox Columns="30" ID="txtName" runat="server" Text='<%# Bind("o_name") %>'></asp:TextBox> 
+                        <asp:RequiredFieldValidator ID="txtValidateNameRequired" runat="server" CssClass="failureNotification"  
+                            ControlToValidate="txtName" 
+                            ErrorMessage="Name is required."
+                            Display="Dynamic"
+                            ValidationGroup="EditOfferingValidationSummary">*</asp:RequiredFieldValidator>
+                    </EditItemTemplate> 
+                    <FooterTemplate>
+                        <asp:TextBox Columns="30" ID="txtNewName" runat="server" ></asp:TextBox>
+                        <asp:RequiredFieldValidator ID="txtValidateNewNameRequired" runat="server" CssClass="failureNotification"  
+                            ControlToValidate="txtNewName" 
+                            ErrorMessage="Name is required."
+                            Display="Dynamic"
+                            ValidationGroup="AddOfferingValidationGroup">*</asp:RequiredFieldValidator>
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblName" runat="server" Text='<%# Bind("o_name") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="ShortName" HeaderStyle-HorizontalAlign="Left" SortExpression="o_short_name" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:TextBox Width="75%" ID="txtShortName" runat="server" Text='<%# Bind("o_short_name") %>'></asp:TextBox> 
+                    </EditItemTemplate> 
+                    <FooterTemplate>
+                        <asp:TextBox Width="75%" ID="txtNewShortName" runat="server" ></asp:TextBox>
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblShortName" runat="server" Text='<%# Bind("o_short_name") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Descr" HeaderStyle-HorizontalAlign="Left" SortExpression="o_descr" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:TextBox Width="75%" ID="txtDescr" runat="server" Text='<%# Bind("o_descr") %>'></asp:TextBox> 
+                    </EditItemTemplate> 
+                    <FooterTemplate>
+                        <asp:TextBox Width="75%" ID="txtNewDescr" runat="server" ></asp:TextBox>
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblDescr" runat="server" Text='<%# Bind("o_descr") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+
+
+                <asp:TemplateField HeaderText="Type" HeaderStyle-HorizontalAlign="Left" SortExpression="type_descr" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:DropDownList ID="ddlOfferingType" runat="server" DataTextField="type_descr" DataValueField="type_offering_type_id"> </asp:DropDownList> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblOfferingType" runat="server" Text='<%# Eval("type_descr") %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:DropDownList ID="ddlNewOfferingType" runat="server" DataTextField="descr" DataValueField="offering_type_id"> </asp:DropDownList>
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Field" HeaderStyle-HorizontalAlign="Left" SortExpression="fld_descr" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:DropDownList ID="ddlField" runat="server" DataTextField="fld_descr" DataValueField="fld_field_id"> </asp:DropDownList> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblField" runat="server" Text='<%# Eval("fld_descr") %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:DropDownList ID="ddlNewField" runat="server" DataTextField="descr" DataValueField="field_id"> </asp:DropDownList>
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Patient Subcategory (Aged Care)" HeaderStyle-HorizontalAlign="Left" SortExpression="acpatientcat_descr" FooterStyle-VerticalAlign="Top" > 
+                    <EditItemTemplate> 
+                        <asp:DropDownList ID="ddlOfferingPatientSubcategory" runat="server" DataTextField="acpatientcat_descr" DataValueField="acpatientcat_aged_care_patient_type_id"></asp:DropDownList> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblOfferingPatientSubcategory" runat="server" Text='<%# Eval("acpatientcat_descr") %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:DropDownList ID="ddlNewOfferingPatientSubcategory" runat="server" DataTextField="descr" DataValueField="aged_care_patient_type_id"> </asp:DropDownList>
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Yrly Visits Allowed" HeaderStyle-HorizontalAlign="Left" SortExpression="o_num_clinic_visits_allowed_per_year" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:DropDownList ID="ddlNumClinicVisitsAllowedPerYear" runat="server" DataTextField="o_num_clinic_visits_allowed_per_year" DataValueField="o_num_clinic_visits_allowed_per_year"> </asp:DropDownList> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblNumClinicVisitsAllowedPerYear" runat="server" Text='<%# Eval("o_num_clinic_visits_allowed_per_year") %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:DropDownList ID="ddlNewNumClinicVisitsAllowedPerYear" runat="server" DataTextField="o_num_clinic_visits_allowed_per_year" DataValueField="o_num_clinic_visits_allowed_per_year"> </asp:DropDownList>
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Inv Type" HeaderStyle-HorizontalAlign="Left" SortExpression="invtype_descr" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:DropDownList ID="ddlOfferingInvoiceType" runat="server" DataTextField="invtype_descr" DataValueField="invtype_offering_invoice_type_id"> </asp:DropDownList> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblOfferingInvoiceType" runat="server" Text='<%# Eval("invtype_descr") %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:DropDownList ID="ddlNewOfferingInvoiceType" runat="server" DataTextField="descr" DataValueField="offering_invoice_type_id"> </asp:DropDownList>
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="GST Exempt" SortExpression="o_is_gst_exempt" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:CheckBox ID="chkIsGstExempt" runat="server" Checked='<%# Eval("o_is_gst_exempt").ToString()=="True"?true:false %>' />
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblIsGstExempt" runat="server" Text='<%# Eval("o_is_gst_exempt").ToString()=="True"?"Yes":"No" %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:CheckBox ID="chkNewIsGstExempt" runat="server" Checked="true" />
+                    </FooterTemplate> 
+                </asp:TemplateField>
+
+                <asp:TemplateField HeaderText="Service Time Mins" HeaderStyle-HorizontalAlign="Left" SortExpression="o_service_time_minutes" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:DropDownList ID="ddlServiceTimeMinutes" runat="server" DataTextField="service_time_minutes" DataValueField="service_time_minutes"> </asp:DropDownList> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblServiceTimeMinutes" runat="server" Text='<%# Eval("o_service_time_minutes") %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:DropDownList ID="ddlNewServiceTimeMinutes" runat="server" DataTextField="service_time_minutes" DataValueField="service_time_minutes"> </asp:DropDownList>
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Default Price" HeaderStyle-HorizontalAlign="Left" SortExpression="o_default_price" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:TextBox Width="90%" ID="txtDefaultPrice" runat="server" Text='<%# Bind("o_default_price") %>'></asp:TextBox> 
+                        <asp:RequiredFieldValidator ID="txtValidateDefaultPriceRequired" runat="server" CssClass="failureNotification"  
+                            ControlToValidate="txtDefaultPrice" 
+                            ErrorMessage="DefaultPrice is required."
+                            Display="Dynamic"
+                            ValidationGroup="EditOfferingValidationSummary">*</asp:RequiredFieldValidator>
+                        <asp:RegularExpressionValidator ID="txtValidateDefaultPriceRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtDefaultPrice"
+                            ValidationExpression="^\d+(\.\d{1,2})?$"
+                            ErrorMessage="DefaultPrice can only be numbers and option decimal place with 1 or 2 digits following."
+                            Display="Dynamic"
+                            ValidationGroup="EditOfferingValidationSummary">*</asp:RegularExpressionValidator>
+                    </EditItemTemplate> 
+                    <FooterTemplate>
+                        <asp:TextBox Width="90%" ID="txtNewDefaultPrice" runat="server" Text='0.00'></asp:TextBox>
+                        <asp:RequiredFieldValidator ID="txtValidateNewDefaultPriceRequired" runat="server" CssClass="failureNotification"  
+                            ControlToValidate="txtNewDefaultPrice" 
+                            ErrorMessage="DefaultPrice is required."
+                            Display="Dynamic"
+                            ValidationGroup="AddOfferingValidationGroup">*</asp:RequiredFieldValidator>
+                        <asp:RegularExpressionValidator ID="txtValidateNewDefaultPriceRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtNewDefaultPrice"
+                            ValidationExpression="^\d+(\.\d{1,2})?$"
+                            ErrorMessage="DefaultPrice can only be numbers and option decimal place with 1 or 2 digits following."
+                            Display="Dynamic"
+                            ValidationGroup="AddOfferingValidationGroup">*</asp:RegularExpressionValidator>
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblDefaultPrice" runat="server" Text='<%# Bind("o_default_price") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Medicare Charge" HeaderStyle-HorizontalAlign="Left" SortExpression="o_medicare_charge" FooterStyle-VerticalAlign="Top" ItemStyle-Wrap="False"> 
+                    <EditItemTemplate> 
+                        <asp:TextBox Width="90%" ID="txtMedicareCharge" runat="server" Text='<%# Bind("o_medicare_charge") %>'></asp:TextBox> 
+                        <!-- disabled because marcus wants to allow empty fields, so then we have javascript out in 0.00 -->
+                        <asp:RequiredFieldValidator ID="txtValidateMedicareChargeRequired" runat="server" CssClass="failureNotification"  
+                            ControlToValidate="txtMedicareCharge" 
+                            ErrorMessage="MedicareCharge is required."
+                            Display="Dynamic"
+                            ValidationGroup="EditOfferingValidationSummary" Enabled="False">*</asp:RequiredFieldValidator>
+                        <asp:RegularExpressionValidator ID="txtValidateMedicareChargeRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtMedicareCharge"
+                            ValidationExpression="^\d+(\.\d{1,2})?$"
+                            ErrorMessage="MedicareCharge can only be numbers and option decimal place with 1 or 2 digits following."
+                            Display="Dynamic"
+                            ValidationGroup="EditOfferingValidationSummary">*</asp:RegularExpressionValidator>
+                    </EditItemTemplate> 
+                    <FooterTemplate>
+                        <asp:TextBox Width="90%" ID="txtNewMedicareCharge" runat="server" Text='0.00'></asp:TextBox>
+                        <!-- disabled because marcus wants to allow empty fields, so then we have javascript out in 0.00 -->
+                        <asp:RequiredFieldValidator ID="txtValidateNewMedicareChargeRequired" runat="server" CssClass="failureNotification"  
+                            ControlToValidate="txtNewMedicareCharge" 
+                            ErrorMessage="MedicareCharge is required."
+                            Display="Dynamic"
+                            ValidationGroup="AddOfferingValidationGroup" Enabled="False">*</asp:RequiredFieldValidator>
+                        <asp:RegularExpressionValidator ID="txtValidateNewMedicareChargeRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtNewMedicareCharge"
+                            ValidationExpression="^\d+(\.\d{1,2})?$"
+                            ErrorMessage="MedicareCharge can only be numbers and option decimal place with 1 or 2 digits following."
+                            Display="Dynamic"
+                            ValidationGroup="AddOfferingValidationGroup">*</asp:RegularExpressionValidator>
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblMedicareCharge" runat="server" Text='<%# Eval("o_medicare_charge") %>'></asp:Label>&nbsp;&nbsp;
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="DVA Charge" HeaderStyle-HorizontalAlign="Left" SortExpression="o_dva_charge" FooterStyle-VerticalAlign="Top" ItemStyle-Wrap="False"> 
+                    <EditItemTemplate> 
+                        <asp:TextBox Width="90%" ID="txtDvaCharge" runat="server" Text='<%# Bind("o_dva_charge") %>'></asp:TextBox> 
+                        <!-- disabled because marcus wants to allow empty fields, so then we have javascript out in 0.00 -->
+                        <asp:RequiredFieldValidator ID="txtValidateDvaChargeRequired" runat="server" CssClass="failureNotification"  
+                            ControlToValidate="txtDvaCharge" 
+                            ErrorMessage="DvaCharge is required."
+                            Display="Dynamic"
+                            ValidationGroup="EditOfferingValidationSummary" Enabled="False">*</asp:RequiredFieldValidator>
+                        <asp:RegularExpressionValidator ID="txtValidateDvaChargeRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtDvaCharge"
+                            ValidationExpression="^\d+(\.\d{1,2})?$"
+                            ErrorMessage="DvaCharge can only be numbers and option decimal place with 1 or 2 digits following."
+                            Display="Dynamic"
+                            ValidationGroup="EditOfferingValidationSummary">*</asp:RegularExpressionValidator>
+                    </EditItemTemplate> 
+                    <FooterTemplate>
+                        <asp:TextBox Width="90%" ID="txtNewDvaCharge" runat="server" Text='0.00'></asp:TextBox>
+                        <!-- disabled because marcus wants to allow empty fields, so then we have javascript out in 0.00 -->
+                        <asp:RequiredFieldValidator ID="txtValidateNewDvaChargeRequired" runat="server" CssClass="failureNotification"  
+                            ControlToValidate="txtNewDvaCharge" 
+                            ErrorMessage="DvaCharge is required."
+                            Display="Dynamic"
+                            ValidationGroup="AddOfferingValidationGroup" Enabled="False">*</asp:RequiredFieldValidator>
+                        <asp:RegularExpressionValidator ID="txtValidateNewDvaChargeRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtNewDvaCharge"
+                            ValidationExpression="^\d+(\.\d{1,2})?$"
+                            ErrorMessage="DvaCharge can only be numbers and option decimal place with 1 or 2 digits following."
+                            Display="Dynamic"
+                            ValidationGroup="AddOfferingValidationGroup">*</asp:RegularExpressionValidator>
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblDvaCharge" runat="server" Text='<%# Eval("o_dva_charge") %>'></asp:Label> &nbsp;&nbsp;
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="TAC Charge" HeaderStyle-HorizontalAlign="Left" SortExpression="o_tac_charge" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:TextBox Width="90%" ID="txtTacCharge" runat="server" Text='<%# Bind("o_tac_charge") %>'></asp:TextBox> 
+                        <!-- disabled because marcus wants to allow empty fields, so then we have javascript out in 0.00 -->
+                        <asp:RequiredFieldValidator ID="txtValidateTacChargeRequired" runat="server" CssClass="failureNotification"  
+                            ControlToValidate="txtTacCharge" 
+                            ErrorMessage="TacCharge is required."
+                            Display="Dynamic"
+                            ValidationGroup="EditOfferingValidationSummary" Enabled="False">*</asp:RequiredFieldValidator>
+                        <asp:RegularExpressionValidator ID="txtValidateTacChargeRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtTacCharge"
+                            ValidationExpression="^\d+(\.\d{1,2})?$"
+                            ErrorMessage="TacCharge can only be numbers and option decimal place with 1 or 2 digits following."
+                            Display="Dynamic"
+                            ValidationGroup="EditOfferingValidationSummary">*</asp:RegularExpressionValidator>
+                    </EditItemTemplate> 
+                    <FooterTemplate>
+                        <asp:TextBox Width="90%" ID="txtNewTacCharge" runat="server" Text='0.00'></asp:TextBox>
+                        <!-- disabled because marcus wants to allow empty fields, so then we have javascript out in 0.00 -->
+                        <asp:RequiredFieldValidator ID="txtValidateNewTacChargeRequired" runat="server" CssClass="failureNotification"  
+                            ControlToValidate="txtNewTacCharge" 
+                            ErrorMessage="TacCharge is required."
+                            Display="Dynamic"
+                            ValidationGroup="AddOfferingValidationGroup" Enabled="False">*</asp:RequiredFieldValidator>
+                        <asp:RegularExpressionValidator ID="txtValidateNewTacChargeRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtNewTacCharge"
+                            ValidationExpression="^\d+(\.\d{1,2})?$"
+                            ErrorMessage="TacCharge can only be numbers and option decimal place with 1 or 2 digits following."
+                            Display="Dynamic"
+                            ValidationGroup="AddOfferingValidationGroup">*</asp:RegularExpressionValidator>
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblTacCharge" runat="server" Text='<%# Bind("o_tac_charge") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Medicare Code" HeaderStyle-HorizontalAlign="Left" SortExpression="o_medicare_company_code" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:TextBox Width="90%" ID="txtMedicareCompanyCode" runat="server" Text='<%# Bind("o_medicare_company_code") %>'></asp:TextBox> 
+                        <asp:RegularExpressionValidator ID="txtValidateMedicareCompanyCodeRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtMedicareCompanyCode"
+                            ValidationExpression="^[a-zA-Z0-9\-\s]+$"
+                            ErrorMessage="MedicareCompanyCode can only be letters or hyphens."
+                            Display="Dynamic"
+                            ValidationGroup="EditOfferingValidationSummary">*</asp:RegularExpressionValidator>
+                    </EditItemTemplate> 
+                    <FooterTemplate>
+                        <asp:TextBox Width="90%" ID="txtNewMedicareCompanyCode" runat="server" ></asp:TextBox>
+                        <asp:RegularExpressionValidator ID="txtValidateNewMedicareCompanyCodeRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtNewMedicareCompanyCode"
+                            ValidationExpression="^[a-zA-Z0-9\-\s]+$"
+                            ErrorMessage="MedicareCompanyCode can only be letters or hyphens."
+                            Display="Dynamic"
+                            ValidationGroup="AddOfferingValidationGroup">*</asp:RegularExpressionValidator>
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblMedicareCompanyCode" runat="server" Text='<%# Bind("o_medicare_company_code") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Dva Code" HeaderStyle-HorizontalAlign="Left" SortExpression="o_dva_company_code" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:TextBox Width="90%" ID="txtDvaCompanyCode" runat="server" Text='<%# Bind("o_dva_company_code") %>'></asp:TextBox> 
+                        <asp:RegularExpressionValidator ID="txtValidateDvaCompanyCodeRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtDvaCompanyCode"
+                            ValidationExpression="^[a-zA-Z0-9\-\s]+$"
+                            ErrorMessage="DvaCompanyCode can only be letters or hyphens."
+                            Display="Dynamic"
+                            ValidationGroup="EditOfferingValidationSummary">*</asp:RegularExpressionValidator>
+                    </EditItemTemplate> 
+                    <FooterTemplate>
+                        <asp:TextBox Width="90%" ID="txtNewDvaCompanyCode" runat="server" ></asp:TextBox>
+                        <asp:RegularExpressionValidator ID="txtValidateNewDvaCompanyCodeRegex" runat="server" CssClass="failureNotification" 
+                            ControlToValidate="txtNewDvaCompanyCode"
+                            ValidationExpression="^[a-zA-Z0-9\-\s]+$"
+                            ErrorMessage="DvaCompanyCode can only be letters or hyphens."
+                            Display="Dynamic"
+                            ValidationGroup="AddOfferingValidationGroup">*</asp:RegularExpressionValidator>
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblDvaCompanyCode" runat="server" Text='<%# Bind("o_dva_company_code") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Max Claimable (Nbr)" HeaderStyle-HorizontalAlign="Left" SortExpression="o_max_nbr_claimable" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:DropDownList ID="ddlMaxNbrClaimable" runat="server" > </asp:DropDownList> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblMaxNbrClaimable" runat="server" Text='<%# Eval("o_max_nbr_claimable") %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:DropDownList ID="ddlNewMaxNbrClaimable" runat="server"> </asp:DropDownList>
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Max Claimable (Months)" HeaderStyle-HorizontalAlign="Left" SortExpression="o_max_nbr_claimable_months" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:DropDownList ID="ddlMaxNbrClaimableMonths" runat="server" > </asp:DropDownList> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblMaxNbrClaimableMonths" runat="server" Text='<%# Eval("o_max_nbr_claimable_months") %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:DropDownList ID="ddlNewMaxNbrClaimableMonths" runat="server"> </asp:DropDownList>
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Reminder Letter<br />Months Later To Send" HeaderStyle-HorizontalAlign="Left" SortExpression="o_reminder_letter_months_later_to_send" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:DropDownList ID="ddlReminderLetterMonthsLaterToSend" runat="server" > </asp:DropDownList> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblReminderLetterMonthsLaterToSend" runat="server" Text='<%# Eval("o_reminder_letter_months_later_to_send") == DBNull.Value || (int)Eval("o_reminder_letter_months_later_to_send") == 0 ? "Disabled" : Eval("o_reminder_letter_months_later_to_send").ToString() %>'></asp:Label> 
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:DropDownList ID="ddlNewReminderLetterMonthsLaterToSend" runat="server" CssClass="hiddencol"> </asp:DropDownList>
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Reminder Letter" HeaderStyle-HorizontalAlign="Left" SortExpression="o_reminder_letter_id" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:DropDownList ID="ddlReminderLetter" runat="server" > </asp:DropDownList> 
+                    </EditItemTemplate> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblReminderLetter" runat="server"></asp:Label>
+                    </ItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:DropDownList ID="ddlNewReminderLetter" runat="server" CssClass="hiddencol"> </asp:DropDownList>
+                    </FooterTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="" FooterStyle-VerticalAlign="Top"> 
+                    <ItemTemplate> 
+                        <asp:ImageButton ID="lnkPopupMessage" runat="server"  ImageUrl="~/images/popup_icon_24.gif" AlternateText="Create A Message/Reminder That Pops-Up When This Service Selected In Booking Sheet" ToolTip="Create A Message/Reminder That Pops-Up When This Service Selected In Booking Sheet" />
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="" ShowHeader="False" HeaderStyle-HorizontalAlign="Left" FooterStyle-VerticalAlign="Top"> 
+                    <EditItemTemplate> 
+                        <asp:LinkButton ID="lnkUpdate" runat="server" CausesValidation="True" CommandName="Update" Text="Update" ValidationGroup="EditOfferingValidationSummary" />
+                        <asp:LinkButton ID="lnkCancel" runat="server" CausesValidation="False" CommandName="Cancel" Text="Cancel" />
+                    </EditItemTemplate> 
+                    <FooterTemplate> 
+                        <asp:LinkButton ID="lnkAdd" runat="server" CausesValidation="True" CommandName="Insert" Text="Insert" ValidationGroup="AddOfferingValidationGroup" />
+                    </FooterTemplate> 
+                    <ItemTemplate> 
+                        <asp:ImageButton ID="lnkEdit" runat="server" CommandName="Edit" ImageUrl="~/images/Inline-edit-icon-24.png"  AlternateText="Inline Edit" ToolTip="Inline Edit"/>
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <%--<asp:CommandField HeaderText="" ShowDeleteButton="True" ShowHeader="True" ButtonType="Image"  DeleteImageUrl="~/images/Delete-icon-24.png" />--%>
+
+                <asp:TemplateField HeaderText="" ShowHeader="True" HeaderStyle-HorizontalAlign="Left" FooterStyle-VerticalAlign="Top">
+                    <ItemTemplate>
+                        <asp:ImageButton ID="btnDelete" runat="server"  CommandName="_Delete" CommandArgument='<%# Bind("o_offering_id") %>' ImageUrl="~/images/Delete-icon-24.png" AlternateText="Delete" ToolTip="Delete" />
+                    </ItemTemplate>
+                </asp:TemplateField>
+
+            </Columns> 
+
+        </asp:GridView>
+
+    </p>
+    <p>
+        <asp:Label ID="Label1" runat="server"></asp:Label>
+    </p>
+
+    <p>
+    </p>
+</asp:Content>

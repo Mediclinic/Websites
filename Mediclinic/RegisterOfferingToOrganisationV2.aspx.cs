@@ -1,0 +1,475 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Configuration;
+using System.Text.RegularExpressions;
+using System.Collections;
+
+public partial class RegisterOfferingToOrganisationV2 : System.Web.UI.Page
+{
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        try
+        {
+
+            if (!IsPostBack)
+                Utilities.SetNoCache(Response);
+            HideErrorMessage();
+
+            if (!IsPostBack)
+            {
+                PagePermissions.EnforcePermissions_RequireAny(Session, Response, true, true, true, false, false, false);
+                Session.Remove("registerofferingtoorg_sortexpression");
+                Session.Remove("registerofferingtoorg_data");
+                lblHeading.Text = Page.Title = !UserView.GetInstance().IsAgedCareView ? "Specific Prices Per Clinic" : "Specific Prices Per Facility/Wing/Unit";
+                FillGrid();
+                SetOrgsDDL();
+            }
+
+            this.GrdRegistration.EnableViewState = true;
+        }
+        catch (CustomMessageException ex)
+        {
+            if (IsPostBack) SetErrorMessage(ex.Message);
+            else HideTableAndSetErrorMessage(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            if (IsPostBack) SetErrorMessage("", ex.ToString());
+            else HideTableAndSetErrorMessage("", ex.ToString());
+        }
+    }
+
+
+    private bool IsValidFormID()
+    {
+        string raw_id = Request.QueryString["id"];
+        if (raw_id == null)
+            return false;
+
+        return Regex.IsMatch(raw_id, @"^\d+$");
+    }
+    private int GetFormID()
+    {
+        if (!IsValidFormID())
+            throw new Exception("Invalid ID");
+        return Convert.ToInt32(Request.QueryString["id"]);
+    }
+
+
+    #region GrdRegistration
+
+    private bool hideFotter = false;
+
+    protected void FillGrid()
+    {
+        bool isAgedCareResidentTypes = IsValidIsAgedCareResidentTypes() ? GetFormIsAgedCareResidentTypes() : false;
+        if (isAgedCareResidentTypes)
+            lblHeading.Text = "Aged Care Resident Types - Specific Prices Per Facility/Wing/Unit";
+
+
+        Organisation org = null;
+        if (IsValidFormID())
+            org = OrganisationDB.GetByID(GetFormID());
+
+
+        DataTable dt = org == null ? dt = OrganisationOfferingsDB.GetDataTable(false, UserView.GetInstance().IsClinicView ? 5 : 6) : OrganisationOfferingsDB.GetDataTable_ByOrg(org.OrganisationID);
+        for (int i = dt.Rows.Count - 1; i >= 0; i--)
+        {
+            Offering o = OfferingDB.Load(dt.Rows[i], "o_");
+            if ((isAgedCareResidentTypes && o.AgedCarePatientType.ID == 1) || (!isAgedCareResidentTypes && o.AgedCarePatientType.ID != 1))
+                dt.Rows.RemoveAt(i);
+        }
+
+        dt = OrganisationOfferingsDB.AddIsActiveFieldToRows(dt);
+        Session["registerofferingtoorg_data"] = dt;
+
+        if (dt.Rows.Count > 0)
+        {
+            if (IsPostBack && Session["registerofferingtoorg_sortexpression"] != null && Session["registerofferingtoorg_sortexpression"].ToString().Length > 0)
+            {
+                DataView dataView = new DataView(dt);
+                dataView.Sort = Session["registerofferingtoorg_sortexpression"].ToString();
+                GrdRegistration.DataSource = dataView;
+            }
+            else
+            {
+                GrdRegistration.DataSource = dt;
+            } 
+            
+            
+            try
+            {
+                GrdRegistration.DataBind();
+            }
+            catch (Exception ex)
+            {
+                SetErrorMessage("", ex.ToString());
+            }
+        }
+        else
+        {
+            dt.Rows.Add(dt.NewRow());
+            GrdRegistration.DataSource = dt;
+            GrdRegistration.DataBind();
+
+            int TotalColumns = GrdRegistration.Rows[0].Cells.Count;
+            GrdRegistration.Rows[0].Cells.Clear();
+            GrdRegistration.Rows[0].Cells.Add(new TableCell());
+            GrdRegistration.Rows[0].Cells[0].ColumnSpan = TotalColumns;
+            GrdRegistration.Rows[0].Cells[0].Text = "No Record Found";
+        }
+
+        if (hideFotter)
+            GrdRegistration.FooterRow.Visible = false;
+    }
+    protected void GrdRegistration_RowCreated(object sender, GridViewRowEventArgs e)
+    {
+        if (!Utilities.IsDev() && e.Row.RowType != DataControlRowType.Pager)
+            e.Row.Cells[0].CssClass = "hiddencol";
+    }
+    protected void GrdRegistration_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        UserView userView = UserView.GetInstance();
+
+        Organisation org = null;
+        if (IsValidFormID())
+            org = OrganisationDB.GetByID(GetFormID());
+
+        DataTable dt = Session["registerofferingtoorg_data"] as DataTable;
+        bool tblEmpty = (dt.Rows.Count == 1 && dt.Rows[0][0] == DBNull.Value);
+        if (!tblEmpty && e.Row.RowType == DataControlRowType.DataRow)
+        {
+            Label lblId = (Label)e.Row.FindControl("lblId");
+            DataRow[] foundRows = dt.Select("oo_organisation_offering_id=" + lblId.Text);
+            DataRow thisRow = foundRows[0];
+
+
+            DropDownList ddlOffering = (DropDownList)e.Row.FindControl("ddlOffering");
+            if (ddlOffering != null)
+            {
+                //Offering[] incList_orig = OrganisationOfferingsDB.GetOfferingsByOrg(false, Convert.ToInt32(thisRow["organisation_organisation_id"]));
+                //Offering[] incList = Offering.RemoveByID(incList_orig, Convert.ToInt32(thisRow["o_offering_id"]));
+                //DataTable offering = OfferingDB.GetDataTable_AllNotInc(incList);
+                //DataTable offering = OfferingDB.GetDataTable_AllNotInc(incList);
+
+                string offering_invoice_type_ids = "-1";
+                if (userView.IsAgedCareView)
+                    offering_invoice_type_ids = "3,4"; // 4 = AC
+                else if (userView.IsClinicView)
+                    offering_invoice_type_ids = "1,3"; // 1 = Clinic
+                else
+                    throw new Exception("Logged in to neither clinic nor aged care");
+
+                bool isAgedCareResidentTypes = IsValidIsAgedCareResidentTypes() ? GetFormIsAgedCareResidentTypes() : false;
+                DataTable offering = OfferingDB.GetDataTable(isAgedCareResidentTypes, offering_invoice_type_ids);
+
+                offering.DefaultView.Sort = "o_name ASC";
+                foreach (DataRowView row in offering.DefaultView)
+                    ddlOffering.Items.Add(new ListItem(row["o_name"].ToString(), row["o_offering_id"].ToString()));
+                ddlOffering.SelectedValue = thisRow["o_offering_id"].ToString();
+            }
+
+            Utilities.AddConfirmationBox(e);
+            if ((e.Row.RowState & DataControlRowState.Edit) > 0)
+                Utilities.SetEditRowBackColour(e, System.Drawing.Color.LightGoldenrodYellow);
+        }
+        if (e.Row.RowType == DataControlRowType.Footer)
+        {
+            Label lblOrganisation = (Label)e.Row.FindControl("lblNewOrganisation");
+            if (lblOrganisation != null)
+                lblOrganisation.Text = org.Name;
+
+            DropDownList ddlOffering = (DropDownList)e.Row.FindControl("ddlNewOffering");
+            if (ddlOffering != null)
+            {
+                DropDownList ddlOrganisation = (DropDownList)e.Row.FindControl("ddlNewOrganisation");
+                DataTable organisation = OrganisationDB.GetDataTable(0, false, true, !userView.IsClinicView, !userView.IsAgedCareView, true, true);
+                DataView     dataView = new DataView(organisation);
+                dataView.Sort = "name";
+                organisation  = dataView.ToTable();
+                for (int i = 0; i < organisation.Rows.Count; i++)
+                {
+                    Organisation o = OrganisationDB.Load(organisation.Rows[i]);
+                    ddlOrganisation.Items.Add(new ListItem(o.Name, o.OrganisationID.ToString()));
+                }
+                if (org != null)
+                    ddlOrganisation.SelectedValue = org.OrganisationID.ToString();
+
+
+
+                //Offering[] incList = OrganisationOfferingsDB.GetOfferingsByOrg(false, org.OrganisationID);
+                //DataTable offering = OfferingDB.GetDataTable_AllNotInc(incList);
+
+                string offering_invoice_type_ids = "-1";
+                if (userView.IsAgedCareView)
+                    offering_invoice_type_ids = "1,2,3,4"; // 4 = AC
+                else if (userView.IsClinicView)
+                    offering_invoice_type_ids = "1,2,3"; // 1 = Clinic
+                else
+                    throw new Exception("Logged in to neither clinic nor aged care");
+
+
+                bool isAgedCareResidentTypes = IsValidIsAgedCareResidentTypes() ? GetFormIsAgedCareResidentTypes() : false;
+
+                DataTable offering = OfferingDB.GetDataTable(isAgedCareResidentTypes, offering_invoice_type_ids);
+                DataView dv = new DataView(offering);
+                dv.Sort  = "o_name ASC";
+                offering = dv.ToTable();
+
+                foreach (DataRow row in offering.Rows)
+                    ddlOffering.Items.Add(new ListItem(row["o_name"].ToString(), row["o_offering_id"].ToString()));
+
+
+                if (offering.Rows.Count == 0 || organisation.Rows.Count == 0)
+                    hideFotter = true;
+            }
+        }
+    }
+    protected void GrdRegistration_RowCancelingEdit(object sender, GridViewCancelEditEventArgs e)
+    {
+        GrdRegistration.EditIndex = -1;
+        FillGrid();
+    }
+    protected void GrdRegistration_RowUpdating(object sender, GridViewUpdateEventArgs e)
+    {
+        Label        lblId             = (Label)GrdRegistration.Rows[e.RowIndex].FindControl("lblId");
+        DropDownList ddlOffering       = (DropDownList)GrdRegistration.Rows[e.RowIndex].FindControl("ddlOffering");
+        TextBox      txtPrice          = (TextBox)GrdRegistration.Rows[e.RowIndex].FindControl("txtPrice");
+        TextBox      txtDateActive     = (TextBox)GrdRegistration.Rows[e.RowIndex].FindControl("txtDateActive");
+
+        CustomValidator txtValidateDateActive = (CustomValidator)GrdRegistration.Rows[e.RowIndex].FindControl("txtValidateDateActive");
+        if (!txtValidateDateActive.IsValid)
+            return;
+
+        DateTime dateActive = GetDate(txtDateActive.Text.Trim());
+
+        OrganisationOfferings orgOffering = OrganisationOfferingsDB.GetByID(Convert.ToInt32(lblId.Text));
+        if (orgOffering != null)
+            OrganisationOfferingsDB.Update(Convert.ToInt32(lblId.Text), orgOffering.Organisation.OrganisationID, orgOffering.Offering.OfferingID, Convert.ToDecimal(txtPrice.Text), GetDate(txtDateActive.Text.Trim()));
+
+        GrdRegistration.EditIndex = -1;
+        FillGrid();
+    }
+    protected void GrdRegistration_RowDeleting(object sender, GridViewDeleteEventArgs e)
+    {
+        Label lblId = (Label)GrdRegistration.Rows[e.RowIndex].FindControl("lblId");
+
+        try
+        {
+            OrganisationOfferings orgOffering = OrganisationOfferingsDB.GetByID(Convert.ToInt32(lblId.Text));
+            if (orgOffering != null)
+                OrganisationOfferingsDB.Delete(orgOffering.OrganisationOfferingID);
+        }
+        catch (ForeignKeyConstraintException fkcEx)
+        {
+            if (Utilities.IsDev())
+                HideTableAndSetErrorMessage("Can not delete because other records depend on this : " + fkcEx.Message);
+            else
+                HideTableAndSetErrorMessage("Can not delete because other records depend on this");
+        }
+
+        FillGrid();
+    }
+    protected void GrdRegistration_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+        if (e.CommandName.Equals("Insert"))
+        {
+            DropDownList ddlOrganisation = (DropDownList)GrdRegistration.FooterRow.FindControl("ddlNewOrganisation");
+            DropDownList ddlOffering = (DropDownList)GrdRegistration.FooterRow.FindControl("ddlNewOffering");
+            TextBox      txtPrice      = (TextBox)GrdRegistration.FooterRow.FindControl("txtNewPrice");
+            TextBox      txtDateActive = (TextBox)GrdRegistration.FooterRow.FindControl("txtNewDateActive");
+
+            CustomValidator txtValidateDOB = (CustomValidator)GrdRegistration.FooterRow.FindControl("txtValidateNewDateActive");
+            if (!txtValidateDOB.IsValid)
+                return;
+
+            try
+            {
+                DateTime dateActive = GetDate(txtDateActive.Text.Trim());
+                OrganisationOfferingsDB.Insert(Convert.ToInt32(ddlOrganisation.SelectedValue), Convert.ToInt32(ddlOffering.SelectedValue), Convert.ToDecimal(txtPrice.Text), dateActive);
+            }
+            catch (UniqueConstraintException) 
+            {
+                // happens when 2 forms allow adding - do nothing and let form re-update
+                ;
+            }
+            FillGrid();
+        }
+    }
+    protected void GrdRegistration_RowEditing(object sender, GridViewEditEventArgs e)
+    {
+        GrdRegistration.EditIndex = e.NewEditIndex;
+        FillGrid();
+    }
+    protected void GridView_Sorting(object sender, GridViewSortEventArgs e)
+    {
+        // dont allow sorting if in edit mode
+        if (GrdRegistration.EditIndex >= 0)
+            return;
+
+        Sort(e.SortExpression);
+    }
+
+    protected void Sort(string sortExpression, params string[] sortExpr)
+    {
+        DataTable dataTable = Session["registerofferingtoorg_data"] as DataTable;
+
+        if (dataTable != null)
+        {
+            if (Session["registerofferingtoorg_sortexpression"] == null)
+                Session["registerofferingtoorg_sortexpression"] = "";
+
+            DataView dataView = new DataView(dataTable);
+            string[] sortData = Session["registerofferingtoorg_sortexpression"].ToString().Trim().Split(' ');
+
+            string newSortExpr = (sortExpr.Length == 0) ?
+                (sortExpression == sortData[0] && sortData[1] == "ASC") ? "DESC" : "ASC" :
+                sortExpr[0];
+
+            dataView.Sort = sortExpression + " " + newSortExpr;
+            Session["registerofferingtoorg_sortexpression"] = sortExpression + " " + newSortExpr;
+
+            GrdRegistration.DataSource = dataView;
+            GrdRegistration.DataBind();
+        }
+    }
+
+    #endregion
+
+    #region ValidDateCheck, GetDate, IsValidDate
+
+    protected void ValidDateCheck(object sender, ServerValidateEventArgs e)
+    {
+        try
+        {
+            CustomValidator cv = (CustomValidator)sender;
+            GridViewRow grdRow = ((GridViewRow)cv.Parent.Parent);
+            TextBox txtDate = grdRow.RowType == DataControlRowType.Footer ? (TextBox)grdRow.FindControl("txtNewDateActive") : (TextBox)grdRow.FindControl("txtDateActive");
+
+            if (!IsValidDate(txtDate.Text))
+                throw new Exception();
+
+            DateTime d = GetDate(txtDate.Text);
+            e.IsValid = d == DateTime.MinValue || Utilities.IsValidDBDateTime(d);
+        }
+        catch (Exception)
+        {
+            e.IsValid = false;
+        }
+    }
+    public DateTime GetDate(string inDate)
+    {
+        inDate = inDate.Trim();
+
+        if (inDate.Length == 0)
+        {
+            return DateTime.MinValue;
+        }
+        else
+        {
+            string[] dobParts = inDate.Split(new char[] { '-' });
+            return new DateTime(Convert.ToInt32(dobParts[2]), Convert.ToInt32(dobParts[1]), Convert.ToInt32(dobParts[0]));
+        }
+    }
+    public bool IsValidDate(string inDate)
+    {
+        inDate = inDate.Trim();
+        return inDate.Length == 0 || Regex.IsMatch(inDate, @"^\d{2}\-\d{2}\-\d{4}$");
+    }
+
+    #endregion
+
+    #region SetOrgsDDL, ddlOrgs_SelectedIndexChanged
+
+    protected void SetOrgsDDL()
+    {
+        DataTable dt = null;
+        string type = null;
+        if (!UserView.GetInstance().IsAgedCareView)
+        {
+            dt = OrganisationDB.GetDataTable_Clinics();
+            type = "Clinics";
+            lblOrgType.Text = "Clinic";
+        }
+        else
+        {
+            dt = OrganisationDB.GetDataTable_AgedCareFacs();
+            type = "Facilities";
+            lblOrgType.Text = "Facility";
+        }
+
+        ddlOrgs.Items.Clear();
+        ddlOrgs.Items.Add(new ListItem("All " + type, "0"));
+        for (int i = 0; i < dt.Rows.Count; i++)
+            ddlOrgs.Items.Add(new ListItem(dt.Rows[i]["name"].ToString(), dt.Rows[i]["organisation_id"].ToString()));
+
+        if (IsValidFormID())
+        {
+            ddlOrgs.SelectedValue = GetFormID().ToString();
+            lblHowToAddItems.Visible = false;
+        }
+    }
+
+    protected void ddlOrgs_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        if (ddlOrgs.SelectedValue == "0")
+            Response.Redirect(UrlParamModifier.Remove(Request.RawUrl, "id"));
+        else
+            Response.Redirect(UrlParamModifier.AddEdit(Request.RawUrl, "id", ddlOrgs.SelectedValue));
+    }
+
+    #endregion
+
+    #region GetUrlParamType()
+
+    private bool IsValidIsAgedCareResidentTypes()
+    {
+        string id = Request.QueryString["is_ac_res_types"];
+        return id != null && (id == "1" || id == "0");
+    }
+    private bool GetFormIsAgedCareResidentTypes()
+    {
+        if (!IsValidIsAgedCareResidentTypes())
+            throw new Exception("Invalid url is_ac_res_types");
+
+        return Request.QueryString["is_ac_res_types"] == "1";
+    }
+
+    #endregion
+
+
+    #region SetErrorMessage, HideErrorMessage
+
+    private void HideTableAndSetErrorMessage(string errMsg = "", string details = "")
+    {
+        SetErrorMessage(errMsg, details);
+    }
+    private void SetErrorMessage(string errMsg = "", string details = "")
+    {
+        if (errMsg.Contains(Environment.NewLine))
+            errMsg = errMsg.Replace(Environment.NewLine, "<br />");
+
+        // double escape so shows up literally on webpage for 'alert' message
+        string detailsToDisplay = (details.Length == 0 ? "" : " <a href=\"#\" onclick=\"alert('" + details.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("'", "\\'").Replace("\"", "\\'") + "'); return false;\">Details</a>");
+
+        lblErrorMessage.Visible = true;
+        if (errMsg != null && errMsg.Length > 0)
+            lblErrorMessage.Text = errMsg + detailsToDisplay + "<br />";
+        else
+            lblErrorMessage.Text = "An error has occurred. Plase contact the system administrator. " + detailsToDisplay + "<br />";
+    }
+    private void HideErrorMessage()
+    {
+        lblErrorMessage.Visible = false;
+        lblErrorMessage.Text = "";
+    }
+
+    #endregion
+
+}

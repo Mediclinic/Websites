@@ -1,0 +1,69 @@
+﻿<%@ Page Title="Letter Printing History = BEST" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true"
+    CodeFile="LetterBestPrintHistory.aspx.cs" Inherits="LetterBestPrintHistoryInfo" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+    <table>
+        <tr>
+            <td><h2 id="heading" runat="server">Letter Print History - B.E.S.T.</h2></td>
+            <td><h2><asp:HyperLink ID="lnkToEntity" runat="server"></asp:HyperLink></h2></td>
+        </tr>
+    </table>
+
+    <asp:ValidationSummary ID="EditLetterPrintHistoryValidationSummary" runat="server" CssClass="failureNotification" 
+            ValidationGroup="EditLetterPrintHistoryValidationSummary"/>
+    <asp:ValidationSummary ID="AddLetterPrintHistoryValidationSummary" runat="server" CssClass="failureNotification" 
+            ValidationGroup="AddLetterPrintHistoryValidationGroup"/>
+    <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+
+    <p>
+        <asp:GridView ID="GrdLetterPrintHistory" runat="server" 
+             AutoGenerateColumns="False" DataKeyNames="lph_letter_print_history_id" 
+             OnRowCancelingEdit="GrdLetterPrintHistory_RowCancelingEdit" 
+             OnRowDataBound="GrdLetterPrintHistory_RowDataBound" 
+             OnRowEditing="GrdLetterPrintHistory_RowEditing" 
+             OnRowUpdating="GrdLetterPrintHistory_RowUpdating" ShowFooter="False" 
+             OnRowCommand="GrdLetterPrintHistory_RowCommand" 
+             OnRowDeleting="GrdLetterPrintHistory_RowDeleting" 
+             OnRowCreated="GrdLetterPrintHistory_RowCreated"
+             AllowSorting="True" 
+             OnSorting="GridView_Sorting"
+             RowStyle-VerticalAlign="top" 
+             CellPadding="2"
+             ClientIDMode="Predictable">
+
+            <Columns> 
+
+                <asp:TemplateField HeaderText="ID"  HeaderStyle-HorizontalAlign="Left" SortExpression="lph_letter_print_history_id"> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblId" runat="server" Text='<%# Bind("lph_letter_print_history_id") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Print Date"  HeaderStyle-HorizontalAlign="Left" SortExpression="lph_date"> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblPrintDate" runat="server" Text='<%# Bind("lph_date", "{0:dd-MM-yyyy}") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Document"  HeaderStyle-HorizontalAlign="Left" SortExpression="letter_docname"> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblDocument" runat="server" Text='<%# Eval("letter_docname") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+                <asp:TemplateField HeaderText="Patient"  HeaderStyle-HorizontalAlign="Left" SortExpression="person_patient_firstname"> 
+                    <ItemTemplate> 
+                        <asp:Label ID="lblPatient" runat="server" Text='<%# Eval("person_patient_firstname") + " " + Eval("person_patient_surname") %>'></asp:Label> 
+                    </ItemTemplate> 
+                </asp:TemplateField> 
+
+            </Columns> 
+        </asp:GridView>
+    </p>
+    <p>
+        <asp:Label ID="Label1" runat="server"></asp:Label>
+        <br />
+    </p>
+</asp:Content>

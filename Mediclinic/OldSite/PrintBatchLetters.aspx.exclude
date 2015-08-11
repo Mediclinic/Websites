@@ -1,0 +1,225 @@
+﻿<%@ Page Title="Print Batch Letters" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="PrintBatchLetters.aspx.cs" Inherits="PrintBatchLetters" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+
+    <script type="text/javascript">
+
+        function select_all(chkBox, selectBox) {
+
+            // have we been passed an ID
+            if (typeof selectBox == "string") {
+                selectBox = document.getElementById(selectBox);
+            }
+
+            // is the select box a multiple select box?
+            if (selectBox.type == "select-multiple") {
+                for (var i = 0; i < selectBox.options.length; i++) {
+                    selectBox.options[i].selected = chkBox.checked;
+                }
+            }
+
+
+            // if orgs list all deselected, then deselect all patients also
+            if (!chkBox.checked && chkBox.id == '<%= chkSelectAllOrgs.ClientID  %>') {
+                selectBox = document.getElementById('<%= lstPatients.ClientID  %>');
+                for (var i = 0; i < selectBox.options.length; i++) {
+                    selectBox.options[i].selected = chkBox.checked;
+                }
+
+                document.getElementById('<%= chkSelectAllPatients.ClientID  %>').checked = false;
+            }
+
+        }
+
+        function clear_error_msg() {
+            document.getElementById('<%= spnErrorMessage.ClientID  %>').style.cssText = "display:none;";
+        }
+
+
+
+        function get_organisation() {
+            var retVal = window.showModalDialog("OrganisationListPopup.aspx", 'Show Popup Window', "dialogHeight:700px;dialogWidth:750px;resizable:yes;center:yes;");
+
+            if (typeof retVal === "undefined")
+                return;
+
+            var index = retVal.indexOf(":");
+            var newOrgID = retVal.substring(0, index);
+            var newOrgName = retVal.substring(index + 1);
+
+
+            // dont add if alread in there
+            var alreadyAddedList = document.getElementById('hiddenOrgIDsList').value.split(',');
+            for (var i = 0; i < alreadyAddedList.length; i++) {
+                if (alreadyAddedList[i] == newOrgID) {
+                    alert("Organisation already added");
+                    return;
+                }
+            }
+
+
+            var itemNew = document.createElement('option');
+            itemNew.value = newOrgID;
+            itemNew.text = newOrgName;
+
+            var added = false;
+            var lstOrgs = document.getElementById('lstOrgs');
+            for (var i = 0; i < lstOrgs.length; i++) {
+                if (newOrgName.localeCompare(lstOrgs.options[i].text) > 0)
+                    continue;
+
+                var itemOld = lstOrgs.options[i];
+                try {
+                    lstOrgs.add(itemNew, itemOld); // standards compliant; doesn't work in IE
+                }
+                catch (ex) {
+                    lstOrgs.add(itemNew, i); // IE only
+                }
+                added = true;
+                break;
+            }
+            if (!added) {
+                try {
+                    lstOrgs.add(itemNew, null); // standards compliant; doesn't work in IE
+                }
+                catch (ex) {
+                    lstOrgs.add(itemNew); // IE only
+                }
+                added = true;
+            }
+
+            updateHiddenOrgIDs();
+            document.getElementById('btnUpdateOrgs').click();
+        }
+        function remove_selected_organisation() {
+            var lstOrgs = document.getElementById('lstOrgs');
+            for (var i = lstOrgs.length - 1; i >= 0; i--) {
+                if (lstOrgs.options[i].selected)
+                    lstOrgs.remove(i);
+            }
+            updateHiddenOrgIDs();
+            document.getElementById('btnUpdateOrgs').click();
+        }
+        function updateHiddenOrgIDs() {
+            var items = "";
+            var lstOrgs = document.getElementById('lstOrgs');
+            for (var i = 0; i < lstOrgs.length; i++)
+                items = items + (items.length > 0 ? "," : "") + lstOrgs.options[i].value;
+            document.getElementById('hiddenOrgIDsList').value = items;
+        }
+
+
+        function hideColumn(hide, tableId, colIndex) {
+            var table = document.getElementById(tableId);
+            if (table != null)
+                for (i = 0; i < table.rows.length; i++)
+                    table.rows[i].cells[colIndex].style.display = hide ? 'none' : '';
+        }
+
+        function hideOrgColumn() {
+            hideColumn(true, 'tbl_select_org_and_patient', 0);
+            hideColumn(true, 'tbl_select_org_and_patient', 1);
+
+            document.getElementById('lblPatientsNotLinkedToAnyOrg').style.display = 'none';
+            document.getElementById('chkIncPatientsWithNoOrg').style.display = 'none';
+            document.getElementById('btnUpdatePatientList').style.display = 'none';
+            document.getElementById('lblTotalText').style.display = 'none';
+            document.getElementById('lblPatientCount').style.display = 'none';
+
+            document.getElementById('lblOneLetterPerPatientText').style.display = 'none';
+            document.getElementById('chkOneLetterPerPatient').style.display = 'none';
+        }
+
+    </script>
+
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+    <table>
+        <tr>
+            <td><h2 id="heading" runat="server">Print Batch Letters</h2></td>
+            <td><h2><asp:HyperLink ID="lnkToEntity" runat="server"></asp:HyperLink></h2></td>
+        </tr>
+    </table>
+    
+    <span id="spnErrorMessage" runat="server">
+        <br />
+        <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification" Text=""></asp:Label>
+    </span>
+
+    <asp:HiddenField ID="hiddenSelectedIDsSentIn" runat="server" Value="false" />
+    <br />
+
+    <table>
+        <tr valign="top">
+            <td>
+
+                <table id="tbl_select_org_and_patient" runat="server">
+                    <tr>
+                        <th id="td_orgcol_row1" align="left">Select Organisations</th>
+                        <th></th>
+                        <th align="left">Select Patients</th>
+                        <th></th>
+                        <th align="left">
+                            <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <th align="left">Select Letter</th>
+                                    <td align="right"><asp:Button ID="btnPrint" runat="server" Text="&nbsp;&nbsp;&nbsp;Print&nbsp;&nbsp;&nbsp;" OnClick="btnPrint_Click" OnClientClick="javascript:clear_error_msg();" /> </td>
+                                </tr>
+                            </table>
+                        </th>
+                    </tr>
+
+                    <tr id="tr_orgs_search_row_space_below" runat="server" height="15">
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+
+                    <tr>
+                        <td>
+                            <asp:Button ID="btnAddOrg" runat="server" Text="Add" OnClientClick="javascript:get_organisation(); return false;"/>
+                            <asp:Button ID="btnAddAllOrgs" runat="server" Text="Add All" onclick="btnAddAllOrgs_Click" />
+                            <asp:Button ID="btnDeleteSelected" runat="server" Text="Delete Selected" OnClientClick="javascript:remove_selected_organisation(); return false;" />
+                            <asp:Button ID="btnUpdateOrgs" runat="server" CssClass="hiddencol" onclick="btnUpdateOrgs_Click" />
+                            <asp:HiddenField ID="hiddenOrgIDsList" runat="server" />
+                        </td>
+                        <td style="width:60px"></td>
+                        <td>
+                            <asp:Label ID="lblPatientsNotLinkedToAnyOrg" runat="server">Include patients not linked to any org</asp:Label>
+                            <asp:CheckBox ID="chkIncPatientsWithNoOrg"  runat="server" AutoPostBack="false" />
+                            <asp:Button ID="btnUpdatePatientList" runat="server" Text="Update" OnClick="btnUpdatePatientList_Click" />
+
+                            <asp:Label ID="lblTotalText" runat="server" Text="&nbsp;Total: "></asp:Label>
+                            <asp:Label ID="lblPatientCount" runat="server" Text="0"></asp:Label>
+
+                        </td>
+                        <td style="width:60px"></td>
+                        <td align="right">
+                            <asp:Label ID="lblOneLetterPerPatientText" runat="server">Max one letter per patient</asp:Label>  <asp:CheckBox ID="chkOneLetterPerPatient" runat="server" Checked="True" />
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td><asp:ListBox ID="lstOrgs" runat="server" rows="32" SelectionMode="Multiple" Width="100%" style="min-width:350px;"></asp:ListBox></td>
+                        <td></td>
+                        <td><asp:ListBox ID="lstPatients" runat="server" rows="32" SelectionMode="Multiple" Width="100%" style="min-width:350px;"></asp:ListBox></td>
+                        <td></td>
+                        <td><asp:ListBox ID="lstLetters" runat="server" rows="32" SelectionMode="Single" style="min-width:350px;"></asp:ListBox></td>
+                    </tr>
+
+                    <tr>
+                        <td align="right">All/None<input id="chkSelectAllOrgs" onclick="select_all(this,'lstOrgs')" type="checkbox" value="Accept Form" name="chkSelectAllOrgs" runat="server" /></td>
+                        <td></td>
+                        <td align="right">All/None<input id="chkSelectAllPatients" onclick="select_all(this,'lstPatients')" type="checkbox" value="Accept Form" name="chkSelectAllPatients" runat="server" /></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+</asp:Content>

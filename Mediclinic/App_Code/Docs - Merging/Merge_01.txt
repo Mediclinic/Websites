@@ -1,0 +1,116 @@
+﻿
+SELECT 'Holloway', * FROM Mediclinic_Holloway_TestDB.dbo.OfferingType;
+SELECT 'Balwyn'  , * FROM Mediclinic_Balwyn_TestDB.dbo.OfferingType;
+
+
+(
+	SELECT 'Holloway', * FROM Mediclinic_Holloway_TestDB.dbo.OfferingType 
+	EXCEPT
+	SELECT 'Holloway', * FROM Mediclinic_Balwyn_TestDB.dbo.OfferingType
+)
+union all
+(
+	SELECT 'Balwyn', * FROM Mediclinic_Balwyn_TestDB.dbo.OfferingType 
+	EXCEPT
+	SELECT 'Balwyn', * FROM Mediclinic_Holloway_TestDB.dbo.OfferingType
+)
+
+
+
+Reference tables
+----------------
+[done] Site                        [Entity]
+[done] Title
+[done] Country
+[----] Suburb
+[----] AddressChannelType
+[----] AddressChannel              [AddressChannelType]
+[done] ContactTypeGroup
+[done] ContactType                 [ContactTypeGroup]
+[done] Field
+[----] StaffPosition
+[done] CostCentre
+[done] OrganisationCustomerType
+[done] OrganisationTypeGroup
+[done] OrganisationType            [OrganisationTypeGroup]
+[done] OfferingType
+[done] AgedCarePatientType
+[done] OfferingInvoiceType
+[done] HealthCardActionType
+[done] WeekDay
+[done] BookingType
+[done] BookingStatus
+[done] BookingUnavailabilityReasonType
+[done] BookingConfirmedByType
+[----] BookingUnavailabilityReason [BookingUnavailabilityReasonType]
+[----] BookingChangeHistoryReason
+[done] NoteType
+[done] Screen
+[done] ScreenNoteTypes             [Screen, NoteType]
+[done] InvoiceType
+.. InvoiceHealthcareClaimNumbers                      <======================= dont need it updated
+[done] ReceiptPaymentType
+[done] RefundReason
+[done] LetterType
+[done] LetterPrintHistorySendMethod
+.. LetterTreatmentTemplate  [Letter, Field]           <======================= dont need it updated
+[done] SMSCredit
+[done] SMSAndEmailType
+
+
+
+Main tables
+-----------
+[----] Entity
+[----] Person                              [Entity, Person, Title]
+[----] Contact/ContactAus                  [Entity, ContactType, AddressChannel, Suburb, Country, Site]
+[----] Staff                   **          [Person, StaffPosition, Field, CostCentre]
+[----] UserLogin                           [Staff, Site]
+[----] StaffSiteRestriction                [Staff, Site]
+[----] Organisation                        [Entity, Organisation, OrganisationType, OrganisationCustomerType]
+[----] RegisterStaff                       [Organisation, Staff]
+[----] Patient                             [Person, Offering]
+[----] PatientHistory                      [Patient, Offering]
+[----] Offering                **          [Field, OfferingType, AgedCarePatientType, OfferingInvoiceType, Letter]
+[----] OrganisationOfferings               [Organisation, Offering]
+[----] StaffOfferings                      [Staff, Offering]
+[----] Referrer                            [Person]
+[----] RegisterReferrer                    [Organisation, Referrer]
+[----] RegisterPatient                     [Organisation, Patient]
+[----] PatientReferrer                     [RegisterReferrer, Patient, Organisation]
+[----] HealthCard                          [Patient, Organisation, Staff]
+[----] HealthCardAction                    [HealthCardActionType, HealthCard]
+[----] HealthCardEPCChangeHistory          [HealthCard, Staff]
+[----] HealthCardEPCRemaining              [HealthCard, Field]
+[----] HealthCardEPCRemainingChangeHistory [HealthCardEPCRemaining, Staff]
+[----] Booking                             [Entity, Organisation, Staff, Patient, Offering, BookingType, BookingStatus, BookingUnavailabilityReason, BookingConfirmedByType, WeekDay]
+[----] BookingChangeHistory                [Booking, Staff. BookingChangeHistoryReason]
+[----] BookingPatient	                   [Booking, Patient, Staff]
+[----] BookingPatientOffering              [BookingPatient, Offering, Staff]
+[----] Note                                [Entity, NoteType, Staff, Site]
+[----] Invoice                             [Entity, InvoiceType, Booking, Organisation, Patient, Letter, Staff, Site]
+[----] InvoiceLine                         [Invoice, Patient, Organisation]
+[----] POSMachine                          [Entity]
+[----] Receipt                             [ReceiptPaymentType, Invoice, POSMachine, Staff]
+[----] Overpayment                         [Receipt, Staff]
+[----] CreditNote                          [Invoice, Staff]
+[----] Refund                              [Invoice, RefundReason, Staff]
+[----] Letter                              [LetterType, Organisation, Site]
+[----] LetterPrintHistory                  [Letter, LetterPrintHistorySendMethod, Booking, Patient, Organisation, RegisterReferrer, Staff, HealthCardAction]
+[----] LetterBest                          [LetterType]
+[----] LetterBestPrintHistory              [LetterBest, Patient]
+[----] SMSHistory                          [SMSAndEmailType, Patient, Booking]
+[----] EmailHistory                        [SMSAndEmailType, Patient, Booking]
+
+
+
+
+================================>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+================================>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+================================>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+now write scripts to add each of them from holloway into balwyn!!
+put in new file to do after all id's updated!
+
+then should be albe to test so can run whole page in one go!  (as should be able to run other pages in one go too!)
+

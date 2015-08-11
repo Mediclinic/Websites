@@ -1,0 +1,41 @@
+﻿<%@ Page Title="Add/Edit Contact List" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="AddEditContactAusList.aspx.cs" Inherits="AddEditContactAusList" %>
+<%@ Register TagPrefix="UC" TagName="AddressAusControl" Src="~/Controls/AddressAusControl.ascx" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <center>
+    <table border="0" cellpadding="0" cellspacing="0">
+        <tr>
+            <td>
+
+                <h2 ID="Heading" runat="server">
+                    Contact
+                </h2>
+
+                <asp:ValidationSummary ID="EditContactValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditContactValidationSummary" Visible="false"/>
+                <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+
+                <br />
+
+
+
+                <table id="maintable" runat="server" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                        <td>
+                            <UC:AddressAusControl ID="addressControl" runat="server" />
+                        </td>
+                    </tr>
+                    <tr style="height:35px;"><td></td></tr>
+                    <tr>
+                        <td align="center"><asp:Button ID="btnClose" runat="server" Text="Close" OnClientClick="javascript:window.close();" /></td>
+                    </tr>
+                </table>
+
+            </td>
+        </tr>
+    </table>
+    </center>
+
+</asp:Content>

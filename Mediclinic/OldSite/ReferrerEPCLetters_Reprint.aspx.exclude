@@ -1,0 +1,191 @@
+﻿<%@ Page Title="Referreral Letters - Reprint" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="ReferrerEPCLetters_Reprint.aspx.cs" Inherits="ReferrerEPCLetters_Reprint" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script type="text/javascript" src="Scripts/date_picker.js"></script>
+    <link href="Styles/date_picker.css" rel="stylesheet" type="text/css" />
+    <script type="text/javascript">
+
+        function get_register_referrer() {
+
+            var retVal = window.showModalDialog("ReferrerListPopup.aspx", 'Show Popup Window', "dialogHeight:700px;dialogWidth:1150px;resizable:yes;center:yes;");
+            if (typeof retVal === "undefined")
+                return;
+
+            var index = retVal.indexOf(":");
+            document.getElementById('registerReferrerID').value = retVal.substring(0, index); // set value so can get from code behind
+            document.getElementById('btnRegisterReferrerSelectionUpdate').click();  // call button press to let the code behind use this id and update accordingly
+        }
+        function clear_register_referrer() {
+            document.getElementById('registerReferrerID').value = '-1';
+            document.getElementById('btnRegisterReferrerSelectionUpdate').click();  // call button press to let the code behind use this id and update accordingly
+        }
+
+        function get_patient() {
+
+            var ref_id = document.getElementById('registerReferrerID').value;
+            var retVal = (ref_id == '' || ref_id == '-1') ?
+                    window.showModalDialog("PatientListPopup.aspx", 'Show Popup Window', "dialogHeight:700px;dialogWidth:1150px;resizable:yes;center:yes;") : 
+                    window.showModalDialog("PatientListPopup.aspx?ref=" + ref_id, 'Show Popup Window', "dialogHeight:700px;dialogWidth:1150px;resizable:yes;center:yes;");
+
+            //var retVal = window.showModalDialog("PatientListPopup.aspx", 'Show Popup Window', "dialogHeight:700px;dialogWidth:1150px;resizable:yes;center:yes;");
+            if (typeof retVal === "undefined")
+                return;
+
+            var index = retVal.indexOf(":");
+            document.getElementById('patientID').value = retVal.substring(0, index); // set value so can get from code behind
+            document.getElementById('btnPatientSelectionUpdate').click();  // call button press to let the code behind use this id and update accordingly
+        }
+        function clear_patient() {
+            document.getElementById('patientID').value = '-1';
+            document.getElementById('btnPatientSelectionUpdate').click();  // call button press to let the code behind use this id and update accordingly
+        }
+
+
+
+        function show_page_load_message() {
+
+            if (!Page_ClientValidate("EditRecepitValidationSummary"))
+                return;
+
+            // delay so it is only shown if it is taking a long time (ie if a last treatment letter is being generated)
+            setTimeout(function () {
+                show_hide('loadingDiv', true);
+            }, 750);
+        }
+        function show_hide(id, show) {
+            obj = document.getElementById(id);
+            obj.style.display = show ? "" : "none";
+        }
+
+    </script>
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <table border="0" cellpadding="0" cellspacing="0">
+        <tr>
+            <td>
+
+                <h2 ID="Heading" runat="server">
+                    Referreral Letters - Reprint
+                </h2>
+
+                <br />
+
+                <asp:ValidationSummary ID="EditRecepitValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditRecepitValidationSummary"/>
+                <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+
+                <asp:HiddenField ID="registerReferrerID" runat="server" Value="-1" />
+                <asp:Button ID="btnRegisterReferrerSelectionUpdate" runat="server" CssClass="hiddencol" Text=""  OnClick="btnRegisterReferrerSelectionUpdate_Click" />
+                <asp:HiddenField ID="patientID" runat="server" Value="-1" />
+                <asp:Button ID="btnPatientSelectionUpdate" runat="server" CssClass="hiddencol" Text=""  OnClick="btnPatientSelectionUpdate_Click" />
+
+
+                <div style="line-height:15px;">&nbsp;</div>
+
+
+                <table id="maintable" runat="server">
+                    <tr>
+                        <td valign="top">
+                            <asp:Label  ID="lblReferrerText" runat="server" Text="<b>All Referreres</b>" />
+                        </td>
+                        <td valign="top" style="width:15px;"></td>
+                        <td valign="top">
+                            <asp:Button ID="btnRegisterReferrerListPopup" runat="server" Width="100%" Text="Get Referrer" OnClientClick="javascript:get_register_referrer(); return false;"/>
+                        </td>
+                        <td valign="top">
+                            <asp:Button ID="btnClearRegisterReferrer" runat="server" Width="100%" Text="All Referrers" OnClientClick="javascript:clear_register_referrer(); return false;"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td valign="top">
+                            <asp:Label  ID="lblPatientText" runat="server" Text="<b>All Patients<b>" />
+                        </td>
+                        <td valign="top" style="width:15px;"></td>
+                        <td valign="top">
+                            <asp:Button ID="btnPatientListPopup" runat="server" Width="100%" Text="Get Patient" OnClientClick="javascript:get_patient(); return false;"/>
+                        </td>
+                        <td valign="top">
+                            <asp:Button ID="btnClearPatient" runat="server" Width="100%" Text="All Patients" OnClientClick="javascript:clear_patient(); return false;"/>
+                        </td>
+                    </tr>
+                </table>
+
+                <div style="line-height:20px;">&nbsp;</div>
+
+
+
+                <table border="0" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td class="nowrap"><asp:Label ID="lblSearchDate" runat="server">From:</asp:Label>&nbsp;</td>
+                        <td class="nowrap"><asp:TextBox ID="txtStartDate" runat="server" Columns="10"/>&nbsp;</td>
+                        <td class="nowrap"><asp:ImageButton ID="txtStartDate_Picker" runat="server" ImageUrl="~/images/Calendar-icon-24px.png" />&nbsp;</td>
+                        <td class="nowrap"><button type="button" onclick="javascript:document.getElementById('txtStartDate').value = '';return false;">Clear</button></td>
+
+                        <td style="width:20px"></td>
+
+                        <td class="nowrap"><asp:Label ID="lblEndDate" runat="server">To:</asp:Label>&nbsp;</td>
+                        <td class="nowrap"><asp:TextBox ID="txtEndDate" runat="server" Columns="10"></asp:TextBox>&nbsp;</td>
+                        <td class="nowrap"><asp:ImageButton ID="txtEndDate_Picker" runat="server" ImageUrl="~/images/Calendar-icon-24px.png" />&nbsp;</td>
+                        <td class="nowrap"><button type="button" onclick="javascript:document.getElementById('txtEndDate').value = '';return false;">Clear</button></td>
+                    </tr>
+                </table>
+
+
+                <div style="line-height:20px;">&nbsp;</div>
+
+
+                <table id="submittable" runat="server">
+                    <tr>
+                        <td align="center">
+                            <asp:RadioButtonList id="rdioSendType" runat="server">
+                                <asp:ListItem Value="Email">Email (print if no referrer email set)</asp:ListItem>
+                                <asp:ListItem Value="Print" Selected="True">Print (irregardless of whether referrer has email set)</asp:ListItem>
+                            </asp:RadioButtonList>
+                            <asp:RequiredFieldValidator   
+                                ID="rdioSendTypeReqiredFieldValidator"  
+                                runat="server"  
+                                ControlToValidate="rdioSendType"  
+                                ErrorMessage="Please select a method of sending."
+                                ValidationGroup="EditRecepitValidationSummary" Display="None"></asp:RequiredFieldValidator>
+                        </td>
+                    </tr>
+                    <tr style="height:20px">
+                        <td colspan="5"></td>
+                    </tr>
+                    <tr>
+                        <td align="center">
+                            <asp:Button ID="btnSubmit" runat="server" Text="Re-Print" onclick="btnSubmit_Click" CausesValidation="True" ValidationGroup="EditRecepitValidationSummary" OnClientClick="show_page_load_message();" />
+                            <asp:Button ID="btnCancel" runat="server" Text="Cancel" OnClientClick="window.returnValue=false;self.close();return false;" Visible="False" />
+                            &nbsp;&nbsp;&nbsp;
+                            <asp:Button ID="btnViewList" runat="server" Text="Refresh List" onclick="btnViewList_Click"  />
+                            <br />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="center">
+                            <table>
+                                <tr valign="middle">
+                                    <td>
+                                        * Please note that this could take some time to complete. 
+                                    </td>
+                                    <td>
+                                        <span id="loadingDiv" runat="server" style="display:none">
+                                            <img src="images/loading_circle_small.gif" alt="Loading..."/>
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+
+                <br />
+                <asp:Label ID="lblInfo" runat="server" ForeColor="Blue"></asp:Label>
+                <asp:Label ID="lblList" runat="server" ForeColor="Blue"></asp:Label>
+
+            </td>
+        </tr>
+    </table>
+         
+</asp:Content>

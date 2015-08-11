@@ -1,0 +1,194 @@
+﻿<%@ Page Title="AddEditContact" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="AddEditContact.aspx.cs" Inherits="AddEditContact" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script type="text/javascript">
+
+        var previous_contact_type_id_selected = ""; // global
+        function ddl_health_card_type_changed() {
+            
+            // only if url: contact_type_group=1 // addresses
+            if (getUrlVars()['contact_type_group'] != 1)
+                return;
+
+            if (document.getElementById("ddlContactType").options[ddlContactType.selectedIndex].value == "37")  // PO Box
+            {
+                document.getElementById("chkIsBillingAddr").checked = true;
+                document.getElementById("txtAddrLine1").value = "PO Box";
+            }
+            else if (document.getElementById("ddlContactType").options[ddlContactType.selectedIndex].value == "262")  // GPO Box
+            {
+                document.getElementById("chkIsBillingAddr").checked = true;
+                document.getElementById("txtAddrLine1").value = "GPO Box";
+            }
+            else
+            {
+                if (previous_contact_type_id_selected == "37" || previous_contact_type_id_selected == "262") {
+                    document.getElementById("chkIsBillingAddr").checked = false;
+                    document.getElementById("txtAddrLine1").value = "";
+                }
+            }
+
+            previous_contact_type_id_selected = document.getElementById("ddlContactType").options[ddlContactType.selectedIndex].value;
+        }
+
+        function getUrlVars() {
+            var vars = [], hash;
+            var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+            for (var i = 0; i < hashes.length; i++) {
+                hash = hashes[i].split('=');
+                vars.push(hash[0]);
+                vars[hash[0]] = hash[1];
+            }
+            return vars;
+        }
+
+        function get_suburb() {
+            var retVal = window.showModalDialog("SuburbListPopup.aspx", 'Show Popup Window', "dialogHeight:700px;dialogWidth:750px;resizable:yes;center:yes;");
+            if (typeof retVal === "undefined")
+                return;
+
+            var index = retVal.indexOf(":");
+            document.getElementById('suburbID').value = retVal.substring(0, index);
+            document.getElementById('lblSuburbText').innerHTML = retVal.substring(index + 1);
+            //document.getElementById('btnSuburbSelectionUpdate').click();
+        }
+        function clear_suburb() {
+            document.getElementById('suburbID').value = '-1';
+            document.getElementById('lblSuburbText').innerHTML = '--';
+            //document.getElementById('btnSuburbSelectionUpdate').click();  // call button press to let the code behind use this id and update accordingly
+        }
+
+    </script>
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+    <h2 ID="Heading" runat="server">
+        Contact
+    </h2>
+
+    <asp:ValidationSummary ID="EditContactValidationSummary" runat="server" CssClass="failureNotification" ValidationGroup="EditContactValidationSummary" Visible="false"/>
+    <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification"></asp:Label>
+    <asp:Button ID="btnUpdateStreetAndSuburb" runat="server" CssClass="hiddencol" onclick="btnUpdateStreetAndSuburb_Click" />
+    <asp:Button ID="btnUpdateType" runat="server" CssClass="hiddencol" onclick="btnUpdateType_Click" />
+
+    <br />
+    <table id="maintable" runat="server">
+        <tr id="idRow" runat="server">
+            <td>ID</td>
+            <td></td>
+            <td><asp:Label ID="lblId" runat="server"></asp:Label></td>
+        </tr>
+        <tr>
+            <td class="nowrap">Type</td>
+            <td></td>
+            <td class="nowrap">
+                <asp:DropDownList ID="ddlContactType" runat="server" DataTextField="at_descr" DataValueField="at_contact_type_id" onchange="javascript:ddl_health_card_type_changed();" />
+                <small><asp:HyperLink ID="lnkUpdateType" runat="server" onfocus="set_focus_color(this, true);" onblur="set_focus_color(this, false, 'transparent');" TabIndex="-1"></asp:HyperLink></small>
+                <asp:Label ID="lblContactType" runat="server" Font-Bold="True"/>
+            </td>
+        </tr>
+        <tr>
+            <td class="nowrap"><asp:Label ID="lblLine1Descr" runat="server">Line 1</asp:Label></td>
+            <td></td>
+            <td class="nowrap">
+                <asp:TextBox ID="txtAddrLine1" runat="server" Columns="30"></asp:TextBox>
+                <asp:RequiredFieldValidator ID="txtValidateAddrLine1Required" runat="server" CssClass="failureNotification"  
+                    ControlToValidate="txtAddrLine1" 
+                    ErrorMessage="AddrLine1 is required."
+                    Display="Dynamic"
+                    ValidationGroup="EditContactValidationSummary">*Required</asp:RequiredFieldValidator>
+                <asp:Label ID="lblAddrLine1" runat="server" Font-Bold="True"/>
+            </td>
+        </tr>
+        <tr id="line2Row" runat="server">
+            <td class="nowrap">Line 2</td>
+            <td></td>
+            <td class="nowrap">
+                <asp:TextBox ID="txtAddrLine2" runat="server"  Columns="30"></asp:TextBox>
+                <asp:Label ID="lblAddrLine2" runat="server" Font-Bold="True"/>
+            </td>
+        </tr>
+        <tr id="streetRow" runat="server">
+            <td class="nowrap">Street</td>
+            <td></td>
+            <td class="nowrap">
+                <asp:DropDownList ID="ddlAddressChannel" runat="server" DataTextField="ac_descr" DataValueField="ac_address_channel_id"/>
+                <small><asp:HyperLink ID="lnkUpdateChannel" runat="server" onfocus="set_focus_color(this, true);" onblur="set_focus_color(this, false, 'transparent');" TabIndex="-1"></asp:HyperLink></small>
+                <asp:Label ID="lblAddressChannel" runat="server" Font-Bold="True"/>
+            </td>
+        </tr>
+        <tr id="suburbRow" runat="server">
+            <td class="nowrap">Suburb</td>
+            <td></td>
+            <td class="nowrap">
+                <table border="0" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td style="min-width:175px"><asp:Label  ID="lblSuburbText" runat="server" Text="--" CssClass="nowrap" /></td>
+                        <td style="min-width:15px"></td>
+                        <td>
+                            <a id="lnkGetSuburb" runat="server" href="javascript:void(0)"  onclick="javascript:get_suburb(); return false;">Get Suburb</a>&nbsp;&nbsp;
+                            <a id="lnkClearSuburb" runat="server" href="javascript:void(0)"  onclick="javascript:clear_suburb(); return false;">Clear Suburb</a>
+                        </td>
+                    </tr>
+                </table>
+                <asp:HiddenField ID="suburbID" runat="server" Value="-1" />
+                <asp:Button ID="btnSuburbSelectionUpdate" runat="server" CssClass="hiddencol" Text=""  OnClick="btnSuburbSelectionUpdate_Click" />
+            </td>
+        </tr>
+        <tr id="countryRow" runat="server">
+            <td class="nowrap">Country</td>
+            <td></td>
+            <td class="nowrap">
+                <asp:DropDownList ID="ddlCountry" runat="server" DataTextField="descr" DataValueField="country_id"/>
+                <asp:Label ID="lblCountry" runat="server" Font-Bold="True"/>
+            </td>
+        </tr>
+        <tr>
+            <td class="nowrap">Note</td>
+            <td></td>
+            <td class="nowrap">
+                <asp:TextBox ID="txtFreeText" runat="server"  Columns="30"></asp:TextBox>
+                <asp:Label ID="lblFreeText" runat="server" Font-Bold="True"/>
+            </td>
+        </tr>
+        <tr id="billinRow" runat="server">
+            <td class="nowrap">Billing</td>
+            <td></td>
+            <td class="nowrap">
+                <asp:CheckBox ID="chkIsBillingAddr" runat="server" />
+                <asp:Label ID="lblIsBillingAddr" runat="server" Font-Bold="True"/>
+            </td>
+        </tr>
+        <tr id="shippingRow" runat="server">
+            <td class="nowrap">Shipping</td>
+            <td></td>
+            <td class="nowrap">
+                <asp:CheckBox ID="chkIsShippingAddr" runat="server" />
+                <asp:Label ID="lblIsShippingAddr" runat="server" Font-Bold="True"/>
+            </td>
+        </tr>
+        <tr>
+            <td class="nowrap"><asp:Label ID="lblIsIncOnDocsDescr" runat="server" Text="Inc On Docs"/></td>
+            <td></td>
+            <td class="nowrap">
+                <asp:CheckBox ID="chkIsIncOnDocs" runat="server" />
+                <asp:Label ID="lblIsIncOnDocs" runat="server" Font-Bold="True"/>
+            </td>
+        </tr>
+
+
+        <tr height="10">
+            <td colspan="3"></td>
+        </tr>
+
+        <tr>
+            <td colspan="3" align="center">
+                <br />  
+                <asp:Button ID="btnSubmit" runat="server" Text="Submit" onclick="btnSubmit_Click" CausesValidation="True" ValidationGroup="EditContactValidationSummary" />
+                <asp:Button ID="btnCancel" runat="server" Text="Cancel" onclick="btnCancel_Click"  OnClientClick="window.returnValue=false;self.close();" />
+                <br />              
+            </td>
+        </tr>
+
+    </table>
+
+</asp:Content>

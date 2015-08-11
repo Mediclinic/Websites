@@ -1,0 +1,242 @@
+﻿<%@ Page Title="Merge - Match Referrers" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="Merge_MatchReferrers.aspx.cs" Inherits="Merge_MatchReferrers" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script type="text/javascript" src="Scripts/jquery-1.4.1.min.js"></script>
+    <script type="text/javascript">
+        
+    </script>
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <h2>
+        Match Referrers
+    </h2>
+
+    <br />
+    <br />
+
+    <asp:ValidationSummary ID="validationSummary" runat="server" CssClass="failureNotification" ValidationGroup="validationSummary"/>
+    <asp:Label ID="lblErrorMessage" runat="server" CssClass="failureNotification"></asp:Label>
+
+
+    <table>
+        <tr>
+            <td>
+                No. Referrers 
+                    <asp:DropDownList ID="ddlNumReferrersToRetrieve" runat="server">
+                          <asp:ListItem Value="5"> 5 </asp:ListItem>
+                          <asp:ListItem Value="25" Selected="True"> 25 </asp:ListItem>
+                          <asp:ListItem Value="100"> 100 </asp:ListItem>
+                          <asp:ListItem Value="500"> 500 </asp:ListItem>
+                          <asp:ListItem Value="2000"> 2000 </asp:ListItem>
+                          <asp:ListItem Value="All"> All </asp:ListItem>
+                    </asp:DropDownList>
+            </td>
+            <td style="width:12px;"></td>
+
+            <td>
+                <asp:Button ID="btnUpdateList" runat="server" Text="Update List" OnClick="btnUpdateList_Click" />
+            </td>
+        </tr>
+    </table>
+
+
+
+
+    <table>
+        <tr valign="top">
+            <td>
+
+                <asp:GridView ID="GrdMatchReferrers" runat="server" 
+                     AutoGenerateColumns="False" DataKeyNames="register_referrer_id" 
+                     OnRowCancelingEdit="GrdMatchReferrers_RowCancelingEdit" 
+                     OnRowDataBound="GrdMatchReferrers_RowDataBound" 
+                     OnRowEditing="GrdMatchReferrers_RowEditing" 
+                     OnRowUpdating="GrdMatchReferrers_RowUpdating" ShowFooter="False" 
+                     OnRowCommand="GrdMatchReferrers_RowCommand" 
+                     OnRowCreated="GrdMatchReferrers_RowCreated"
+                     AllowSorting="True" 
+                     OnSorting="GridView_Sorting"
+                     ClientIDMode="Predictable">
+
+                    <Columns> 
+
+                        <asp:TemplateField HeaderText="RegRef ID" HeaderStyle-HorizontalAlign="Left" SortExpression="register_referrer_id" Visible="false"> 
+                            <ItemTemplate> 
+                                <asp:Label ID="lblRegRefID1" runat="server" Text='<%# Eval("register_referrer_id") %>'></asp:Label> 
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                        <asp:TemplateField HeaderText="Name" HeaderStyle-HorizontalAlign="Left" SortExpression="surname, firstname" ItemStyle-Width="200px"> 
+                            <ItemTemplate> 
+                                <asp:HyperLink ID="lnnkName1" runat="server" NavigateUrl='<%# "~/ReferrerPersonInfo.aspx?name_search=" + Eval("surname") + "&name_starts_with=" %>' Text='<%# Eval("firstname") + " " + Eval("surname") %>' />
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                        <asp:TemplateField HeaderText="Pts" HeaderStyle-HorizontalAlign="Left" SortExpression="n_patients"> 
+                            <ItemTemplate> 
+                                <asp:Label ID="lblPts1" runat="server" Text='<%# Eval("n_patients") %>'></asp:Label> 
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                        <asp:TemplateField HeaderText="RegRef ID" HeaderStyle-HorizontalAlign="Left" SortExpression="o_register_referrer_id" Visible="false"> 
+                            <ItemTemplate> 
+                                <asp:Label ID="lblRegRefID2" runat="server" Text='<%# Eval("o_register_referrer_id") %>'></asp:Label> 
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                        <asp:TemplateField HeaderText="Name" HeaderStyle-HorizontalAlign="Left" SortExpression="o_surname, o_firstname" ItemStyle-Width="200px"> 
+                            <ItemTemplate> 
+                                <asp:HyperLink ID="lnnkName2" runat="server" NavigateUrl='<%# "~/ReferrerPersonInfo.aspx?name_search=" + Eval("o_surname") + "&name_starts_with=" %>' Text='<%# Eval("o_firstname") + " " + Eval("o_surname") %>' />
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                        <asp:TemplateField HeaderText="Pts" HeaderStyle-HorizontalAlign="Left" SortExpression="o_n_patients"> 
+                            <ItemTemplate> 
+                                <asp:Label ID="lblPts2" runat="server" Text='<%# Eval("o_n_patients") %>'></asp:Label> 
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                        <asp:TemplateField HeaderText="" HeaderStyle-HorizontalAlign="Left"> 
+                            <ItemTemplate> 
+                                <asp:LinkButton ID="lnkSelect" runat="server" OnCommand="lnkSelect_Command" CommandArgument='<%# Eval("register_referrer_id") + "_" + Eval("o_register_referrer_id")  %>' Text="Select"/>
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                    </Columns> 
+
+                </asp:GridView>
+
+            </td>
+            <td style="width:30px;">&nbsp;</td>
+            <td>
+
+                <asp:HiddenField ID="hiddenReferrerID1" runat="server" />
+                <asp:HiddenField ID="hiddenReferrerID2" runat="server" />
+
+                <table border="0" bordercolor="989898" cellpadding="1" style="border-collapse:collapse;">
+                    <tr>
+                        <td>RegRef ID</td>
+                        <td style="width:8px;"></td>
+                        <td><asp:TextBox ID="txtReferrerID1" runat="server" Columns="8" /></td>
+                        <td style="width:8px;"></td>
+                        <td><asp:TextBox ID="txtReferrerID2" runat="server" Columns="8" /></td>
+                        <td style="width:8px;"></td>
+                        <td><asp:Button ID="btnUpdateRegRefInfo" runat="server" Text="Update" OnClick="btnUpdateRegRefInfo_Click" /></td>
+                    </tr>
+                    <tr style="height:8px;">
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>First Name</td>
+                        <td></td>
+                        <td><asp:Label ID="lblFirstname1" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Label ID="lblFirstname2" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Image ID="imgMatchFirstname" runat="server" /></td>
+                    </tr>
+                    <tr>
+                        <td>Surname</td>
+                        <td></td>
+                        <td><asp:Label ID="lblSurname1" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Label ID="lblSurname2" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Image ID="imgMatchSurname" runat="server" /></td>
+                    </tr>
+                    <tr>
+                        <td>Clinic</td>
+                        <td></td>
+                        <td><asp:Label ID="lblClinic1" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Label ID="lblClinic2" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Image ID="imgMatchClinic" runat="server" /></td>
+                    </tr>
+                    <tr>
+                        <td>Provider Number</td>
+                        <td></td>
+                        <td><asp:Label ID="lblProviderNumber1" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Label ID="lblProviderNumber2" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Image ID="imgMatchProviderNumber" runat="server" /></td>
+                    </tr>
+                    <tr style="height:8px;">
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr valign="top">
+                        <td>Patients</td>
+                        <td></td>
+                        <td><asp:Label ID="lblPatients1" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Label ID="lblPatients2" runat="server" /></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr style="height:8px;">
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+
+
+
+                    <tr style="height:15px;">
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr valign="middle">
+                        <td></td>
+                        <td></td>
+                        <td align="center">
+                            <asp:Button ID="btnDeletePatient1" runat="server" Text="Delete" OnCommand="btnDeletePatient_Command" />
+                            <br />
+                            <asp:Label ID="lblErrorMessagePT1" runat="server" />
+                        </td>
+                        <td></td>
+                        <td align="center">
+                            <asp:Button ID="btnDeletePatient2" runat="server" Text="Delete" OnCommand="btnDeletePatient_Command" />
+                            <br />
+                            <asp:Label ID="lblErrorMessagePT2" runat="server" />
+                        </td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+
+                </table>
+
+
+            </td>
+        </tr>
+    </table>
+
+
+
+
+
+
+</asp:Content>
+

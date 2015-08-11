@@ -1,0 +1,124 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Configuration;
+using System.Collections;
+using System.Text.RegularExpressions;
+
+public partial class ServiceSpecificBookingReminderLettersToSend : System.Web.UI.Page
+{
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        try
+        {
+
+            if (!IsPostBack)
+                Utilities.SetNoCache(Response);
+            HideErrorMessage();
+
+            if (!IsPostBack)
+            {
+                SetNotificationInfo();
+                htmlOutput.Text = ServiceSpecificBookingReminderLettersSending.Run(true, false, true, DateTime.Now.Date.AddDays(3));
+            }
+
+        }
+        catch (CustomMessageException ex)
+        {
+            if (IsPostBack) SetErrorMessage(ex.Message);
+            else HideTableAndSetErrorMessage(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            if (IsPostBack) SetErrorMessage("", ex.ToString());
+            else HideTableAndSetErrorMessage("", ex.ToString());
+        }
+    }
+    
+    #region btnUpdateNotificationInfo_Click, btnUpdateList_Click
+
+    protected void btnUpdateNotificationInfo_Click(object sender, EventArgs e)
+    {
+        txtEmailAddress.Text = txtEmailAddress.Text.Trim();
+
+        try
+        {
+            if (txtEmailAddress.Text.Length > 0 && !Utilities.IsValidEmailAddress(txtEmailAddress.Text))
+                throw new CustomMessageException("Invalid email address");
+        }
+        catch (CustomMessageException ex)
+        {
+            SetErrorMessage(ex.Message);
+            return;
+        }
+
+        SystemVariableDB.Update("ServiceSpecificBookingReminderLettersToBatch_EmailAddress", txtEmailAddress.Text);
+
+        SetNotificationInfo(); // re-set to show it was update in the db
+    }
+
+    protected void btnRevertNotificationInfo_Click(object sender, EventArgs e)
+    {
+        SetNotificationInfo();
+    }
+
+    protected void SetNotificationInfo()
+    {
+        txtEmailAddress.Text = SystemVariableDB.GetByDescr("ServiceSpecificBookingReminderLettersToBatch_EmailAddress").Value;
+        update_button_row.Attributes["class"] = "hiddencol";
+    }
+
+    protected void btnUpdateList_Click(object sender, EventArgs e)
+    {
+        htmlOutput.Text = ServiceSpecificBookingReminderLettersSending.Run(true, false, true, DateTime.Now.Date.AddDays(3));
+    }
+
+    #endregion
+
+    #region btnTest_Click
+
+    protected void btnTestWithoutPtEmailing_Click(object sender, EventArgs e)
+    {
+        htmlOutput.Text = ServiceSpecificBookingReminderLettersSending.Run(true, true, false, DateTime.Now.Date.AddDays(3));
+    }
+
+    protected void btnTestWithPtEmailing_Click(object sender, EventArgs e)
+    {
+        htmlOutput.Text = ServiceSpecificBookingReminderLettersSending.Run(true, true, true, DateTime.Now.Date.AddDays(3));
+    }
+
+    #endregion
+
+    #region SetErrorMessage, HideErrorMessag
+
+    private void HideTableAndSetErrorMessage(string errMsg = "", string details = "")
+    {
+        SetErrorMessage(errMsg, details);
+    }
+    private void SetErrorMessage(string errMsg = "", string details = "")
+    {
+        if (errMsg.Contains(Environment.NewLine))
+            errMsg = errMsg.Replace(Environment.NewLine, "<br />");
+
+        // double escape so shows up literally on webpage for 'alert' message
+        string detailsToDisplay = (details.Length == 0 ? "" : " <a href=\"#\" onclick=\"alert('" + details.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("'", "\\'").Replace("\"", "\\'") + "'); return false;\">Details</a>");
+
+        lblErrorMessage.Visible = true;
+        if (errMsg != null && errMsg.Length > 0)
+            lblErrorMessage.Text = errMsg + detailsToDisplay + "<br />";
+        else
+            lblErrorMessage.Text = "An error has occurred. Plase contact the system administrator. " + detailsToDisplay + "<br />";
+    }
+    private void HideErrorMessage()
+    {
+        lblErrorMessage.Visible = false;
+        lblErrorMessage.Text = "";
+    }
+
+    #endregion
+
+}

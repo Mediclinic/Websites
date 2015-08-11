@@ -1,0 +1,136 @@
+﻿<%@ Page Title="Add Standard Invoice" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="AddStandardInvoice.aspx.cs" Inherits="AddStandardInvoice" %>
+<%@ Register TagPrefix="UC" TagName="InvoiceItemsControl" Src="~/Controls/InvoiceItemsControl.ascx" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script type="text/javascript">
+
+    function get_patient() {
+        var retVal = window.showModalDialog("PatientListPopup.aspx", 'Show Popup Window', "dialogHeight:700px;dialogWidth:700px;resizable:yes;center:yes;");
+        if (typeof retVal === "undefined")
+            return;
+
+        var index = retVal.indexOf(":");
+        document.getElementById('txtUpdatePatientID').value = retVal.substring(0, index);
+        document.getElementById('txtUpdatePatientName').value = retVal.substring(index + 1);
+    }
+
+    function clear_patient() {
+        document.getElementById('txtUpdatePatientID').value = '';
+        document.getElementById('txtUpdatePatientName').value = '';
+    }
+
+    function get_organisation() {
+        var retVal = window.showModalDialog("OrganisationListPopup.aspx", 'Show Popup Window', "dialogHeight:700px;dialogWidth:750px;resizable:yes;center:yes;");
+        if (typeof retVal === "undefined")
+            return;
+
+        var index = retVal.indexOf(":");
+        document.getElementById('txtUpdateOrganisationID').value = retVal.substring(0, index);
+        document.getElementById('txtUpdateOrganisationName').value = retVal.substring(index + 1);
+    }
+
+    function clear_organisation() {
+        document.getElementById('txtUpdateOrganisationID').value = '';
+        document.getElementById('txtUpdateOrganisationName').value = '';
+    }
+
+
+
+    function live_search(str) {
+
+        set_watermark(document.getElementById("txtSearchOffering"), document.getElementById("txtSearchOffering").value);
+
+        if (str.length == 0) {
+            clear_live_search();
+            return;
+        }
+
+        var fieldsSep = "[[fieldsSep]]";
+        var itemSep = "[[itemSep]]";
+
+        var countFound = 0;
+        var output = "<table>";
+        var offerings = document.getElementById('hiddenItemList').value;
+        var offeringLines = offerings.split(itemSep);
+        for (var i = 0; i < offeringLines.length; i++) {
+            var fields = offeringLines[i].split(fieldsSep);
+            if (fields[0].toLowerCase().indexOf(str.toLowerCase()) != -1) {
+                countFound++;
+                //output += "<tr><td>" + fields[0] + "</td><td>" + fields[1] + "</td></tr>";  // <<< it one td, with javascript click link
+                output += "<tr><td><a href=javascript:void(0)'  onclick=\"clear_live_search();document.getElementById('" + fields[1] + "').click();return false;\">" + fields[0] + "</a></td></tr>";
+            }
+        }
+        output += "</table>";
+
+        document.getElementById("div_livesearch").innerHTML = countFound == 0 ? "<table><tr><td>No results matching that text</td></tr></table>" : output;
+        document.getElementById("div_livesearch").style.border = "1px solid #A5ACB2";
+    }
+
+    function clear_live_search() {
+        document.getElementById("div_livesearch").innerHTML = "";
+        document.getElementById("div_livesearch").style.border = "0px";
+        document.getElementById("txtSearchOffering").value = "";
+        document.getElementById("txtSearchOffering").style.backgroundImage = "url('/images/textbox_watermark_offering_name_first.png')";
+    }
+
+    function set_watermark(txtbox, val) {
+        txtbox.style.backgroundImage = (txtbox.value.length == 0 && val) ? "url('/images/textbox_watermark_offering_name_first.png')" : "";
+    }
+
+
+    </script>
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+    <h2>
+        <asp:Label ID="lblHeading" runat="server" Text="A Standard Invoice"/>
+    </h2>
+
+    
+    <span id="spnErrorMessageLineBreak" runat="server"><br /></span>
+    <asp:Label ID="lblErrorMessage" runat="server" ForeColor="Red" CssClass="failureNotification" Text = ""></asp:Label>
+    <asp:Label ID="Label1" runat="server" Font-Bold="True" ForeColor="Red" />
+    <br />
+
+    <table>
+
+        <tr id="patient_row" runat="server">
+            <td>Patient</td>
+            <td style="width:10px"></td>
+            <td>
+                <asp:TextBox ID="txtUpdatePatientID" runat="server" CssClass="hiddencol" />
+                <asp:TextBox ID="txtUpdatePatientName" runat="server" Width="230" Enabled="False" />
+            </td>
+            <td>
+                <asp:Button ID="btnPatientListPopup" runat="server" Text="Get Patient" OnClientClick="javascript:get_patient(); return false;"/>
+                <asp:Button ID="txtClearPatient"     runat="server" Text="Clear"       OnClientClick="javascript:clear_patient();return false;" />
+
+                <asp:Button ID="btnUpdatePatient"    runat="server" CssClass="hiddencol" Text="Get ID in Code Behind" onclick="btnUpdatePatient_Click" />
+                <asp:Label  ID="lblPatientName"      runat="server" CssClass="hiddencol" Text="--" />
+            </td>
+        </tr>
+
+        <tr id="org_row" runat="server">
+            <td>Organisation</td>
+            <td style="width:10px"></td>
+            <td>
+                <asp:TextBox ID="txtUpdateOrganisationID" runat="server" CssClass="hiddencol" />
+                <asp:TextBox ID="txtUpdateOrganisationName" runat="server" Width="230" Enabled="False" />
+            </td>
+            <td>
+                <asp:Button ID="btnOrganisationListPopup" runat="server" Text="Get Organisation" OnClientClick="javascript:get_organisation(); return false;"/>
+                <asp:Button ID="txtClearOrganisation"     runat="server" Text="Clear"            OnClientClick="javascript:clear_organisation();return false;" />
+
+                <asp:Button ID="btnUpdateOrganisation"    runat="server" CssClass="hiddencol" Text="Get ID in Code Behind" onclick="btnUpdateOrganisation_Click" />
+                <asp:Label  ID="lblOrganisationName"      runat="server" CssClass="hiddencol" Text="--" />
+            </td>
+        </tr>
+
+    </table>
+
+    <UC:InvoiceItemsControl ID="invoiceItemsControl" runat="server" />
+
+
+    <br />
+    
+
+</asp:Content>

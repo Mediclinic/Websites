@@ -1,0 +1,268 @@
+﻿
+
+1. Get dump of rest of stuff (staff, patients, etc) ... then put on server for them to test out
+
+2. Update DB conn in config
+
+3. List every table to get stuff from charles (tell him to keep any scripts to dump that data, as later will need to reuse it)
+  start with extremities that other tables refer to:
+
+
+	------------------------------------------------------------------------------------------------------------------------------------------
+
+  0. SystemVariable
+.	    [done] - put tbl on db
+
+
+  1. entity
+.	    [done] - put tbl on V0.1
+
+
+  2. Site 
+.	    [done] - put tbl on V0.1
+.	    [done] - put stored proc on V0.1
+.	    [done] - put converted file on V0.1 
+.	    [done] - convert data (create stored proc cuz has entity)
+
+
+  3. Title
+.	    [done] - put tbl on V0.1 
+.	    [done] - put converted file on V0.1 
+
+
+  4. person
+.	    [done] - put tbl on V0.1 
+
+
+  5. staff
+.        [done] - staff positions   -- text field - so list of staff tbl "positions" & try and make it into foreign key
+.        [done] - staff field       -- this is from OfferingSubtype/Field!
+.        [done] - cost center       -- KPI file where field 2 = 12 -- field 2,3,4 = id,desc,parent
+.        [done] - 3 SUPPPORT staff rows
+.        [done] - staff
+	    [done]     - join 
+	    [done]        staff tbl
+	    [done]        person tbl and join staffid -- only get if "person" table has row where PE_StaffId not 0
+	    [done]        contract tbl and join staffid with CT_STAFF -- only get if CT_TYPE = 242
+	    [done]     - create stored proc
+	    [done]     - send to stored proc
+.        [done] - user login
+.        [done] StaffSiteRestriction
+
+
+.  6A-1  [done] - OrganisationCustomerType
+.        [done] - OrganisationTypeGroup
+.        [done] - OrganisationType
+.        [done] - Organisation
+
+
+.  6A-2  [done] - RegisterStaff
+
+
+.  6B-1  [done] - OfferingType
+.        [done] - AgedCarePatientType
+.        [done] - OfferingClinicVisitType
+.        [done] - OfferingInvoiceType
+.        [done] - Offering
+
+
+.  6B-2  [done] - OrganisationOfferings
+
+
+.  6C-1  [done] - Patient
+
+				 list of patients = go through contact file, create hash of those where Co_OrgnFSw = 218 (clinic) or 367 (AC)
+	                 then loop through the contact file with that search argument, get all people where presonid = Co_PersonId
+					 and just check that the person does not already exist in the list as a patient can be allocated to more than 1 clinic
+					 -- check if any of these have staff id' set and notify me
+		
+		[done] 1. create sp
+		[done] 2. put data into sp in converter
+		[done] 3. run converter
+		[done] 4. put patient tbl and sp onto v0.1
+		[done] 5. put converted file into patient tbl
+	    
+.  6C-1B [done] PatientHistory
+
+.  6c-2  [done] - RegisterPatient
+        [done] - add tbl to db
+		[done] - create and run data migration
+
+
+	---------------------------------------------------------------------------------------------------------------
+	contact_file
+	------------
+
+	// field[4] = "315" + 218;  <=== this is for patients of clinics
+	// field[4] = "308" + 367;  <=== this is for patients/residents of aged care
+
+
+	// field[4] = "55";   <=== this is for EPC referrers  - so have org
+	// 55 + orgtype=3/218      => personid = patient  orgid = another id in this tbl => that one will be:
+			3   => ac
+			218 => clinic
+	// 55 + orgtype=[214/221]  => personid = referrer orgid = medical practice (can be group file or facility file)
+			214 => facilityclinic
+			221 => joins to groupfacility
+
+	// field[4] = "152"; <=== this is for NON-EPC referrers - so links to org that is yellow pages or whatever
+
+
+	55  218/3   = [PatientReferrer ] - patient to reg-ref
+	55  214/221 = [RegisterReferrer] - ref to org
+	152         = [PatientReferrer ] - patient to org that referred them (eg yellow pages)
+	---------------------------------------------------------------------------------------------------------------
+
+
+.  6D    [done] - Referrer
+.        [done] - RegisterReferrer
+
+
+.  6E    [done] - PatientReferrer registrations
+
+
+.  7     [done] - Country, Suburb, ChannelType, Channel, ContactTypeGroup, ContactType, Contact
+
+	----------------------------------------------------
+	==> merge orgs
+
+	only these are one clinic:
+	1923	2009	NULL	218	0	Z Mitcham1 (GM)			14 January 12:00:00 AM	09 April 12:00:00 AM	False	False	0	False	0	13 December 12:00:00 AM	14 January 12:00:00 AM		0	False	False	False	False	False	False	False	08:00:00	20:00:00	08:00:00	20:00:00	08:00:00	20:00:00	08:00:00	20:00:00	08:00:00	20:00:00	08:00:00	20:00:00	08:00:00	20:00:00	NULL
+	2021	2107	NULL	218	0	Z Mitcham2 (DP)			09 February 12:00:00 AM	09 April 12:00:00 AM	False	False	0	False	0	13 December 12:00:00 AM	09 February 12:00:00 AM		0	False	False	False	False	False	False	False	08:00:00	20:00:00	08:00:00	20:00:00	08:00:00	20:00:00	08:00:00	20:00:00	08:00:00	20:00:00	08:00:00	20:00:00	08:00:00	20:00:00	NULL
+	2020	2106	NULL	218	0	Z Mitcham4 (AA)			09 February 12:00:00 AM	09 April 12:00:00 AM	False	False	0	False	0	13 December 12:00:00 AM	09 February 12:00:00 AM		0	False	False	False	False	False	False	False	08:00:00	20:00:00	08:00:00	20:00:00	08:00:00	20:00:00	08:00:00	20:00:00	08:00:00	20:00:00	08:00:00	20:00:00	08:00:00	20:00:00	NULL
+
+	code, gen, put-in-db
+	[X]   [X]  [X] - organisation ===>>  del entity_id's of those orgs too
+	[X]   [X]  [X] - contact
+	[X]   [X]  [X] - organisationoffering
+	[X]   [X]  [X] - registerpatient
+	[X]   [X]  [X] - registerstaff
+			   [X] - regref
+			   [X] - patientref
+	----------------------------------------------------
+
+
+.  8A    [done] - Healthcard -- KEEP THE ID'S
+.        [done]   HealthcardEPCRemainig (need to generate this on the fly)
+
+
+.  8B    [done] - HealthcardActionType
+.        [done]   HealthcardAction
+
+
+.  8C    [done] - HealthCardEPCChangeHistory
+.        [done]   HealthCardEPCRemainingChangeHistory
+
+.  9     [done] - Booking
+
+
+  10    [done] - Update migration and dev code for treatement letters like charles has so that it can import correctly later
+			  1. [done] move "report_every_visit_to_referrer" from patientreferrer to regreferrer in dbs
+			  2. [done] move "report_every_visit_to_referrer" from patientreferrer to regreferrer in sql tbl create file
+			  3. [done] update migration code to both remove from first and add to second
+			  4. [done] update db access classes
+			  5. [done] udpate webpages (addpatient page [referrer info], and the regref page/s)
+			  6. [done] test:
+				 [done] -- [done] add/del/edit referrer for patient
+				 [done] -- [done] update referrer field treatment notes
+				 [done] -- create invoice to test for:
+				   [done] -- WITH treatment notes + 1st letter
+				   [done] -- WITH treatment notes + last letter
+				   [done] -- WITH treatment notes + neitehr first or last
+				   [done] -- WITHOUT treatment notes + 1st letter
+				   [done] -- WITHOUT treatment notes + last letter
+				   [done] -- WITHOUT treatment notes + neitehr first or last
+
+
+.  11    [done] BookingChangeHistoryReason
+.        [done] BookingChangeHistory ("BookingMovements.csv")
+
+
+  12 Letters
+
+.  	 [done] - LetterType
+.	 [done] - Letter              -- for final import need to know update which letters are AC/Clinic/Both ********
+.	 [done] - LetterPrintHistorySendMethod
+.	 [done] - LetterPrintHistory       -- just table defn
+. 	 [done] - TreatmentTemplateLetters -- just table defn
+
+.	 [done] - LetterBest
+.	 [done] - LetterBestPrintHistory   -- see:  "C:\Users\Eli\Documents\Mediclinic - Docs\Charles - Letters\Letter Hisotry From Best.txt"
+
+	 History in seperate tables:
+	    LetterBest
+	    LetterBestPrintHistory   -- see:  "C:\Users\Eli\Documents\Mediclinic - Docs\Charles - Letters\Letter Hisotry From Best.txt"
+		BestLetterDirectory
+
+	 When showing lettershistory ... need to show from 
+		- LetterPrintHistory
+		- LetterBestPrintHistory
+
+
+		---------------------
+		TESTING - only import 
+		---------------------
+
+			85  	Doctor 		ClinicFirstMedicareTreatment.doc 	Yes 	No 	No 	No 	0 	
+			86  	Doctor 		ClinicLastMedicareTreatment.doc 	Yes 	No 	No 	No 	0 	
+			122 	Medicare 	BILL 	1 Bill Client.doc 	Yes 	No 		No 	No 	0 	
+
+			Letters on server:   C:\DATA\BEST\Databases\Carepro]
+			Auto:  Aged Care: FirstMedicareTreatment.doc
+							  LastMedicareTreatment.doc
+				   Clinics:   ClinicFirstMedicareTreatment.doc
+							  ClinicLastMedicareTreatment.doc
+							  GPTreatmentNote.doc
+
+		------------------------
+		Letter History From BEST
+		------------------------
+
+		Q1. first, last letters, kept only in healthcardaction becuase they are attached to an epc? or are they also in reg table
+
+		Q2. so you only keep letter TYPE and not the actual letterid ?
+			3  Reg_DoC     = letterid
+			7  Reg_DocFSw  = think that = Reg_DocFSw  ie =type
+
+		Q3. are there ANY letters that are kept on the server or anywhere else ?
+		charles: dont think so ... cuz can reprint the letters anytime (and no epc letters in there anyway)
+
+		- marcus said he 
+			Marcus: We do but at present we have to print them then scan them as a pdf and save them in a folder.  THAT IS A REAL PAIN.
+			Marcus: Treatment letters should be kept on the patient file and any letter non system generated
+			Eli: treatment letters .. as in ... the date and the type of letter info is kept .. but not an actual scan or anything .. right ?
+			Marcus: right
+			==> so dont need to save any actual current letters .. just charles' info on the history
+
+
+  13    [done] Invoices
+.	    [done] - InvoiceType
+.	    [done] - Invoice
+.	    [done] - InvoiceLine
+.	    [done] - InvoiceHealthcareClaimNumbers
+.	    [done] - uspCreateClaimNumber
+
+.		[done] - receipt
+.		[done] - overpayment
+.		[done] - credit note
+.		[done] - refund
+
+
+  14    [done] Notes
+.	    [done] - NoteType (USE DATA FROM MY DEFINITION - clearer descriptions)
+.	    [done] - Note
+.	    [done] - Screen
+.	    [done] - ScreenNoteTypes
+
+
+  15    [done] StaffOfferings
+.        [done] - table added, but not used in financing since not implemented yet
+
+
+  16    [done] Reminders
+.        [done] - SMSCredit
+.        [done] - SMSHistory
+.        [done] - EmailHistory
+
+	------------------------------------------------------------------------------------------------------------------------------------------
+

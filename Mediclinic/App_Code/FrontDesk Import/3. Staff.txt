@@ -1,0 +1,209 @@
+﻿
+
+****** change FROM db 0027 !!!!!!!!!!
+
+===> they will need to go in and give the staff logins and for providers, put in their field, and set providers as providers
+
+-------------------------------------------------------------------------------------------
+
+SELECT 
+	 PracID
+	,Name
+	,Title
+	,ProviderNo
+	--,Qualifications
+	,Active
+	--,Location
+	--,PGroupID
+ FROM FrontDesk.dbo.Practice
+
+
+	 PracID         -- staff_id
+	,Name           -- need to split up name (just use on first space)
+	,Title          -- role (Podiatrist)
+	,ProviderNo     -- provider nbr
+	,Qualifications -- --
+	,Active         -- is_fired
+	,Location       -- --
+	--,PGroupID
+
+
+PracID	Name	Title	ProviderNo	Qualifications	Active	Location
+50003	Brenden Brown	Podiatrist	2188198X	Dip Health Science Podiatry MAPODA	T	ST MARYS
+50004	Brenden Brown	Podiatrist	NULL	Dip Health Science Podiatry MAPODA	F	ST CLAIR
+50006	Steve Williams	Podiatrist	0768753B	NULL	F	St Marys
+50007	David Logue	Podiatrist	2647851W	NULL	F	ST MARYS
+50008	Outback Podiatry			NULL	F	Outback
+50009	Mark Palmer	Podiatrist	2851661L		F	ST MARYS
+50010	Brenden Brown	Brenden	218819AW	NULL	T	Penrith
+50011	Alexis Medina	NULL	2742892F	Podiatrist	F	Penrith
+50012	James Cresswell	NULL	2903972X	NULL	F	Penrith
+50013	James Cresswell	NULL	2903973H	NULL	F	St Marys
+50014	Matt Chang	NULL	2188198X	NULL	F	St Marys
+50015	Mark Palmer	Podiatrist	2851662A	NULL	F	Penrith
+50016	Brittany Orr	NULL	NULL	NULL	F	St Marys
+50018	Aneesh Kesha	Podiatrist	4224363H	NULL	T	Penrith
+50019	Aneesh Kesha	Podiatrist	4224361J	NULL	T	St Marys
+50020	Sze Wah (Janet) Yau	Podiatrist	4354541L	NULL	T	St Marys
+50021	Sze Wah (Janet) Yau	Podiatrist	4354543K	NULL	T	Penrith
+50022	Kobi Gibson	Podiatrist	4449801X	NULL	F	St Marys
+50023	Kobi Gibson	NULL	4449802H	NULL	F	Penrith
+50024	Mehdi Shahbazi	NULL	4523231X	Podiatrist	F	St Marys
+50025	Mehdi Shahbazi	NULL	4523232H	Podiatrist	F	Penrith
+50026	Nina Lansdowne	NULL	4802781Y	NULL	T	ST Marys
+50027	Nina Lansdowne	NULL	4802782J	NULL	T	Penrith
+
+-------------------------------------------------------------------------------------------
+
+	Declare @PracID       int
+	Declare @Name         varchar(200)
+	Declare @Field        varchar(200)
+	Declare @ProviderNo   varchar(200)
+	Declare @Active       varchar(2)
+	Declare @PGroupID     int
+
+	Declare @entity_id   int
+	Declare @person_id   int
+	Declare @is_deleted  bit
+
+	Declare @firstname   varchar(200)
+	Declare @surname     varchar(200)
+	Declare @pos_space   int
+
+
+	DECLARE DatabaseCursor CURSOR FOR 
+
+	SELECT 
+		 PracID
+		,Name
+		,Title
+		,ProviderNo
+		,Active
+		,PGroupID
+	FROM FrontDesk.dbo.Practice
+	ORDER BY PracID
+
+	OPEN DatabaseCursor  
+	FETCH NEXT FROM DatabaseCursor INTO @PracID, @Name, @Field, @ProviderNo, @Active, @PGroupID
+
+	WHILE @@FETCH_STATUS = 0 
+	BEGIN 
+
+		SET @Name = LTRIM(RTRIM(@Name))
+		SET @pos_space = CHARINDEX(' ', @Name)
+
+		IF (@pos_space = 0)
+		BEGIN
+			SET @firstname = @Name
+			SET @surname = ''
+		END
+		ELSE 
+		BEGIN
+			SET @firstname = SUBSTRING(@Name, 1, CHARINDEX(' ', @Name) - 1)
+			SET @surname = SUBSTRING(@Name, CHARINDEX(' ', @Name) + 1, LEN(@Name))
+		END
+
+		SET @is_deleted = 0
+		IF  @Active = 'F'      BEGIN SET @is_deleted     = 1   END
+
+		IF @ProviderNo IS NULL BEGIN SET @ProviderNo = '' END
+
+
+	    -- add entity
+        INSERT INTO Mediclinic_0027.dbo.Entity DEFAULT VALUES;
+        SET @entity_id = SCOPE_IDENTITY()
+
+
+		-- add person
+        INSERT INTO Mediclinic_0027.dbo.Person (added_by,entity_id, title_id, firstname, middlename, surname, nickname, gender, dob, person_date_added, person_date_modified) 
+        VALUES
+        (
+			 NULL
+			,@entity_id
+			,0
+			,@firstname
+			,''
+			,@Surname
+			,''
+			,''
+			,NULL
+			,GETDATE()
+			,NULL
+        )
+        SET @person_id = SCOPE_IDENTITY()
+
+
+		-- add staff
+
+		SET IDENTITY_INSERT Mediclinic_0027.dbo.Staff ON
+		INSERT INTO Mediclinic_0027.dbo.Staff (staff_id,person_id,login,pwd,staff_position_id,field_id,costcentre_id,is_contractor,tfn,provider_number,
+							is_fired,is_commission, commission_percent, 
+							is_stakeholder, is_master_admin, is_admin, is_principal, is_provider, is_external, staff_date_added,start_date,end_date,comment,
+							num_days_to_display_on_booking_screen,bk_screen_field_id,bk_screen_show_key,enable_daily_reminder_sms,enable_daily_reminder_email,show_header_on_booking_screen)
+		VALUES
+		(
+			@PracID
+			,@person_id
+			,''
+			,''
+			,14
+			,0 -- field_id
+			,56
+			,0
+			,''
+			,@ProviderNo
+			
+			,@is_deleted,0,0.00 
+			
+			,0,1,1,0,1,0
+			
+			,GETDATE(), NULL, NULL,''
+
+			,3,NULL,1,1,1,1
+		)
+		SET IDENTITY_INSERT Mediclinic_0027.dbo.Staff OFF
+		
+		INSERT INTO Mediclinic_0027.dbo.RegisterStaff ( 
+			 register_staff_date_added
+			,organisation_id
+			,staff_id
+			,provider_number
+			,main_provider_for_clinic
+			,excl_sun
+			,excl_mon
+			,excl_tue
+			,excl_wed
+			,excl_thu
+			,excl_fri
+			,excl_sat
+			,is_deleted
+		)
+		VALUES
+		(
+			GETDATE()
+			,@PGroupID
+			,@PracID
+			,''
+			,0
+			
+			,0
+			,0
+			,0
+			,0
+			,0
+			,0
+			,0
+
+			,0
+		)
+		
+		
+
+		FETCH NEXT FROM DatabaseCursor INTO @PracID, @Name, @Field, @ProviderNo, @Active, @PGroupID
+	
+	END 
+	CLOSE DatabaseCursor  
+	DEALLOCATE DatabaseCursor
+
+-------------------------------------------------------------------------------------------
+

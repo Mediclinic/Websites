@@ -1,0 +1,290 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+
+using System.Data;
+using System.Configuration;
+
+using System.IO;
+
+public partial class Settings : System.Web.UI.Page
+{
+    protected void Page_Load(object sender, EventArgs e)
+    {
+
+        try
+        {
+            HideErrorMessage();
+            if (!IsPostBack)
+            {
+                PagePermissions.EnforcePermissions_RequireAny(Session, Response, true, true, false, false, false, false);
+                SetupGUI();
+                ResetValues();
+            }
+        }
+        catch (CustomMessageException ex)
+        {
+            if (IsPostBack) SetErrorMessage(ex.Message);
+            else HideTableAndSetErrorMessage(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            if (IsPostBack) SetErrorMessage("", ex.ToString());
+            else HideTableAndSetErrorMessage("", ex.ToString());
+        }
+
+    }
+
+    protected void SetupGUI()
+    {
+        bool isStakeholder   = Session["IsStakeholder"] != null && Convert.ToBoolean(Session["IsStakeholder"]);
+        bool isMasterAdmin   = Session["IsMasterAdmin"] != null && Convert.ToBoolean(Session["IsMasterAdmin"]);
+        bool isAdmin         = Session["IsAdmin"]       != null && Convert.ToBoolean(Session["IsAdmin"]);
+        bool isPrincipal     = Session["IsPrincipal"]   != null && Convert.ToBoolean(Session["IsPrincipal"]);
+        bool isProvider      = Session["IsProvider"]    != null && Convert.ToBoolean(Session["IsProvider"]);
+
+        if (!isStakeholder)
+        {
+            tr_MedicareMaxNbrServicesPerYear.Attributes["class"]        = "hiddencol";
+            tr_AutoMedicareClaiming.Attributes["class"]                 = "hiddencol";
+            tr_MedicareEclaimsLicenseNbr.Attributes["class"]            = "hiddencol";
+            tr_MaxNbrProviders.Attributes["class"]                      = "hiddencol";
+            tr_SMSPrice.Attributes["class"]                             = "hiddencol";
+            tr_StockWarningNotificationEmailAddress.Attributes["class"] = "hiddencol";
+            tr_AllowAddSiteClinic.Attributes["class"]                   = "hiddencol";
+            tr_AllowAddSiteAgedCare.Attributes["class"]                 = "hiddencol";
+            tr_DayOfMonthPaymentDue.Attributes["class"]                 = "hiddencol";
+            tr_SpaceTrailingStakeholderFields.Attributes["class"]       = "hiddencol";
+        }
+
+        for (int i = 1; i <= 31; i++)
+            ddlDayOfMonthPaymentDue.Items.Add(new ListItem(i.ToString(), i.ToString()));
+    }
+
+    protected void ResetValues()
+    {
+        SystemVariables sysVariables = SystemVariableDB.GetAll();
+
+        ddlDefaultState.Items.Clear();
+        DataTable states = DBBase.GetGenericDataTable_WithWhereOrderClause("Suburb", "", "state", "distinct state");
+        foreach (DataRow row in states.Rows)
+            ddlDefaultState.Items.Add(new ListItem(row["state"].ToString(), row["state"].ToString()));
+
+        bool seen = false;
+        ddlCSS.Items.Clear();
+        DirectoryInfo di = new DirectoryInfo(Server.MapPath(@"~/Styles"));
+        FileInfo[] Files = di.GetFiles("Site*.css"); //Getting Text files
+        foreach(FileInfo file in Files )
+        {
+            ddlCSS.Items.Add(new ListItem(file.Name, @"~/Styles/" + file.Name));
+            if (@"~/Styles/" + file.Name == sysVariables["CssPage"].Value)
+                seen = true;
+        }
+        if (!seen)
+            ddlCSS.Items.Add(new ListItem(sysVariables["CssPage"].Value.Substring(@"~/Styles/".Length), sysVariables["CssPage"].Value));
+
+
+        txtMedicareMaxNbrServicesPerYear.Text                               = sysVariables["MedicareMaxNbrServicesPerYear"].Value;
+        txtMedicareEclaimsLicenseNbr.Text                                   = sysVariables["MedicareEclaimsLicenseNbr"].Value;
+        chkAutoMedicareClaiming.Checked                                     = Convert.ToInt32(sysVariables["AutoMedicareClaiming"].Value) == 1;
+        txtMaxNbrProviders.Text                                             = Convert.ToInt32(sysVariables["MaxNbrProviders"].Value).ToString();
+        txtSMSPrice.Text                                                    = Convert.ToDouble(sysVariables["SMSPrice"].Value).ToString("0.00");
+        txtStockWarningNotificationEmailAddress.Text                        = sysVariables["StockWarningNotificationEmailAddress"].Value;
+        chkAllowAddSiteClinic.Checked                                       = Convert.ToInt32(sysVariables["AllowAddSiteClinic"].Value) == 1;
+        chkAllowAddSiteAgedCare.Checked                                     = Convert.ToInt32(sysVariables["AllowAddSiteAgedCare"].Value) == 1;
+        ddlDayOfMonthPaymentDue.SelectedValue                               = sysVariables["PaymentDueDayOfMonth"].Value;
+
+
+        txtSite.Text                                                        = sysVariables["Site"].Value;
+        ddlCSS.SelectedValue                                                = sysVariables["CssPage"].Value;
+        txtBannerMessage.Text                                               = sysVariables["BannerMessage"].Value;
+        chkShowBannerMessage.Checked                                        = Convert.ToBoolean(sysVariables["ShowBannerMessage"].Value);
+        txtEmail_FromName.Text                                              = sysVariables["Email_FromName"].Value;
+        txtEmail_FromEmail.Text                                             = sysVariables["Email_FromEmail"].Value;
+        txtAdminAlertEmail_To.Text                                          = sysVariables["AdminAlertEmail_To"].Value;
+        chkEnableDeletedBookingsAlerts.Checked                              = Convert.ToInt32(sysVariables["EnableDeletedBookingsAlerts"].Value)            == 1;
+        txtServiceSpecificBookingReminderLettersToBatch_EmailAddress.Text   = sysVariables["ServiceSpecificBookingReminderLettersToBatch_EmailAddress"].Value;
+        ddlDefaultState.SelectedValue                                       = sysVariables["DefaultState"].Value;
+        txtSMSCreditNotificationEmailAddress.Text                           = sysVariables["SMSCreditNotificationEmailAddress"].Value;
+        chkSMSCreditOutOfBalance_SendEmail.Checked                          = Convert.ToInt32(sysVariables["SMSCreditOutOfBalance_SendEmail"].Value)        == 1;
+        chkSMSCreditLowBalance_SendEmail.Checked                            = Convert.ToInt32(sysVariables["SMSCreditLowBalance_SendEmail"].Value)          == 1;
+        txtSMSCreditLowBalance_Threshold.Text                               = Convert.ToDouble(sysVariables["SMSCreditLowBalance_Threshold"].Value).ToString("0.00");
+        chkEnableDailyBookingReminderSMS.Checked                            = Convert.ToInt32(sysVariables["EnableDailyBookingReminderSMS"].Value)          == 1;
+        chkEnableDailyBookingReminderEmails.Checked                         = Convert.ToInt32(sysVariables["EnableDailyBookingReminderEmails"].Value)       == 1;
+        chkEnableDailyStaffBookingReminderSMS.Checked                       = Convert.ToInt32(sysVariables["EnableDailyStaffBookingsReminderSMS"].Value)    == 1;
+        chkEnableDailyStaffBookingReminderEmails.Checked                    = Convert.ToInt32(sysVariables["EnableDailyStaffBookingsReminderEmails"].Value) == 1;
+        chkEnableBirthdaySMS.Checked                                        = Convert.ToInt32(sysVariables["EnableBirthdaySMS"].Value)                      == 1;
+        chkEnableBirthdayEmails.Checked                                     = Convert.ToInt32(sysVariables["EnableBirthdayEmails"].Value)                   == 1;
+        chkInvoiceGapPayments.Checked                                       = Convert.ToInt32(sysVariables["InvoiceGapPayments"].Value) == 1;
+
+        txtLettersEmailDeafultSubjectLine.Text                              = sysVariables["LettersEmailDefaultSubject"].Value;
+        FreeTextBox1.Text                                                   = sysVariables["LettersEmailSignature"].Value;
+    
+    }
+
+    protected void UpdateValues()
+    {
+
+        try
+        {
+            lblErrorMessage.Text = string.Empty;
+
+            txtMedicareMaxNbrServicesPerYear.Text        = txtMedicareMaxNbrServicesPerYear.Text.Trim();
+            txtMedicareEclaimsLicenseNbr.Text            = txtMedicareEclaimsLicenseNbr.Text.Trim();
+            txtMaxNbrProviders.Text                      = txtMaxNbrProviders.Text.Trim();
+            txtSMSPrice.Text                             = txtSMSPrice.Text.Trim();
+            txtStockWarningNotificationEmailAddress.Text = txtStockWarningNotificationEmailAddress.Text.Trim();
+            txtSite.Text                                 = txtSite.Text.Trim();
+            txtEmail_FromName.Text                       = txtEmail_FromName.Text.Trim();
+            txtEmail_FromEmail.Text                      = txtEmail_FromEmail.Text.Trim();
+            txtAdminAlertEmail_To.Text                   = txtAdminAlertEmail_To.Text.Trim();
+            txtServiceSpecificBookingReminderLettersToBatch_EmailAddress.Text = txtServiceSpecificBookingReminderLettersToBatch_EmailAddress.Text.Trim();
+            txtSMSCreditNotificationEmailAddress.Text    = txtSMSCreditNotificationEmailAddress.Text.Trim();
+            txtSMSCreditLowBalance_Threshold.Text        = txtSMSCreditLowBalance_Threshold.Text.Trim();
+
+
+            int n;
+            decimal d;
+
+            if (!int.TryParse(txtMedicareMaxNbrServicesPerYear.Text, out n))
+                throw new CustomMessageException("Medicare Max Nbr Services Per Year must be an integer");
+            if (txtMedicareEclaimsLicenseNbr.Text.Length == 0)
+                throw new CustomMessageException("Medicare Eclaims License Nbr is a required field");
+            if (!int.TryParse(txtMaxNbrProviders.Text, out n))
+                throw new CustomMessageException("Max Nbr Providers must be an integer");
+            if (!decimal.TryParse(txtSMSPrice.Text, out d))
+                throw new CustomMessageException("SMS Price must be a decimal");
+            else if (d < 0)
+                throw new CustomMessageException("SMS Price must be at least 0.00");
+            if (txtStockWarningNotificationEmailAddress.Text.Length > 0 && !Utilities.IsValidEmailAddress(txtStockWarningNotificationEmailAddress.Text))
+                throw new CustomMessageException("Stock Warning Notification Email Address must either be blank or a valid email address.");
+            if (txtSite.Text.Length == 0)
+                throw new CustomMessageException("Site Name is a required field");
+            if (txtEmail_FromName.Text.Length == 0)
+                throw new CustomMessageException("Email From Name is a required field");
+            if (!Utilities.IsValidEmailAddress(txtEmail_FromEmail.Text))
+                throw new CustomMessageException("Email From Email must be a valid email address.");
+            if (!Utilities.IsValidEmailAddress(txtAdminAlertEmail_To.Text))
+                throw new CustomMessageException("Admin Alert Email must be a valid email address.");
+            if (txtServiceSpecificBookingReminderLettersToBatch_EmailAddress.Text.Length > 0 && !Utilities.IsValidEmailAddress(txtServiceSpecificBookingReminderLettersToBatch_EmailAddress.Text))
+                throw new CustomMessageException("Service Specific Booking Reminder Letters To Batch - Email Address must either be blank or a valid email address.");
+            if ((chkSMSCreditOutOfBalance_SendEmail.Checked || chkSMSCreditLowBalance_SendEmail.Checked) && !Utilities.IsValidEmailAddress(txtSMSCreditNotificationEmailAddress.Text))
+                throw new CustomMessageException("SMS Credit Notification Email Address must be a valid email address if you check either 'SMS Credit Out Of Balance' or 'SMS Credit Low Balance'.");
+            if (txtSMSCreditNotificationEmailAddress.Text.Length > 0 && !Utilities.IsValidEmailAddress(txtSMSCreditNotificationEmailAddress.Text))
+                throw new CustomMessageException("SMS Credit Notification Email Address must either be blank or a valid email address.");
+            if (!decimal.TryParse(txtSMSCreditLowBalance_Threshold.Text, out d))
+                throw new CustomMessageException("SMS Credit Low Balance Threshold must be a decimal");
+
+
+            bool isStakeholder   = Session["IsStakeholder"] != null && Convert.ToBoolean(Session["IsStakeholder"]);
+            bool isMasterAdmin   = Session["IsMasterAdmin"] != null && Convert.ToBoolean(Session["IsMasterAdmin"]);
+            bool isAdmin         = Session["IsAdmin"]       != null && Convert.ToBoolean(Session["IsAdmin"]);
+            bool isPrincipal     = Session["IsPrincipal"]   != null && Convert.ToBoolean(Session["IsPrincipal"]);
+            bool isProvider      = Session["IsProvider"]    != null && Convert.ToBoolean(Session["IsProvider"]);
+
+            if (isStakeholder)
+            {
+                SystemVariableDB.Update("MedicareMaxNbrServicesPerYear"         , txtMedicareMaxNbrServicesPerYear.Text);
+                SystemVariableDB.Update("MedicareEclaimsLicenseNbr"             , txtMedicareEclaimsLicenseNbr.Text);
+                SystemVariableDB.Update("AutoMedicareClaiming"                  , chkAutoMedicareClaiming.Checked ? "1" : "0");
+                SystemVariableDB.Update("MaxNbrProviders"                       , Convert.ToInt32(txtMaxNbrProviders.Text).ToString());
+                SystemVariableDB.Update("SMSPrice"                              , Convert.ToDouble(txtSMSPrice.Text).ToString("0.00"));
+                SystemVariableDB.Update("StockWarningNotificationEmailAddress"  , txtStockWarningNotificationEmailAddress.Text);
+                SystemVariableDB.Update("AllowAddSiteClinic"                    , chkAllowAddSiteClinic.Checked   ? "1" : "0");
+                SystemVariableDB.Update("AllowAddSiteAgedCare"                  , chkAllowAddSiteAgedCare.Checked ? "1" : "0");
+                SystemVariableDB.Update("PaymentDueDayOfMonth"                  , Convert.ToInt32(ddlDayOfMonthPaymentDue.SelectedValue).ToString());
+            }
+
+            SystemVariableDB.Update("Site"                                   , txtSite.Text);
+            SystemVariableDB.Update("CssPage"                                , ddlCSS.SelectedValue);
+            SystemVariableDB.Update("BannerMessage"                           , txtBannerMessage.Text);
+            SystemVariableDB.Update("ShowBannerMessage"                      , chkShowBannerMessage.Checked ? "True" : "False");
+            SystemVariableDB.Update("Email_FromName"                         , txtEmail_FromName.Text);
+            SystemVariableDB.Update("Email_FromEmail"                        , txtEmail_FromEmail.Text);
+            SystemVariableDB.Update("AdminAlertEmail_To"                     , txtAdminAlertEmail_To.Text);
+            SystemVariableDB.Update("EnableDeletedBookingsAlerts"            , chkEnableDeletedBookingsAlerts.Checked           ? "1" : "0");
+            SystemVariableDB.Update("ServiceSpecificBookingReminderLettersToBatch_EmailAddress", txtServiceSpecificBookingReminderLettersToBatch_EmailAddress.Text);
+            SystemVariableDB.Update("DefaultState"                           , ddlDefaultState.SelectedValue);
+            SystemVariableDB.Update("SMSCreditNotificationEmailAddress"      , txtSMSCreditNotificationEmailAddress.Text);
+            SystemVariableDB.Update("SMSCreditOutOfBalance_SendEmail"        , chkSMSCreditOutOfBalance_SendEmail.Checked       ? "1" : "0");
+            SystemVariableDB.Update("SMSCreditLowBalance_SendEmail"          , chkSMSCreditLowBalance_SendEmail.Checked         ? "1" : "0");
+            SystemVariableDB.Update("SMSCreditLowBalance_Threshold"          , Convert.ToDouble(txtSMSCreditLowBalance_Threshold.Text).ToString("0.00"));
+            SystemVariableDB.Update("EnableDailyBookingReminderSMS"          , chkEnableDailyBookingReminderSMS.Checked         ? "1" : "0");
+            SystemVariableDB.Update("EnableDailyBookingReminderEmails"       , chkEnableDailyBookingReminderEmails.Checked      ? "1" : "0");
+
+            SystemVariableDB.Update("EnableDailyStaffBookingsReminderSMS"    , chkEnableDailyStaffBookingReminderSMS.Checked    ? "1" : "0");
+            SystemVariableDB.Update("EnableDailyStaffBookingsReminderEmails" , chkEnableDailyStaffBookingReminderEmails.Checked ? "1" : "0");
+            SystemVariableDB.Update("EnableBirthdaySMS"                      , chkEnableBirthdaySMS.Checked                     ? "1" : "0");
+            SystemVariableDB.Update("EnableBirthdayEmails"                   , chkEnableBirthdayEmails.Checked                  ? "1" : "0");
+            SystemVariableDB.Update("InvoiceGapPayments"                     , chkInvoiceGapPayments.Checked                    ? "1" : "0");
+            SystemVariableDB.Update("LettersEmailDefaultSubject"             , txtLettersEmailDeafultSubjectLine.Text);
+            SystemVariableDB.Update("LettersEmailSignature"                  , FreeTextBox1.Text);
+
+
+            bool cssPageChanged  =  ((SystemVariables)Session["SystemVariables"])["CssPage"].Value != ddlCSS.SelectedValue;
+            bool siteNameChanged =  ((SystemVariables)Session["SystemVariables"])["Site"].Value != txtSite.Text;
+            bool bannerChanged   = (((SystemVariables)Session["SystemVariables"])["ShowBannerMessage"].Value != (chkShowBannerMessage.Checked ? "True" : "False")) ||
+                                   chkShowBannerMessage.Checked && (((SystemVariables)Session["SystemVariables"])["BannerMessage"].Value != txtBannerMessage.Text);
+
+            Session["SystemVariables"] = SystemVariableDB.GetAll();
+
+            if (cssPageChanged || siteNameChanged || bannerChanged)
+            {
+                Response.Redirect(Request.RawUrl);
+            }
+            else
+            {
+                ResetValues();
+                SetErrorMessage("Updated.");
+            }
+
+        }
+        catch (CustomMessageException ex)
+        {
+            SetErrorMessage(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            SetErrorMessage("", ex.ToString());
+        }
+    }
+
+    protected void btnUpdate_Click(object sender, EventArgs e)
+    {
+        UpdateValues();
+    }
+
+    #region SetErrorMessage, HideErrorMessage
+
+    private void HideTableAndSetErrorMessage(string errMsg = "", string details = "")
+    {
+        SetErrorMessage(errMsg, details);
+    }
+    private void SetErrorMessage(string errMsg = "", string details = "")
+    {
+        if (errMsg.Contains(Environment.NewLine))
+            errMsg = errMsg.Replace(Environment.NewLine, "<br />");
+
+        // double escape so shows up literally on webpage for 'alert' message
+        string detailsToDisplay = (details.Length == 0 ? "" : " <a href=\"#\" onclick=\"alert('" + details.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("'", "\\'").Replace("\"", "\\'") + "'); return false;\">Details</a>");
+
+        lblErrorMessage.Visible = true;
+        if (errMsg != null && errMsg.Length > 0)
+            lblErrorMessage.Text = errMsg + detailsToDisplay + "<br />";
+        else
+            lblErrorMessage.Text = "An error has occurred. Plase contact the system administrator. " + detailsToDisplay + "<br />";
+    }
+    private void HideErrorMessage()
+    {
+        lblErrorMessage.Visible = false;
+        lblErrorMessage.Text = "";
+    }
+
+    #endregion
+
+}
+
+

@@ -1,0 +1,286 @@
+﻿<%@ Page Title="Merge - Match Patients" Language="C#" MasterPageFile="~/Site.master" AutoEventWireup="true" CodeFile="Merge_MatchPatients.aspx.cs" Inherits="Merge_MatchPatients" %>
+
+<asp:Content ID="HeaderContent" runat="server" ContentPlaceHolderID="HeadContent">
+    <script type="text/javascript" src="Scripts/jquery-1.4.1.min.js"></script>
+    <script type="text/javascript">
+        
+    </script>
+</asp:Content>
+<asp:Content ID="BodyContent" runat="server" ContentPlaceHolderID="MainContent">
+
+    <h2>
+        Match Patients
+    </h2>
+
+    <br />
+    <br />
+
+    <asp:ValidationSummary ID="validationSummary" runat="server" CssClass="failureNotification" ValidationGroup="validationSummary"/>
+    <asp:Label ID="lblErrorMessage" runat="server" CssClass="failureNotification"></asp:Label>
+
+
+    <table>
+        <tr>
+            <td>
+                No. Patients 
+                    <asp:DropDownList ID="ddlNumPatientsToRetrieve" runat="server">
+                          <asp:ListItem Value="5"> 5 </asp:ListItem>
+                          <asp:ListItem Value="25" Selected="True"> 25 </asp:ListItem>
+                          <asp:ListItem Value="100"> 100 </asp:ListItem>
+                          <asp:ListItem Value="500"> 500 </asp:ListItem>
+                          <asp:ListItem Value="2000"> 2000 </asp:ListItem>
+                          <asp:ListItem Value="All"> All </asp:ListItem>
+                    </asp:DropDownList>
+            </td>
+            <td style="width:12px;"></td>
+            <td>
+                <asp:CheckBox ID="chkIncAgedCare" runat="server" Text="Inc Has AC Invoices" TextAlign="Left" Checked="true" />
+            </td>
+            <td style="width:12px;"></td>
+            <td>
+
+            </td>
+            <td style="width:12px;"></td>
+            <td>
+                <asp:Button ID="btnUpdateList" runat="server" Text="Update List" OnClick="btnUpdateList_Click" />
+            </td>
+        </tr>
+    </table>
+
+
+
+
+    <table>
+        <tr valign="top">
+            <td>
+
+                <asp:GridView ID="GrdMatchPatients" runat="server" 
+                     AutoGenerateColumns="False" DataKeyNames="patient_id" 
+                     OnRowCancelingEdit="GrdMatchPatients_RowCancelingEdit" 
+                     OnRowDataBound="GrdMatchPatients_RowDataBound" 
+                     OnRowEditing="GrdMatchPatients_RowEditing" 
+                     OnRowUpdating="GrdMatchPatients_RowUpdating" ShowFooter="False" 
+                     OnRowCommand="GrdMatchPatients_RowCommand" 
+                     OnRowCreated="GrdMatchPatients_RowCreated"
+                     AllowSorting="True" 
+                     OnSorting="GridView_Sorting"
+                     ClientIDMode="Predictable">
+
+                    <Columns> 
+
+                        <asp:TemplateField HeaderText="PT ID" HeaderStyle-HorizontalAlign="Left" SortExpression="patient_id" Visible="false"> 
+                            <ItemTemplate> 
+                                <asp:Label ID="lblPTID1" runat="server" Text='<%# Eval("patient_id") %>'></asp:Label> 
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                        <asp:TemplateField HeaderText="Name" HeaderStyle-HorizontalAlign="Left" SortExpression="surname, firstname" ItemStyle-Width="200px"> 
+                            <ItemTemplate> 
+                                <asp:HyperLink ID="lnnkName1" runat="server" NavigateUrl='<%# "~/AddEditPatient.aspx?type=view&id=" + Eval("patient_id") %>' Text='<%# Eval("firstname") + " " + Eval("surname") %>' />
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                        <asp:TemplateField HeaderText="Bkgs" HeaderStyle-HorizontalAlign="Left" SortExpression="bk_count" ItemStyle-CssClass="nowrap"> 
+                            <ItemTemplate> 
+                                <asp:Label ID="lblBkgs1" runat="server" Text='<%# Eval("bk_count") + ((int)Eval("acbk_count") == 0 ? "" : " (" + (int)Eval("acbk_count") + ")") %>'></asp:Label> 
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                        <asp:TemplateField HeaderText="PT ID" HeaderStyle-HorizontalAlign="Left" SortExpression="o_patient_id" Visible="false"> 
+                            <ItemTemplate> 
+                                <asp:Label ID="lblPTID2" runat="server" Text='<%# Eval("o_patient_id") %>'></asp:Label> 
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                         <asp:TemplateField HeaderText="Name" HeaderStyle-HorizontalAlign="Left" SortExpression="surname, firstname" ItemStyle-Width="200px"> 
+                            <ItemTemplate> 
+                                <asp:HyperLink ID="lnnkName2" runat="server" NavigateUrl='<%# "~/AddEditPatient.aspx?type=view&id=" + Eval("O_patient_id") %>' Text='<%# Eval("O_firstname") + " " + Eval("O_surname") %>' />
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                        <asp:TemplateField HeaderText="Bkgs" HeaderStyle-HorizontalAlign="Left" SortExpression="o_bk_count" ItemStyle-CssClass="nowrap"> 
+                            <ItemTemplate> 
+                                <asp:Label ID="lblBkgs2" runat="server" Text='<%# Eval("o_bk_count") + ((int)Eval("o_acbk_count") == 0 ? "" : " (" + (int)Eval("o_acbk_count") + ")") %>'></asp:Label> 
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                        <asp:TemplateField HeaderText="" HeaderStyle-HorizontalAlign="Left"> 
+                            <ItemTemplate> 
+                                <asp:LinkButton ID="lnkSelect" runat="server" OnCommand="lnkSelect_Command" CommandArgument='<%# Eval("patient_id") + "_" + Eval("o_patient_id")  %>' Text="Select"/>
+                            </ItemTemplate> 
+                        </asp:TemplateField> 
+
+                    </Columns> 
+
+                </asp:GridView>
+
+            </td>
+            <td style="width:30px;">&nbsp;</td>
+            <td>
+
+                <asp:HiddenField ID="hiddenPatientID1" runat="server" />
+                <asp:HiddenField ID="hiddenPatientID2" runat="server" />
+
+                <table border="0" bordercolor="989898" cellpadding="1" style="border-collapse:collapse;">
+                    <tr>
+                        <td>PT ID</td>
+                        <td style="width:5px;"></td>
+                        <td><asp:TextBox ID="txtPatientID1" runat="server" Columns="8" /></td>
+                        <td style="width:5px;"></td>
+                        <td><asp:TextBox ID="txtPatientID2" runat="server" Columns="8" /></td>
+                        <td style="width:5px;"></td>
+                        <td><asp:Button ID="btnUpdatePtInfo" runat="server" Text="Update" OnClick="btnUpdatePtInfo_Click" /></td>
+                    </tr>
+                    <tr style="height:8px;">
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>Title</td>
+                        <td></td>
+                        <td><asp:Label ID="lblTitle1" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Label ID="lblTitle2" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Image ID="imgMatchTitle" runat="server" /></td>
+                    </tr>
+                    <tr>
+                        <td>First Name</td>
+                        <td></td>
+                        <td><asp:Label ID="lblFirstname1" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Label ID="lblFirstname2" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Image ID="imgMatchFirstname" runat="server" /></td>
+                    </tr>
+                    <tr>
+                        <td>Middle Name</td>
+                        <td></td>
+                        <td><asp:Label ID="lblMiddlename1" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Label ID="lblMiddlename2" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Image ID="imgMatchMiddlename" runat="server" /></td>
+                    </tr>
+                    <tr>
+                        <td>Surname</td>
+                        <td></td>
+                        <td><asp:Label ID="lblSurname1" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Label ID="lblSurname2" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Image ID="imgMatchSurname" runat="server" /></td>
+                    </tr>
+                    <tr>
+                        <td>Gender</td>
+                        <td></td>
+                        <td><asp:Label ID="lblGender1" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Label ID="lblGender2" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Image ID="imgMatchGender" runat="server" /></td>
+                    </tr>
+                    <tr>
+                        <td>D.O.B.</td>
+                        <td></td>
+                        <td><asp:Label ID="lblDOB1" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Label ID="lblDOB2" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Image ID="imgMatchDOB" runat="server" /></td>
+                    </tr>
+                    <tr>
+                        <td>Clinic Patient</td>
+                        <td></td>
+                        <td><asp:Label ID="lblIsClinicPatient1" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Label ID="lblIsClinicPatient2" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Image ID="imgMatchIsClinicPatient" runat="server" /></td>
+                    </tr>
+                    <tr>
+                        <td>Deceased</td>
+                        <td></td>
+                        <td><asp:Label ID="lblDeceased1" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Label ID="lblDeceased2" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Image ID="imgMatchDeceased" runat="server" /></td>
+                    </tr>
+                    <tr>
+                        <td>AC PT Type</td>
+                        <td></td>
+                        <td><asp:Label ID="lblACPTType1" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Label ID="lblACPTType2" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Image ID="imgMatchACPTType" runat="server" /></td>
+                    </tr>
+                    <tr style="height:8px;">
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr valign="top">
+                        <td>Bookings</td>
+                        <td></td>
+                        <td><asp:Label ID="lblBookings1" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Label ID="lblBookings2" runat="server" /></td>
+                        <td></td>
+                        <td><asp:Image ID="imgMatchBookings" runat="server" /></td>
+                    </tr>
+
+
+
+
+                    <tr style="height:15px;">
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td align="center">
+                            <asp:Button ID="btnDeletePatient1" runat="server" Text="Delete" OnCommand="btnDeletePatient_Command" />
+                            <br />
+                            <asp:Label ID="lblErrorMessagePT1" runat="server"/>
+                        </td>
+                        <td></td>
+                        <td align="center">
+                            <asp:Button ID="btnDeletePatient2" runat="server" Text="Delete" OnCommand="btnDeletePatient_Command" />
+                            <br />
+                            <asp:Label ID="lblErrorMessagePT2" runat="server"/>
+                        </td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+
+                </table>
+
+
+            </td>
+        </tr>
+    </table>
+
+
+
+
+
+
+</asp:Content>
+

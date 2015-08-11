@@ -1,0 +1,3930 @@
+﻿
+ =============================================================================================
+ ================================>> MAIN TABLES <<============================================
+ =============================================================================================
+
+
+> EXEC sp_fkeys tableName
+
+> select * from INFORMATION_SCHEMA.TABLE_CONSTRAINTS where CONSTRAINT_TYPE='UNIQUE'
+
+CONSTRAINT_CATALOG			CONSTRAINT_SCHEMA	CONSTRAINT_NAME					TABLE_CATALOG				TABLE_SCHEMA	TABLE_NAME						CONSTRAINT_TYPE	IS_DEFERRABLE	INITIALLY_DEFERRED
+Mediclinic_Balwyn_TestDB	dbo					UQ__SystemVa__018C0AA77F60ED59	Mediclinic_Balwyn_TestDB	dbo				SystemVariable					UNIQUE	NO	NO
+Mediclinic_Balwyn_TestDB	dbo					UQ__Site__AF9F95A609DE7BCC		Mediclinic_Balwyn_TestDB	dbo				Site							UNIQUE	NO	NO
+Mediclinic_Balwyn_TestDB	dbo					UQ__Invoice__AF9F95A614B10FFA	Mediclinic_Balwyn_TestDB	dbo				Invoice							UNIQUE	NO	NO
+Mediclinic_Balwyn_TestDB	dbo					UQ__Person__AF9F95A6173876EA	Mediclinic_Balwyn_TestDB	dbo				Person							UNIQUE	NO	NO
+Mediclinic_Balwyn_TestDB	dbo					UQ__InvoiceH__8DF9683D30592A6F	Mediclinic_Balwyn_TestDB	dbo				InvoiceHealthcareClaimNumbers	UNIQUE	NO	NO
+Mediclinic_Balwyn_TestDB	dbo					UQ__Booking__AF9F95A63552E9B6	Mediclinic_Balwyn_TestDB	dbo				Booking							UNIQUE	NO	NO
+Mediclinic_Balwyn_TestDB	dbo					uc_unique_staff_site			Mediclinic_Balwyn_TestDB	dbo				StaffSiteRestriction			UNIQUE	NO	NO
+Mediclinic_Balwyn_TestDB	dbo					UQ__Organisa__AF9F95A659FA5E80	Mediclinic_Balwyn_TestDB	dbo				Organisation					UNIQUE	NO	NO
+
+
+ALTER TABLE tbl DROP CONSTRAINT 'CONSTRAINT_NAME'
+
+
+
+
+==>>>>> THEN TO MOVE IT OVER TO BALWYN ... DONT NEED TO EXPORT IT AT ALL!
+
+	SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Person ON
+
+	INSERT INTO Mediclinic_Balwyn_TestDB.dbo.Person ( 
+	 cols
+	)
+ 
+	SELECT 
+	 cols
+	FROM   Mediclinic_Holloway_TestDB.dbo.Person
+	WHERE  person_id < @NewID
+
+	SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Person OFF
+
+
+
+
+----------------------------------------------------------
+
+-- Entity
+---------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 10000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(entity_id) FROM Mediclinic_Holloway_TestDB.dbo.Entity)
+set @B = (SELECT MAX(entity_id) FROM Mediclinic_Balwyn_TestDB.dbo.Entity)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+
+SET IDENTITY_INSERT Entity ON
+
+INSERT INTO Entity ( entity_id )
+SELECT entity_id + @NewID
+FROM   Entity
+WHERE  entity_id < @NewID
+
+SET IDENTITY_INSERT Entity OFF
+
+update Booking      set entity_id = entity_id + @NewID WHERE entity_id < @NewID;
+update ContactOld   set entity_id = entity_id + @NewID WHERE entity_id < @NewID;
+update ContactAus   set entity_id = entity_id + @NewID WHERE entity_id < @NewID;
+update Invoice      set entity_id = entity_id + @NewID WHERE entity_id < @NewID;
+update Note         set entity_id = entity_id + @NewID WHERE entity_id < @NewID;
+update Organisation set entity_id = entity_id + @NewID WHERE entity_id < @NewID;
+update Person       set entity_id = entity_id + @NewID WHERE entity_id < @NewID;
+update POSMachine   set entity_id = entity_id + @NewID WHERE entity_id < @NewID;
+update Site         set entity_id = entity_id + @NewID WHERE entity_id < @NewID;
+
+DELETE Entity WHERE entity_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Entity ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.Entity ( entity_id )
+SELECT entity_id
+FROM   Mediclinic_Holloway_TestDB.dbo.Entity
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Entity OFF
+
+----------------------------------------------------------
+
+-- Person
+---------
+
+
+-- select * from Person
+-- select * from Patient
+
+
+ALTER TABLE Person DROP CONSTRAINT UQ__Person__AF9F95A6173876EA;
+
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 10000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(person_id) FROM Mediclinic_Holloway_TestDB.dbo.Person)
+set @B = (SELECT MAX(person_id) FROM Mediclinic_Balwyn_TestDB.dbo.Person)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+
+SET IDENTITY_INSERT Person ON
+
+INSERT INTO Person ( 
+ person_id,
+ entity_id,
+ added_by,
+ title_id,
+ firstname,
+ middlename,
+ surname,
+ nickname,
+ gender,
+ dob,
+ person_date_added,
+ person_date_modified
+)
+ 
+SELECT 
+ person_id + @NewID,
+ entity_id,
+ added_by  + @NewID,
+ title_id,
+ firstname,
+ middlename,
+ surname,
+ nickname,
+ gender,
+ dob,
+ person_date_added,
+ person_date_modified
+FROM   Person
+WHERE  person_id < @NewID
+
+SET IDENTITY_INSERT Person OFF
+
+
+update Patient  set person_id = person_id + @NewID WHERE person_id < @NewID;
+update Person   set added_by  = added_by  + @NewID WHERE added_by  < @NewID;
+update Referrer set person_id = person_id + @NewID WHERE person_id < @NewID;
+update Staff    set person_id = person_id + @NewID WHERE person_id < @NewID;
+
+DELETE Person WHERE person_id < @NewID;
+
+ALTER TABLE Person ADD UNIQUE (entity_id);
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Person ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.Person ( 
+ person_id,
+ entity_id,
+ added_by,
+ title_id,
+ firstname,
+ middlename,
+ surname,
+ nickname,
+ gender,
+ dob,
+ person_date_added,
+ person_date_modified
+)
+SELECT 
+ person_id,
+ entity_id,
+ added_by,
+ title_id,
+ firstname,
+ middlename,
+ surname,
+ nickname,
+ gender,
+ dob,
+ person_date_added,
+ person_date_modified
+FROM   Mediclinic_Holloway_TestDB.dbo.Person
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Person OFF
+
+----------------------------------------------------------
+
+-- ContactAus
+-----------------
+
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 10000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(contact_id) FROM Mediclinic_Holloway_TestDB.dbo.ContactAus)
+set @B = (SELECT MAX(contact_id) FROM Mediclinic_Balwyn_TestDB.dbo.ContactAus)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+
+SET IDENTITY_INSERT ContactAus ON
+
+INSERT INTO ContactAus ( 
+ contact_id,
+ entity_id,
+ contact_type_id,
+ free_text,
+ addr_line1,
+ addr_line2,
+ street_name,
+ address_channel_type_id,
+ suburb_id,
+ country_id,
+ site_id,
+ is_billing_addr,
+ is_shipping_addr,
+ is_inc_on_docs,
+ contact_date_added,
+ contact_date_modified,
+ contact_date_deleted
+)
+ 
+SELECT 
+ contact_id + @NewID,
+ entity_id,
+ contact_type_id,
+ free_text,
+ addr_line1,
+ addr_line2,
+ street_name,
+ address_channel_type_id,
+ suburb_id,
+ country_id,
+ site_id,
+ is_billing_addr,
+ is_shipping_addr,
+ is_inc_on_docs,
+ contact_date_added,
+ contact_date_modified,
+ contact_date_deleted
+FROM   ContactAus
+WHERE  contact_id < @NewID
+
+SET IDENTITY_INSERT ContactAus OFF
+
+
+DELETE ContactAus WHERE contact_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.ContactAus ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.ContactAus ( 
+ contact_id,
+ entity_id,
+ contact_type_id,
+ free_text,
+ addr_line1,
+ addr_line2,
+ street_name,
+ address_channel_type_id,
+ suburb_id,
+ country_id,
+ site_id,
+ is_billing_addr,
+ is_shipping_addr,
+ is_inc_on_docs,
+ contact_date_added,
+ contact_date_modified,
+ contact_date_deleted
+)
+SELECT 
+ contact_id,
+ entity_id,
+ contact_type_id,
+ free_text,
+ addr_line1,
+ addr_line2,
+ street_name,
+ address_channel_type_id,
+ suburb_id,
+ country_id,
+ site_id,
+ is_billing_addr,
+ is_shipping_addr,
+ is_inc_on_docs,
+ contact_date_added,
+ contact_date_modified,
+ contact_date_deleted
+FROM   Mediclinic_Holloway_TestDB.dbo.ContactAus
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.ContactAus OFF
+
+----------------------------------------------------------
+
+DELETE  Mediclinic_Balwyn_TestDB.dbo.ContactOld;
+DELETE  Mediclinic_Holloway_TestDB.dbo.ContactOld;
+
+----------------------------------------------------------
+
+
+-- Staff
+--------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 100
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(staff_id) FROM Mediclinic_Holloway_TestDB.dbo.Staff)
+set @B = (SELECT MAX(staff_id) FROM Mediclinic_Balwyn_TestDB.dbo.Staff)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT Staff ON
+
+INSERT INTO Staff ( 
+ staff_id,
+ person_id,
+ login,
+ pwd,
+ staff_position_id,
+ field_id,
+ costcentre_id,
+ is_contractor,
+ tfn,
+ provider_number,
+ is_fired,
+ is_commission,
+ commission_percent,
+ is_stakeholder,
+ is_master_admin,
+ is_admin,
+ is_principal,
+ is_provider,
+ is_external,
+ staff_date_added,
+ start_date,
+ end_date,
+ comment,
+ num_days_to_display_on_booking_screen,
+ bk_screen_field_id,
+ bk_screen_show_key,
+ enable_daily_reminder_sms,
+ enable_daily_reminder_email
+)
+ 
+SELECT 
+ staff_id + @NewID,
+ person_id,
+ login,
+ pwd,
+ staff_position_id,
+ field_id,
+ costcentre_id,
+ is_contractor,
+ tfn,
+ provider_number,
+ is_fired,
+ is_commission,
+ commission_percent,
+ is_stakeholder,
+ is_master_admin,
+ is_admin,
+ is_principal,
+ is_provider,
+ is_external,
+ staff_date_added,
+ start_date,
+ end_date,
+ comment,
+ num_days_to_display_on_booking_screen,
+ bk_screen_field_id,
+ bk_screen_show_key,
+ enable_daily_reminder_sms,
+ enable_daily_reminder_email
+FROM   Staff
+WHERE  staff_id < @NewID AND staff_id > 0
+
+SET IDENTITY_INSERT Staff OFF
+
+
+update Booking                    set 	added_by     = added_by     + @NewID WHERE added_by     < @NewID AND added_by     > 0;
+update Booking                    set 	confirmed_by = confirmed_by + @NewID WHERE confirmed_by < @NewID AND confirmed_by > 0;
+update Booking                    set 	deleted_by   = deleted_by   + @NewID WHERE deleted_by   < @NewID AND deleted_by   > 0;
+update Booking                    set 	provider     = provider     + @NewID WHERE provider     < @NewID AND provider     > 0;
+update BookingChangeHistory       set 	moved_by     = moved_by     + @NewID WHERE moved_by     < @NewID AND moved_by     > 0;
+update BookingPatient             set 	added_by     = added_by     + @NewID WHERE added_by     < @NewID AND added_by     > 0;
+update BookingPatient             set 	deleted_by   = deleted_by   + @NewID WHERE deleted_by   < @NewID AND deleted_by   > 0;
+update BookingPatientOffering     set 	added_by     = added_by     + @NewID WHERE added_by     < @NewID AND added_by     > 0;
+update BookingPatientOffering     set 	deleted_by   = deleted_by   + @NewID WHERE deleted_by   < @NewID AND deleted_by   > 0;
+update CreditNote                 set 	reversed_by  = reversed_by  + @NewID WHERE reversed_by  < @NewID AND reversed_by  > 0;
+update CreditNote                 set 	staff_id     = staff_id     + @NewID WHERE staff_id     < @NewID AND staff_id     > 0;
+
+update HealthCard                 set 	added_or_last_modified_by = added_or_last_modified_by + @NewID WHERE added_or_last_modified_by < @NewID AND added_or_last_modified_by > 0;
+
+update HealthCardEPCChangeHistory set 	staff_id     = staff_id     + @NewID WHERE staff_id     < @NewID AND staff_id   > 0;
+update HealthCardEPCRemaining     set 	deleted_by   = deleted_by   + @NewID WHERE deleted_by   < @NewID AND deleted_by > 0;
+
+update HealthCardEPCRemainingChangeHistory set 	staff_id = staff_id + @NewID WHERE staff_id < @NewID AND staff_id > 0;
+
+update Invoice                    set 	reversed_by  = reversed_by + @NewID WHERE reversed_by < @NewID AND reversed_by > 0;
+update Invoice                    set 	staff_id     = staff_id    + @NewID WHERE staff_id    < @NewID AND staff_id    > 0;
+update LetterPrintHistory         set 	staff_id     = staff_id    + @NewID WHERE staff_id    < @NewID AND staff_id    > 0;
+update Note                       set 	added_by     = added_by    + @NewID WHERE added_by    < @NewID AND added_by    > 0;
+update Note                       set 	modified_by  = modified_by + @NewID WHERE modified_by < @NewID AND modified_by > 0;
+update Overpayment                set 	staff_id     = staff_id    + @NewID WHERE staff_id    < @NewID AND staff_id    > 0;
+
+update PatientHistory             set 	modified_from_this_by = modified_from_this_by + @NewID WHERE modified_from_this_by < @NewID AND modified_from_this_by > 0;
+
+update Receipt                    set 	reversed_by  = reversed_by + @NewID WHERE reversed_by < @NewID AND reversed_by > 0;
+update Receipt                    set 	staff_id     = staff_id    + @NewID WHERE staff_id    < @NewID AND staff_id   > 0;
+update Refund                     set 	staff_id     = staff_id    + @NewID WHERE staff_id    < @NewID AND staff_id   > 0;
+update RegisterStaff              set 	staff_id     = staff_id    + @NewID WHERE staff_id    < @NewID AND staff_id   > 0;
+update StaffOfferings             set 	staff_id     = staff_id    + @NewID WHERE staff_id    < @NewID AND staff_id   > 0;
+update StaffSiteRestriction       set 	staff_id     = staff_id    + @NewID WHERE staff_id    < @NewID AND staff_id   > 0;
+update StockUpdateHistory         set 	added_by     = added_by    + @NewID WHERE added_by    < @NewID AND added_by   > 0;
+update Suburb                     set 	amended_by   = amended_by  + @NewID WHERE amended_by  < @NewID AND amended_by > 0;
+update UserLogin                  set 	staff_id     = staff_id    + @NewID WHERE staff_id    < @NewID AND staff_id   > 0;
+
+
+DELETE Staff WHERE staff_id < @NewID AND staff_id > 0;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Staff ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.Staff ( 
+ staff_id,
+ person_id,
+ login,
+ pwd,
+ staff_position_id,
+ field_id,
+ costcentre_id,
+ is_contractor,
+ tfn,
+ provider_number,
+ is_fired,
+ is_commission,
+ commission_percent,
+ is_stakeholder,
+ is_master_admin,
+ is_admin,
+ is_principal,
+ is_provider,
+ is_external,
+ staff_date_added,
+ start_date,
+ end_date,
+ comment,
+ num_days_to_display_on_booking_screen,
+ bk_screen_field_id,
+ bk_screen_show_key,
+ enable_daily_reminder_sms,
+ enable_daily_reminder_email
+)
+SELECT 
+ staff_id,
+ person_id,
+ login,
+ pwd,
+ staff_position_id,
+ field_id,
+ costcentre_id,
+ is_contractor,
+ tfn,
+ provider_number,
+ is_fired,
+ is_commission,
+ commission_percent,
+ is_stakeholder,
+ is_master_admin,
+ is_admin,
+ is_principal,
+ is_provider,
+ is_external,
+ staff_date_added,
+ start_date,
+ end_date,
+ comment,
+ num_days_to_display_on_booking_screen,
+ bk_screen_field_id,
+ bk_screen_show_key,
+ enable_daily_reminder_sms,
+ enable_daily_reminder_email
+FROM   Mediclinic_Holloway_TestDB.dbo.Staff
+WHERE  staff_id > 0
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Staff OFF
+
+
+         ----------------------------------------
+
+^^ TRY WRITE SQL TO DEDUPLICATE THE FUCKING STAFF ... THEY WILL BE ALL OVER THE GOD DAMN SYSTEM AS DUPLICATES!
+
+No ... it's far easier to just run the above.
+Then before it goes live, just run the 20 or so update to merge each staff and delete the duplicates
+
+----------------------------------------------------------
+
+-- UserLogin
+------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 1000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(userlogin_id) FROM Mediclinic_Holloway_TestDB.dbo.UserLogin)
+set @B = (SELECT MAX(userlogin_id) FROM Mediclinic_Balwyn_TestDB.dbo.UserLogin)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+
+SET IDENTITY_INSERT UserLogin ON
+
+INSERT INTO UserLogin ( 
+  userlogin_id
+ ,staff_id
+ ,username
+ ,site_id
+ ,is_successful
+ ,session_id
+ ,login_time
+ ,last_access_time
+ ,last_access_page
+ ,is_logged_off
+ ,ipaddress
+)
+ 
+SELECT 
+  userlogin_id + @NewID
+ ,staff_id
+ ,username
+ ,site_id
+ ,is_successful
+ ,session_id
+ ,login_time
+ ,last_access_time
+ ,last_access_page
+ ,is_logged_off
+ ,ipaddress
+FROM   UserLogin
+WHERE  userlogin_id < @NewID
+
+SET IDENTITY_INSERT UserLogin OFF
+
+
+DELETE UserLogin WHERE userlogin_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.UserLogin ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.UserLogin ( 
+  userlogin_id
+ ,staff_id
+ ,username
+ ,site_id
+ ,is_successful
+ ,session_id
+ ,login_time
+ ,last_access_time
+ ,last_access_page
+ ,is_logged_off
+ ,ipaddress
+)
+SELECT 
+  userlogin_id
+ ,staff_id
+ ,username
+ ,site_id
+ ,is_successful
+ ,session_id
+ ,login_time
+ ,last_access_time
+ ,last_access_page
+ ,is_logged_off
+ ,ipaddress
+FROM   Mediclinic_Holloway_TestDB.dbo.UserLogin
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.UserLogin OFF
+
+----------------------------------------------------------
+
+-- StaffSiteRestriction
+-----------------------
+
+ALTER TABLE StaffSiteRestriction DROP CONSTRAINT uc_unique_staff_site;
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 100
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(staff_site_restriction_id) FROM Mediclinic_Holloway_TestDB.dbo.StaffSiteRestriction)
+set @B = (SELECT MAX(staff_site_restriction_id) FROM Mediclinic_Balwyn_TestDB.dbo.StaffSiteRestriction)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+
+SET IDENTITY_INSERT StaffSiteRestriction ON
+
+INSERT INTO StaffSiteRestriction ( 
+  staff_site_restriction_id
+ ,staff_id
+ ,site_id
+)
+ 
+SELECT 
+  staff_site_restriction_id + @NewID
+ ,staff_id
+ ,site_id
+FROM   StaffSiteRestriction
+WHERE  staff_site_restriction_id < @NewID
+
+SET IDENTITY_INSERT StaffSiteRestriction OFF
+
+
+DELETE StaffSiteRestriction WHERE staff_site_restriction_id < @NewID;
+
+ALTER TABLE StaffSiteRestriction ADD UNIQUE (staff_id, site_id);
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.StaffSiteRestriction ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.StaffSiteRestriction ( 
+  staff_site_restriction_id
+ ,staff_id
+ ,site_id
+)
+SELECT 
+  staff_site_restriction_id
+ ,staff_id
+ ,site_id
+FROM   Mediclinic_Holloway_TestDB.dbo.StaffSiteRestriction
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.StaffSiteRestriction OFF
+
+----------------------------------------------------------
+
+-- Organisation
+---------------
+
+ALTER TABLE Organisation DROP CONSTRAINT UQ__Organisa__AF9F95A659FA5E80;
+
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 1000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(organisation_id) FROM Mediclinic_Holloway_TestDB.dbo.Organisation)
+set @B = (SELECT MAX(organisation_id) FROM Mediclinic_Balwyn_TestDB.dbo.Organisation)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT Organisation ON
+
+INSERT INTO Organisation ( 
+  organisation_id
+ ,entity_id
+ ,parent_organisation_id
+ ,use_parent_offernig_prices
+ ,organisation_type_id
+ ,organisation_customer_type_id
+ ,name
+ ,acn
+ ,abn
+ ,organisation_date_added
+ ,organisation_date_modified
+ ,is_debtor
+ ,is_creditor
+ ,bpay_account
+ ,is_deleted
+ ,weeks_per_service_cycle
+ ,start_date
+ ,end_date
+ ,comment
+ ,free_services
+ ,excl_sun
+ ,excl_mon
+ ,excl_tue
+ ,excl_wed
+ ,excl_thu
+ ,excl_fri
+ ,excl_sat
+ ,sun_start_time
+ ,sun_end_time
+ ,mon_start_time
+ ,mon_end_time
+ ,tue_start_time
+ ,tue_end_time
+ ,wed_start_time
+ ,wed_end_time
+ ,thu_start_time
+ ,thu_end_time
+ ,fri_start_time
+ ,fri_end_time
+ ,sat_start_time
+ ,sat_end_time
+ ,sun_lunch_start_time
+ ,sun_lunch_end_time
+ ,mon_lunch_start_time
+ ,mon_lunch_end_time
+ ,tue_lunch_start_time
+ ,tue_lunch_end_time
+ ,wed_lunch_start_time
+ ,wed_lunch_end_time
+ ,thu_lunch_start_time
+ ,thu_lunch_end_time
+ ,fri_lunch_start_time
+ ,fri_lunch_end_time
+ ,sat_lunch_start_time
+ ,sat_lunch_end_time
+ ,last_batch_run
+)
+ 
+SELECT 
+  organisation_id + @NewID
+ ,entity_id
+ ,parent_organisation_id + @NewID
+ ,use_parent_offernig_prices
+ ,organisation_type_id
+ ,organisation_customer_type_id
+ ,name
+ ,acn
+ ,abn
+ ,organisation_date_added
+ ,organisation_date_modified
+ ,is_debtor
+ ,is_creditor
+ ,bpay_account
+ ,is_deleted
+ ,weeks_per_service_cycle
+ ,start_date
+ ,end_date
+ ,comment
+ ,free_services
+ ,excl_sun
+ ,excl_mon
+ ,excl_tue
+ ,excl_wed
+ ,excl_thu
+ ,excl_fri
+ ,excl_sat
+ ,sun_start_time
+ ,sun_end_time
+ ,mon_start_time
+ ,mon_end_time
+ ,tue_start_time
+ ,tue_end_time
+ ,wed_start_time
+ ,wed_end_time
+ ,thu_start_time
+ ,thu_end_time
+ ,fri_start_time
+ ,fri_end_time
+ ,sat_start_time
+ ,sat_end_time
+ ,sun_lunch_start_time
+ ,sun_lunch_end_time
+ ,mon_lunch_start_time
+ ,mon_lunch_end_time
+ ,tue_lunch_start_time
+ ,tue_lunch_end_time
+ ,wed_lunch_start_time
+ ,wed_lunch_end_time
+ ,thu_lunch_start_time
+ ,thu_lunch_end_time
+ ,fri_lunch_start_time
+ ,fri_lunch_end_time
+ ,sat_lunch_start_time
+ ,sat_lunch_end_time
+ ,last_batch_run
+FROM   Organisation
+WHERE  organisation_id < @NewID AND organisation_id > 0
+
+SET IDENTITY_INSERT Organisation OFF
+
+
+update Booking               set organisation_id                     = organisation_id                     + @NewID WHERE organisation_id                     < @NewID AND organisation_id                     > 0;
+update HealthCard            set organisation_id                     = organisation_id                     + @NewID WHERE organisation_id                     < @NewID AND organisation_id                     > 0;
+update Invoice               set non_booking_invoice_organisation_id = non_booking_invoice_organisation_id + @NewID WHERE non_booking_invoice_organisation_id < @NewID AND non_booking_invoice_organisation_id > 0;
+update Invoice               set payer_organisation_id               = payer_organisation_id               + @NewID WHERE payer_organisation_id               < @NewID AND payer_organisation_id               > 0;
+update Letter                set organisation_id                     = organisation_id                     + @NewID WHERE organisation_id                     < @NewID AND organisation_id                     > 0;
+update LetterPrintHistory    set organisation_id                     = organisation_id                     + @NewID WHERE organisation_id                     < @NewID AND organisation_id                     > 0;
+update Organisation          set parent_organisation_id              = parent_organisation_id              + @NewID WHERE parent_organisation_id              < @NewID AND parent_organisation_id              > 0;
+update OrganisationOfferings set organisation_id                     = organisation_id                     + @NewID WHERE organisation_id                     < @NewID AND organisation_id                     > 0;
+update PatientReferrer       set organisation_id                     = organisation_id                     + @NewID WHERE organisation_id                     < @NewID AND organisation_id                     > 0;
+update RegisterPatient       set organisation_id                     = organisation_id                     + @NewID WHERE organisation_id                     < @NewID AND organisation_id                     > 0;
+update RegisterReferrer      set organisation_id                     = organisation_id                     + @NewID WHERE organisation_id                     < @NewID AND organisation_id                     > 0;
+update RegisterStaff         set organisation_id                     = organisation_id                     + @NewID WHERE organisation_id                     < @NewID AND organisation_id                     > 0;
+update Stock                 set organisation_id                     = organisation_id                     + @NewID WHERE organisation_id                     < @NewID AND organisation_id                     > 0;
+update StockUpdateHistory    set organisation_id                     = organisation_id                     + @NewID WHERE organisation_id                     < @NewID AND organisation_id                     > 0;
+
+
+DELETE Organisation WHERE organisation_id < @NewID AND organisation_id > 0;
+
+ALTER TABLE Organisation ADD UNIQUE (entity_id);
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Organisation ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.Organisation ( 
+  organisation_id
+ ,entity_id
+ ,parent_organisation_id
+ ,use_parent_offernig_prices
+ ,organisation_type_id
+ ,organisation_customer_type_id
+ ,name
+ ,acn
+ ,abn
+ ,organisation_date_added
+ ,organisation_date_modified
+ ,is_debtor
+ ,is_creditor
+ ,bpay_account
+ ,is_deleted
+ ,weeks_per_service_cycle
+ ,start_date
+ ,end_date
+ ,comment
+ ,free_services
+ ,excl_sun
+ ,excl_mon
+ ,excl_tue
+ ,excl_wed
+ ,excl_thu
+ ,excl_fri
+ ,excl_sat
+ ,sun_start_time
+ ,sun_end_time
+ ,mon_start_time
+ ,mon_end_time
+ ,tue_start_time
+ ,tue_end_time
+ ,wed_start_time
+ ,wed_end_time
+ ,thu_start_time
+ ,thu_end_time
+ ,fri_start_time
+ ,fri_end_time
+ ,sat_start_time
+ ,sat_end_time
+ ,sun_lunch_start_time
+ ,sun_lunch_end_time
+ ,mon_lunch_start_time
+ ,mon_lunch_end_time
+ ,tue_lunch_start_time
+ ,tue_lunch_end_time
+ ,wed_lunch_start_time
+ ,wed_lunch_end_time
+ ,thu_lunch_start_time
+ ,thu_lunch_end_time
+ ,fri_lunch_start_time
+ ,fri_lunch_end_time
+ ,sat_lunch_start_time
+ ,sat_lunch_end_time
+ ,last_batch_run
+)
+SELECT 
+  organisation_id
+ ,entity_id
+ ,parent_organisation_id
+ ,use_parent_offernig_prices
+ ,organisation_type_id
+ ,organisation_customer_type_id
+ ,name
+ ,acn
+ ,abn
+ ,organisation_date_added
+ ,organisation_date_modified
+ ,is_debtor
+ ,is_creditor
+ ,bpay_account
+ ,is_deleted
+ ,weeks_per_service_cycle
+ ,start_date
+ ,end_date
+ ,comment
+ ,free_services
+ ,excl_sun
+ ,excl_mon
+ ,excl_tue
+ ,excl_wed
+ ,excl_thu
+ ,excl_fri
+ ,excl_sat
+ ,sun_start_time
+ ,sun_end_time
+ ,mon_start_time
+ ,mon_end_time
+ ,tue_start_time
+ ,tue_end_time
+ ,wed_start_time
+ ,wed_end_time
+ ,thu_start_time
+ ,thu_end_time
+ ,fri_start_time
+ ,fri_end_time
+ ,sat_start_time
+ ,sat_end_time
+ ,sun_lunch_start_time
+ ,sun_lunch_end_time
+ ,mon_lunch_start_time
+ ,mon_lunch_end_time
+ ,tue_lunch_start_time
+ ,tue_lunch_end_time
+ ,wed_lunch_start_time
+ ,wed_lunch_end_time
+ ,thu_lunch_start_time
+ ,thu_lunch_end_time
+ ,fri_lunch_start_time
+ ,fri_lunch_end_time
+ ,sat_lunch_start_time
+ ,sat_lunch_end_time
+ ,last_batch_run
+FROM   Mediclinic_Holloway_TestDB.dbo.Organisation
+WHERE organisation_id > 0
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Organisation OFF
+
+----------------------------------------------------------
+
+-- RegisterStaff
+----------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 500
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(register_staff_id) FROM Mediclinic_Holloway_TestDB.dbo.RegisterStaff)
+set @B = (SELECT MAX(register_staff_id) FROM Mediclinic_Balwyn_TestDB.dbo.RegisterStaff)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT RegisterStaff ON
+
+INSERT INTO RegisterStaff ( 
+  register_staff_id
+ ,register_staff_date_added
+ ,organisation_id
+ ,staff_id
+ ,provider_number
+ ,main_provider_for_clinic
+ ,excl_sun
+ ,excl_mon
+ ,excl_tue
+ ,excl_wed
+ ,excl_thu
+ ,excl_fri
+ ,excl_sat
+ ,is_deleted
+)
+ 
+SELECT 
+  register_staff_id + @NewID
+ ,register_staff_date_added
+ ,organisation_id
+ ,staff_id
+ ,provider_number
+ ,main_provider_for_clinic
+ ,excl_sun
+ ,excl_mon
+ ,excl_tue
+ ,excl_wed
+ ,excl_thu
+ ,excl_fri
+ ,excl_sat
+ ,is_deleted
+FROM   RegisterStaff
+WHERE  register_staff_id < @NewID AND register_staff_id > 0
+
+SET IDENTITY_INSERT RegisterStaff OFF
+
+
+DELETE RegisterStaff WHERE register_staff_id < @NewID;
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.RegisterStaff ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.RegisterStaff ( 
+  register_staff_id
+ ,register_staff_date_added
+ ,organisation_id
+ ,staff_id
+ ,provider_number
+ ,main_provider_for_clinic
+ ,excl_sun
+ ,excl_mon
+ ,excl_tue
+ ,excl_wed
+ ,excl_thu
+ ,excl_fri
+ ,excl_sat
+ ,is_deleted
+)
+SELECT 
+  register_staff_id
+ ,register_staff_date_added
+ ,organisation_id
+ ,staff_id
+ ,provider_number
+ ,main_provider_for_clinic
+ ,excl_sun
+ ,excl_mon
+ ,excl_tue
+ ,excl_wed
+ ,excl_thu
+ ,excl_fri
+ ,excl_sat
+ ,is_deleted
+FROM   Mediclinic_Holloway_TestDB.dbo.RegisterStaff
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.RegisterStaff OFF
+
+----------------------------------------------------------
+
+-- Patient
+----------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 10000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(patient_id) FROM Mediclinic_Holloway_TestDB.dbo.Patient)
+set @B = (SELECT MAX(patient_id) FROM Mediclinic_Balwyn_TestDB.dbo.Patient)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+
+SET IDENTITY_INSERT Patient ON
+
+INSERT INTO Patient ( 
+  patient_id
+ ,person_id
+ ,patient_date_added
+ ,is_clinic_patient
+ ,is_deleted
+ ,is_deceased
+ ,flashing_text
+ ,private_health_fund
+ ,concession_card_number
+ ,concession_card_expiry_date
+ ,is_diabetic
+ ,is_member_diabetes_australia
+ ,ac_inv_offering_id
+ ,ac_pat_offering_id
+)
+ 
+SELECT 
+  patient_id + @NewID
+ ,person_id
+ ,patient_date_added
+ ,is_clinic_patient
+ ,is_deleted
+ ,is_deceased
+ ,flashing_text
+ ,private_health_fund
+ ,concession_card_number
+ ,concession_card_expiry_date
+ ,is_diabetic
+ ,is_member_diabetes_australia
+ ,ac_inv_offering_id
+ ,ac_pat_offering_id
+FROM   Patient
+WHERE  patient_id < @NewID
+
+SET IDENTITY_INSERT Patient OFF
+
+update Booking                set patient_id       = patient_id       + @NewID WHERE patient_id       < @NewID;
+update BookingPatient         set patient_id       = patient_id       + @NewID WHERE patient_id       < @NewID;
+update EmailHistory           set patient_id       = patient_id       + @NewID WHERE patient_id       < @NewID;
+update HealthCard             set patient_id       = patient_id       + @NewID WHERE patient_id       < @NewID;
+update Invoice                set payer_patient_id = payer_patient_id + @NewID WHERE payer_patient_id < @NewID;
+update InvoiceLine            set patient_id       = patient_id       + @NewID WHERE patient_id       < @NewID;
+update LetterBestPrintHistory set patient_id       = patient_id       + @NewID WHERE patient_id       < @NewID;
+update LetterPrintHistory     set patient_id       = patient_id       + @NewID WHERE patient_id       < @NewID;
+update PatientHistory         set patient_id       = patient_id       + @NewID WHERE patient_id       < @NewID;
+update PatientReferrer        set patient_id       = patient_id       + @NewID WHERE patient_id       < @NewID;
+update RegisterPatient        set patient_id       = patient_id       + @NewID WHERE patient_id       < @NewID;
+update SMSHistory             set patient_id       = patient_id       + @NewID WHERE patient_id       < @NewID;
+
+
+DELETE Patient WHERE patient_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Patient ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.Patient ( 
+  patient_id
+ ,person_id
+ ,patient_date_added
+ ,is_clinic_patient
+ ,is_deleted
+ ,is_deceased
+ ,flashing_text
+ ,private_health_fund
+ ,concession_card_number
+ ,concession_card_expiry_date
+ ,is_diabetic
+ ,is_member_diabetes_australia
+ ,ac_inv_offering_id
+ ,ac_pat_offering_id
+)
+SELECT 
+  patient_id
+ ,person_id
+ ,patient_date_added
+ ,is_clinic_patient
+ ,is_deleted
+ ,is_deceased
+ ,flashing_text
+ ,private_health_fund
+ ,concession_card_number
+ ,concession_card_expiry_date
+ ,is_diabetic
+ ,is_member_diabetes_australia
+ ,ac_inv_offering_id
+ ,ac_pat_offering_id
+FROM   Mediclinic_Holloway_TestDB.dbo.Patient
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Patient OFF
+
+----------------------------------------------------------
+
+-- PatientHistory
+-----------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 500
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(patient_history_id) FROM Mediclinic_Holloway_TestDB.dbo.PatientHistory)
+set @B = (SELECT MAX(patient_history_id) FROM Mediclinic_Balwyn_TestDB.dbo.PatientHistory)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+
+SET IDENTITY_INSERT PatientHistory ON
+
+INSERT INTO PatientHistory ( 
+  patient_history_id
+ ,patient_id
+ ,is_clinic_patient
+ ,is_deleted
+ ,is_deceased
+ ,flashing_text
+ ,private_health_fund
+ ,concession_card_number
+ ,concession_card_expiry_date
+ ,is_diabetic
+ ,is_member_diabetes_australia
+ ,ac_inv_offering_id
+ ,ac_pat_offering_id
+ ,title_id
+ ,firstname
+ ,middlename
+ ,surname
+ ,nickname
+ ,gender
+ ,dob
+ ,modified_from_this_by
+ ,date_added
+)
+ 
+SELECT 
+  patient_history_id + @NewID
+ ,patient_id
+ ,is_clinic_patient
+ ,is_deleted
+ ,is_deceased
+ ,flashing_text
+ ,private_health_fund
+ ,concession_card_number
+ ,concession_card_expiry_date
+ ,is_diabetic
+ ,is_member_diabetes_australia
+ ,ac_inv_offering_id
+ ,ac_pat_offering_id
+ ,title_id
+ ,firstname
+ ,middlename
+ ,surname
+ ,nickname
+ ,gender
+ ,dob
+ ,modified_from_this_by
+ ,date_added
+FROM   PatientHistory
+WHERE  patient_history_id < @NewID
+
+SET IDENTITY_INSERT PatientHistory OFF
+
+
+DELETE PatientHistory WHERE patient_history_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.PatientHistory ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.PatientHistory ( 
+  patient_history_id
+ ,patient_id
+ ,is_clinic_patient
+ ,is_deleted
+ ,is_deceased
+ ,flashing_text
+ ,private_health_fund
+ ,concession_card_number
+ ,concession_card_expiry_date
+ ,is_diabetic
+ ,is_member_diabetes_australia
+ ,ac_inv_offering_id
+ ,ac_pat_offering_id
+ ,title_id
+ ,firstname
+ ,middlename
+ ,surname
+ ,nickname
+ ,gender
+ ,dob
+ ,modified_from_this_by
+ ,date_added
+)
+SELECT 
+  patient_history_id
+ ,patient_id
+ ,is_clinic_patient
+ ,is_deleted
+ ,is_deceased
+ ,flashing_text
+ ,private_health_fund
+ ,concession_card_number
+ ,concession_card_expiry_date
+ ,is_diabetic
+ ,is_member_diabetes_australia
+ ,ac_inv_offering_id
+ ,ac_pat_offering_id
+ ,title_id
+ ,firstname
+ ,middlename
+ ,surname
+ ,nickname
+ ,gender
+ ,dob
+ ,modified_from_this_by
+ ,date_added
+FROM   Mediclinic_Holloway_TestDB.dbo.PatientHistory
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.PatientHistory OFF
+
+----------------------------------------------------------
+
+-- Offering
+-----------
+
+-- check aged care fucking ones ... so dont dupicate them ... rest can be duplicated...
+
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 100
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(offering_id) FROM Mediclinic_Holloway_TestDB.dbo.Offering)
+set @B = (SELECT MAX(offering_id) FROM Mediclinic_Balwyn_TestDB.dbo.Offering)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT Offering ON
+
+INSERT INTO Offering ( 
+  offering_id
+ ,field_id
+ ,offering_type_id
+ ,aged_care_patient_type_id
+ ,num_clinic_visits_allowed_per_year
+ ,offering_invoice_type_id
+ ,name
+ ,short_name
+ ,descr
+ ,is_gst_exempt
+ ,default_price
+ ,service_time_minutes
+ ,is_deleted
+ ,max_nbr_claimable
+ ,max_nbr_claimable_months
+ ,medicare_company_code
+ ,dva_company_code
+ ,medicare_charge
+ ,dva_charge
+ ,tac_charge
+ ,popup_message
+ ,reminder_letter_months_later_to_send
+ ,reminder_letter_id
+)
+ 
+SELECT 
+  offering_id + @NewID
+ ,field_id
+ ,offering_type_id
+ ,aged_care_patient_type_id
+ ,num_clinic_visits_allowed_per_year
+ ,offering_invoice_type_id
+ ,name
+ ,short_name
+ ,descr
+ ,is_gst_exempt
+ ,default_price
+ ,service_time_minutes
+ ,is_deleted
+ ,max_nbr_claimable
+ ,max_nbr_claimable_months
+ ,medicare_company_code
+ ,dva_company_code
+ ,medicare_charge
+ ,dva_charge
+ ,tac_charge
+ ,popup_message
+ ,reminder_letter_months_later_to_send
+ ,reminder_letter_id
+FROM   Offering
+WHERE  offering_id < @NewID AND offering_id > 10
+
+SET IDENTITY_INSERT Offering OFF
+
+
+update Booking                 set 	offering_id        = offering_id        + @NewID WHERE offering_id        < @NewID AND offering_id        > 10;
+update BookingPatientOffering  set 	offering_id        = offering_id        + @NewID WHERE offering_id        < @NewID AND offering_id        > 10;
+update InvoiceLine             set 	offering_id        = offering_id        + @NewID WHERE offering_id        < @NewID AND offering_id        > 10;
+update OrganisationOfferings   set 	offering_id        = offering_id        + @NewID WHERE offering_id        < @NewID AND offering_id        > 10;
+update Patient                 set 	ac_inv_offering_id = ac_inv_offering_id + @NewID WHERE ac_inv_offering_id < @NewID AND ac_inv_offering_id > 10;
+update Patient                 set 	ac_pat_offering_id = ac_pat_offering_id + @NewID WHERE ac_pat_offering_id < @NewID AND ac_pat_offering_id > 10;
+update PatientHistory          set 	ac_inv_offering_id = ac_inv_offering_id + @NewID WHERE ac_inv_offering_id < @NewID AND ac_inv_offering_id > 10;
+update PatientHistory          set 	ac_pat_offering_id = ac_pat_offering_id + @NewID WHERE ac_pat_offering_id < @NewID AND ac_pat_offering_id > 10;
+update StaffOfferings          set 	offering_id        = offering_id        + @NewID WHERE offering_id        < @NewID AND offering_id        > 10;
+update Stock                   set 	offering_id        = offering_id        + @NewID WHERE offering_id        < @NewID AND offering_id        > 10;
+update StockUpdateHistory      set 	offering_id        = offering_id        + @NewID WHERE offering_id        < @NewID AND offering_id        > 10;
+
+
+DELETE Offering WHERE offering_id < @NewID AND offering_id > 10;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Offering ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.Offering ( 
+  offering_id
+ ,field_id
+ ,offering_type_id
+ ,aged_care_patient_type_id
+ ,num_clinic_visits_allowed_per_year
+ ,offering_invoice_type_id
+ ,name
+ ,short_name
+ ,descr
+ ,is_gst_exempt
+ ,default_price
+ ,service_time_minutes
+ ,is_deleted
+ ,max_nbr_claimable
+ ,max_nbr_claimable_months
+ ,medicare_company_code
+ ,dva_company_code
+ ,medicare_charge
+ ,dva_charge
+ ,tac_charge
+ ,popup_message
+ ,reminder_letter_months_later_to_send
+ ,reminder_letter_id
+)
+SELECT 
+  offering_id
+ ,field_id
+ ,offering_type_id
+ ,aged_care_patient_type_id
+ ,num_clinic_visits_allowed_per_year
+ ,offering_invoice_type_id
+ ,name
+ ,short_name
+ ,descr
+ ,is_gst_exempt
+ ,default_price
+ ,service_time_minutes
+ ,is_deleted
+ ,max_nbr_claimable
+ ,max_nbr_claimable_months
+ ,medicare_company_code
+ ,dva_company_code
+ ,medicare_charge
+ ,dva_charge
+ ,tac_charge
+ ,popup_message
+ ,reminder_letter_months_later_to_send
+ ,reminder_letter_id
+FROM   Mediclinic_Holloway_TestDB.dbo.Offering
+WHERE offering_id > 10;
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Offering OFF
+
+----------------------------------------------------------
+
+==> same with staff .... once all merged ... before they use it ....
+re-run the updates to de-duplicate the same offerings
+
+----------------------------------------------------------
+
+-- OrganisationOfferings
+------------------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 2000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(organisation_offering_id) FROM Mediclinic_Holloway_TestDB.dbo.OrganisationOfferings)
+set @B = (SELECT MAX(organisation_offering_id) FROM Mediclinic_Balwyn_TestDB.dbo.OrganisationOfferings)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT OrganisationOfferings ON
+
+INSERT INTO OrganisationOfferings ( 
+  organisation_offering_id
+ ,organisation_id
+ ,offering_id
+ ,price
+ ,date_active
+)
+ 
+SELECT 
+  organisation_offering_id + @NewID
+ ,organisation_id
+ ,offering_id
+ ,price
+ ,date_active
+FROM   OrganisationOfferings
+WHERE  organisation_offering_id < @NewID AND organisation_offering_id > 0
+
+SET IDENTITY_INSERT OrganisationOfferings OFF
+
+
+DELETE OrganisationOfferings WHERE organisation_offering_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.OrganisationOfferings ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.OrganisationOfferings ( 
+  organisation_offering_id
+ ,organisation_id
+ ,offering_id
+ ,price
+ ,date_active
+)
+SELECT 
+  organisation_offering_id
+ ,organisation_id
+ ,offering_id
+ ,price
+ ,date_active
+FROM   Mediclinic_Holloway_TestDB.dbo.OrganisationOfferings
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.OrganisationOfferings OFF
+
+----------------------------------------------------------
+
+-- StaffOfferings
+-----------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 10000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(staff_offering_id) FROM Mediclinic_Holloway_TestDB.dbo.StaffOfferings)
+set @B = (SELECT MAX(staff_offering_id) FROM Mediclinic_Balwyn_TestDB.dbo.StaffOfferings)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT StaffOfferings ON
+
+INSERT INTO StaffOfferings ( 
+  staff_offering_id
+ ,staff_id
+ ,offering_id
+ ,is_commission
+ ,commission_percent
+ ,is_fixed_rate
+ ,fixed_rate
+ ,date_active
+)
+ 
+SELECT 
+  staff_offering_id + @NewID
+ ,staff_id
+ ,offering_id
+ ,is_commission
+ ,commission_percent
+ ,is_fixed_rate
+ ,fixed_rate
+ ,date_active
+FROM   StaffOfferings
+WHERE  staff_offering_id < @NewID AND staff_offering_id > 0
+
+SET IDENTITY_INSERT StaffOfferings OFF
+
+
+DELETE StaffOfferings WHERE staff_offering_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.StaffOfferings ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.StaffOfferings ( 
+  staff_offering_id
+ ,staff_id
+ ,offering_id
+ ,is_commission
+ ,commission_percent
+ ,is_fixed_rate
+ ,fixed_rate
+ ,date_active
+)
+SELECT 
+  staff_offering_id
+ ,staff_id
+ ,offering_id
+ ,is_commission
+ ,commission_percent
+ ,is_fixed_rate
+ ,fixed_rate
+ ,date_active
+FROM   Mediclinic_Holloway_TestDB.dbo.StaffOfferings
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.StaffOfferings OFF
+
+----------------------------------------------------------
+
+-- Referrer
+-----------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 10000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(referrer_id) FROM Mediclinic_Holloway_TestDB.dbo.Referrer)
+set @B = (SELECT MAX(referrer_id) FROM Mediclinic_Balwyn_TestDB.dbo.Referrer)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+
+SET IDENTITY_INSERT Referrer ON
+
+INSERT INTO Referrer ( 
+  referrer_id
+ ,person_id
+ ,referrer_date_added
+ ,is_deleted
+)
+ 
+SELECT 
+  referrer_id + @NewID
+ ,person_id
+ ,referrer_date_added
+ ,is_deleted
+FROM   Referrer
+WHERE  referrer_id < @NewID
+
+SET IDENTITY_INSERT Referrer OFF
+
+
+update RegisterReferrer  set referrer_id = referrer_id + @NewID WHERE referrer_id < @NewID;
+
+
+DELETE Referrer WHERE referrer_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Referrer ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.Referrer ( 
+  referrer_id
+ ,person_id
+ ,referrer_date_added
+ ,is_deleted
+)
+SELECT 
+  referrer_id
+ ,person_id
+ ,referrer_date_added
+ ,is_deleted
+FROM   Mediclinic_Holloway_TestDB.dbo.Referrer
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Referrer OFF
+
+----------------------------------------------------------
+
+-- RegisterReferrer
+-------------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 10000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(register_referrer_id) FROM Mediclinic_Holloway_TestDB.dbo.RegisterReferrer)
+set @B = (SELECT MAX(register_referrer_id) FROM Mediclinic_Balwyn_TestDB.dbo.RegisterReferrer)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT RegisterReferrer ON
+
+INSERT INTO RegisterReferrer ( 
+ register_referrer_id
+ ,organisation_id
+ ,referrer_id
+ ,provider_number
+ ,report_every_visit_to_referrer
+ ,batch_send_all_patients_treatment_notes
+ ,date_last_batch_send_all_patients_treatment_notes
+ ,register_referrer_date_added
+ ,is_deleted
+)
+ 
+SELECT 
+  register_referrer_id + @NewID
+ ,organisation_id
+ ,referrer_id
+ ,provider_number
+ ,report_every_visit_to_referrer
+ ,batch_send_all_patients_treatment_notes
+ ,date_last_batch_send_all_patients_treatment_notes
+ ,register_referrer_date_added
+ ,is_deleted
+FROM   RegisterReferrer
+WHERE  register_referrer_id < @NewID AND register_referrer_id > 0
+
+SET IDENTITY_INSERT RegisterReferrer OFF
+
+
+update LetterPrintHistory  set register_referrer_id = register_referrer_id + @NewID WHERE register_referrer_id < @NewID;
+update PatientReferrer     set register_referrer_id = register_referrer_id + @NewID WHERE register_referrer_id < @NewID;
+
+
+DELETE RegisterReferrer WHERE register_referrer_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.RegisterReferrer ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.RegisterReferrer ( 
+ register_referrer_id
+ ,organisation_id
+ ,referrer_id
+ ,provider_number
+ ,report_every_visit_to_referrer
+ ,batch_send_all_patients_treatment_notes
+ ,date_last_batch_send_all_patients_treatment_notes
+ ,register_referrer_date_added
+ ,is_deleted
+)
+SELECT 
+ register_referrer_id
+ ,organisation_id
+ ,referrer_id
+ ,provider_number
+ ,report_every_visit_to_referrer
+ ,batch_send_all_patients_treatment_notes
+ ,date_last_batch_send_all_patients_treatment_notes
+ ,register_referrer_date_added
+ ,is_deleted
+FROM   Mediclinic_Holloway_TestDB.dbo.RegisterReferrer
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.RegisterReferrer OFF
+
+----------------------------------------------------------
+
+-- RegisterPatient
+------------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 1000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(register_patient_id) FROM Mediclinic_Holloway_TestDB.dbo.RegisterPatient)
+set @B = (SELECT MAX(register_patient_id) FROM Mediclinic_Balwyn_TestDB.dbo.RegisterPatient)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT RegisterPatient ON
+
+INSERT INTO RegisterPatient ( 
+  register_patient_id
+ ,organisation_id
+ ,patient_id
+ ,register_patient_date_added
+ ,is_deleted
+)
+ 
+SELECT 
+  register_patient_id + @NewID
+ ,organisation_id
+ ,patient_id
+ ,register_patient_date_added
+ ,is_deleted
+FROM   RegisterPatient
+WHERE  register_patient_id < @NewID AND register_patient_id > 0
+
+SET IDENTITY_INSERT RegisterPatient OFF
+
+
+DELETE RegisterPatient WHERE register_patient_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.RegisterPatient ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.RegisterPatient ( 
+  register_patient_id
+ ,organisation_id
+ ,patient_id
+ ,register_patient_date_added
+ ,is_deleted
+)
+SELECT 
+  register_patient_id
+ ,organisation_id
+ ,patient_id
+ ,register_patient_date_added
+ ,is_deleted
+FROM   Mediclinic_Holloway_TestDB.dbo.RegisterPatient
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.RegisterPatient OFF
+
+----------------------------------------------------------
+
+-- PatientReferrer
+----------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 1000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(patient_referrer_id) FROM Mediclinic_Holloway_TestDB.dbo.PatientReferrer)
+set @B = (SELECT MAX(patient_referrer_id) FROM Mediclinic_Balwyn_TestDB.dbo.PatientReferrer)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT PatientReferrer ON
+
+INSERT INTO PatientReferrer ( 
+  patient_referrer_id
+ ,patient_id
+ ,register_referrer_id
+ ,organisation_id
+ ,patient_referrer_date_added
+ ,is_debtor
+ ,is_active
+)
+ 
+SELECT 
+  patient_referrer_id + @NewID
+ ,patient_id
+ ,register_referrer_id
+ ,organisation_id
+ ,patient_referrer_date_added
+ ,is_debtor
+ ,is_active
+FROM   PatientReferrer
+WHERE  patient_referrer_id < @NewID AND patient_referrer_id > 0
+
+SET IDENTITY_INSERT PatientReferrer OFF
+
+
+DELETE PatientReferrer WHERE patient_referrer_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.PatientReferrer ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.PatientReferrer ( 
+  patient_referrer_id
+ ,patient_id
+ ,register_referrer_id
+ ,organisation_id
+ ,patient_referrer_date_added
+ ,is_debtor
+ ,is_active
+)
+SELECT 
+  patient_referrer_id
+ ,patient_id
+ ,register_referrer_id
+ ,organisation_id
+ ,patient_referrer_date_added
+ ,is_debtor
+ ,is_active
+FROM   Mediclinic_Holloway_TestDB.dbo.PatientReferrer
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.PatientReferrer OFF
+
+----------------------------------------------------------
+
+-- HealthCard
+-------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 1000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(health_card_id) FROM Mediclinic_Holloway_TestDB.dbo.HealthCard)
+set @B = (SELECT MAX(health_card_id) FROM Mediclinic_Balwyn_TestDB.dbo.HealthCard)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT HealthCard ON
+
+INSERT INTO HealthCard ( 
+  health_card_id
+ ,patient_id
+ ,organisation_id
+ ,card_name
+ ,card_nbr
+ ,card_family_member_nbr
+ ,expiry_date
+ ,date_referral_signed
+ ,date_referral_received_in_office
+ ,is_active
+ ,added_or_last_modified_by
+ ,added_or_last_modified_date
+)
+ 
+SELECT 
+  health_card_id + @NewID
+ ,patient_id
+ ,organisation_id
+ ,card_name
+ ,card_nbr
+ ,card_family_member_nbr
+ ,expiry_date
+ ,date_referral_signed
+ ,date_referral_received_in_office
+ ,is_active
+ ,added_or_last_modified_by
+ ,added_or_last_modified_date
+FROM   HealthCard
+WHERE  health_card_id < @NewID
+
+SET IDENTITY_INSERT HealthCard OFF
+
+
+update HealthCardAction            set health_card_id = health_card_id + @NewID WHERE health_card_id < @NewID;
+update HealthCardEPCChangeHistory  set health_card_id = health_card_id + @NewID WHERE health_card_id < @NewID;
+update HealthCardEPCRemaining      set health_card_id = health_card_id + @NewID WHERE health_card_id < @NewID;
+
+
+DELETE HealthCard WHERE health_card_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.HealthCard ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.HealthCard ( 
+  health_card_id
+ ,patient_id
+ ,organisation_id
+ ,card_name
+ ,card_nbr
+ ,card_family_member_nbr
+ ,expiry_date
+ ,date_referral_signed
+ ,date_referral_received_in_office
+ ,is_active
+ ,added_or_last_modified_by
+ ,added_or_last_modified_date
+)
+SELECT 
+  health_card_id
+ ,patient_id
+ ,organisation_id
+ ,card_name
+ ,card_nbr
+ ,card_family_member_nbr
+ ,expiry_date
+ ,date_referral_signed
+ ,date_referral_received_in_office
+ ,is_active
+ ,added_or_last_modified_by
+ ,added_or_last_modified_date
+FROM   Mediclinic_Holloway_TestDB.dbo.HealthCard
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.HealthCard OFF
+
+----------------------------------------------------------
+
+-- HealthCardAction
+-------------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 10000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(health_card_action_id) FROM Mediclinic_Holloway_TestDB.dbo.HealthCardAction)
+set @B = (SELECT MAX(health_card_action_id) FROM Mediclinic_Balwyn_TestDB.dbo.HealthCardAction)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT HealthCardAction ON
+
+INSERT INTO HealthCardAction ( 
+  health_card_action_id
+ ,health_card_id
+ ,health_card_action_type_id
+ ,action_date
+)
+ 
+SELECT 
+  health_card_action_id + @NewID
+ ,health_card_id
+ ,health_card_action_type_id
+ ,action_date
+
+FROM   HealthCardAction
+WHERE  health_card_action_id < @NewID
+
+SET IDENTITY_INSERT HealthCardAction OFF
+
+
+update LetterPrintHistory  set health_card_action_id = health_card_action_id + @NewID WHERE health_card_action_id < @NewID;
+
+
+DELETE HealthCardAction WHERE health_card_action_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.HealthCardAction ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.HealthCardAction ( 
+  health_card_action_id
+ ,health_card_id
+ ,health_card_action_type_id
+ ,action_date
+)
+SELECT 
+  health_card_action_id
+ ,health_card_id
+ ,health_card_action_type_id
+ ,action_date
+FROM   Mediclinic_Holloway_TestDB.dbo.HealthCardAction
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.HealthCardAction OFF
+
+----------------------------------------------------------
+
+-- HealthCardEPCChangeHistory
+-----------------------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 100
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(health_card_epc_change_history_id) FROM Mediclinic_Holloway_TestDB.dbo.HealthCardEPCChangeHistory)
+set @B = (SELECT MAX(health_card_epc_change_history_id) FROM Mediclinic_Balwyn_TestDB.dbo.HealthCardEPCChangeHistory)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT HealthCardEPCChangeHistory ON
+
+INSERT INTO HealthCardEPCChangeHistory ( 
+   health_card_epc_change_history_id
+  ,health_card_id
+  ,staff_id
+  ,date
+  ,is_new_epc_card_set
+  ,pre_date_referral_signed
+  ,pre_date_referral_received_in_office
+  ,post_date_referral_signed
+  ,post_date_referral_received_in_office
+)
+ 
+SELECT 
+   health_card_epc_change_history_id + @NewID
+  ,health_card_id
+  ,staff_id
+  ,date
+  ,is_new_epc_card_set
+  ,pre_date_referral_signed
+  ,pre_date_referral_received_in_office
+  ,post_date_referral_signed
+  ,post_date_referral_received_in_office
+
+FROM   HealthCardEPCChangeHistory
+WHERE  health_card_epc_change_history_id < @NewID
+
+SET IDENTITY_INSERT HealthCardEPCChangeHistory OFF
+
+
+DELETE HealthCardEPCChangeHistory WHERE health_card_epc_change_history_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.HealthCardEPCChangeHistory ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.HealthCardEPCChangeHistory ( 
+   health_card_epc_change_history_id
+  ,health_card_id
+  ,staff_id
+  ,date
+  ,is_new_epc_card_set
+  ,pre_date_referral_signed
+  ,pre_date_referral_received_in_office
+  ,post_date_referral_signed
+  ,post_date_referral_received_in_office
+)
+SELECT 
+   health_card_epc_change_history_id
+  ,health_card_id
+  ,staff_id
+  ,date
+  ,is_new_epc_card_set
+  ,pre_date_referral_signed
+  ,pre_date_referral_received_in_office
+  ,post_date_referral_signed
+  ,post_date_referral_received_in_office
+FROM   Mediclinic_Holloway_TestDB.dbo.HealthCardEPCChangeHistory
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.HealthCardEPCChangeHistory OFF
+
+----------------------------------------------------------
+
+-- HealthCardEPCRemaining
+-------------------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 5000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(health_card_epc_remaining_id) FROM Mediclinic_Holloway_TestDB.dbo.HealthCardEPCRemaining)
+set @B = (SELECT MAX(health_card_epc_remaining_id) FROM Mediclinic_Balwyn_TestDB.dbo.HealthCardEPCRemaining)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT HealthCardEPCRemaining ON
+
+INSERT INTO HealthCardEPCRemaining ( 
+  health_card_epc_remaining_id
+ ,health_card_id
+ ,field_id
+ ,num_services_remaining
+ ,deleted_by
+ ,date_deleted
+)
+ 
+SELECT 
+  health_card_epc_remaining_id + @NewID
+ ,health_card_id
+ ,field_id
+ ,num_services_remaining
+ ,deleted_by
+ ,date_deleted
+FROM   HealthCardEPCRemaining
+WHERE  health_card_epc_remaining_id < @NewID
+
+SET IDENTITY_INSERT HealthCardEPCRemaining OFF
+
+
+update HealthCardEPCRemainingChangeHistory  set health_card_epc_remaining_id = health_card_epc_remaining_id + @NewID WHERE health_card_epc_remaining_id < @NewID;
+
+
+DELETE HealthCardEPCRemaining WHERE health_card_epc_remaining_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.HealthCardEPCRemaining ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.HealthCardEPCRemaining ( 
+  health_card_epc_remaining_id
+ ,health_card_id
+ ,field_id
+ ,num_services_remaining
+ ,deleted_by
+ ,date_deleted
+)
+SELECT 
+  health_card_epc_remaining_id
+ ,health_card_id
+ ,field_id
+ ,num_services_remaining
+ ,deleted_by
+ ,date_deleted
+FROM   Mediclinic_Holloway_TestDB.dbo.HealthCardEPCRemaining
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.HealthCardEPCRemaining OFF
+
+----------------------------------------------------------
+
+-- HealthCardEPCRemainingChangeHistory
+--------------------------------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 100
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(health_card_epc_remaining_change_history_id) FROM Mediclinic_Holloway_TestDB.dbo.HealthCardEPCRemainingChangeHistory)
+set @B = (SELECT MAX(health_card_epc_remaining_change_history_id) FROM Mediclinic_Balwyn_TestDB.dbo.HealthCardEPCRemainingChangeHistory)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT HealthCardEPCRemainingChangeHistory ON
+
+INSERT INTO HealthCardEPCRemainingChangeHistory ( 
+   health_card_epc_remaining_change_history_id
+  ,health_card_epc_remaining_id
+  ,staff_id
+  ,date
+  ,pre_num_services_remaining
+  ,post_num_services_remaining
+)
+ 
+SELECT 
+   health_card_epc_remaining_change_history_id + @NewID
+  ,health_card_epc_remaining_id
+  ,staff_id
+  ,date
+  ,pre_num_services_remaining
+  ,post_num_services_remaining
+FROM   HealthCardEPCRemainingChangeHistory
+WHERE  health_card_epc_remaining_change_history_id < @NewID
+
+SET IDENTITY_INSERT HealthCardEPCRemainingChangeHistory OFF
+
+
+DELETE HealthCardEPCRemainingChangeHistory WHERE health_card_epc_remaining_change_history_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.HealthCardEPCRemainingChangeHistory ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.HealthCardEPCRemainingChangeHistory ( 
+   health_card_epc_remaining_change_history_id
+  ,health_card_epc_remaining_id
+  ,staff_id
+  ,date
+  ,pre_num_services_remaining
+  ,post_num_services_remaining
+)
+SELECT 
+   health_card_epc_remaining_change_history_id
+  ,health_card_epc_remaining_id
+  ,staff_id
+  ,date
+  ,pre_num_services_remaining
+  ,post_num_services_remaining
+FROM   Mediclinic_Holloway_TestDB.dbo.HealthCardEPCRemainingChangeHistory
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.HealthCardEPCRemainingChangeHistory OFF
+
+----------------------------------------------------------
+
+-- Booking
+----------
+
+ALTER TABLE Booking DROP CONSTRAINT UQ__Booking__AF9F95A63552E9B6;
+
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 10000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(booking_id) FROM Mediclinic_Holloway_TestDB.dbo.Booking)
+set @B = (SELECT MAX(booking_id) FROM Mediclinic_Balwyn_TestDB.dbo.Booking)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT Booking ON
+
+INSERT INTO Booking ( 
+  booking_id
+ ,entity_id
+ ,date_start
+ ,date_end
+ ,organisation_id
+ ,provider
+ ,patient_id
+ ,offering_id
+ ,booking_type_id
+ ,booking_status_id
+ ,booking_unavailability_reason_id
+ ,added_by
+ ,date_created
+ ,booking_confirmed_by_type_id
+ ,confirmed_by
+ ,date_confirmed
+ ,deleted_by
+ ,date_deleted
+ ,is_patient_missed_appt
+ ,is_provider_missed_appt
+ ,is_emergency
+ ,need_to_generate_first_letter
+ ,need_to_generate_last_letter
+ ,has_generated_system_letters
+ ,arrival_time
+ ,is_recurring
+ ,recurring_weekday_id
+ ,recurring_start_time
+ ,recurring_end_time
+)
+ 
+SELECT 
+  booking_id + @NewID
+ ,entity_id
+ ,date_start
+ ,date_end
+ ,organisation_id
+ ,provider
+ ,patient_id
+ ,offering_id
+ ,booking_type_id
+ ,booking_status_id
+ ,booking_unavailability_reason_id
+ ,added_by
+ ,date_created
+ ,booking_confirmed_by_type_id
+ ,confirmed_by
+ ,date_confirmed
+ ,deleted_by
+ ,date_deleted
+ ,is_patient_missed_appt
+ ,is_provider_missed_appt
+ ,is_emergency
+ ,need_to_generate_first_letter
+ ,need_to_generate_last_letter
+ ,has_generated_system_letters
+ ,arrival_time
+ ,is_recurring
+ ,recurring_weekday_id
+ ,recurring_start_time
+ ,recurring_end_time
+FROM   Booking
+WHERE  booking_id < @NewID AND booking_id > 0
+
+SET IDENTITY_INSERT Booking OFF
+
+
+update BookingChangeHistory  set booking_id = booking_id + @NewID WHERE booking_id < @NewID;
+update BookingPatient        set booking_id = booking_id + @NewID WHERE booking_id < @NewID;
+update EmailHistory          set booking_id = booking_id + @NewID WHERE booking_id < @NewID;
+update Invoice               set booking_id = booking_id + @NewID WHERE booking_id < @NewID;
+update LetterPrintHistory    set booking_id = booking_id + @NewID WHERE booking_id < @NewID;
+update SMSHistory            set booking_id = booking_id + @NewID WHERE booking_id < @NewID;
+
+
+DELETE Booking WHERE booking_id < @NewID;
+
+ALTER TABLE Booking ADD UNIQUE (entity_id);
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Booking ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.Booking ( 
+  booking_id
+ ,entity_id
+ ,date_start
+ ,date_end
+ ,organisation_id
+ ,provider
+ ,patient_id
+ ,offering_id
+ ,booking_type_id
+ ,booking_status_id
+ ,booking_unavailability_reason_id
+ ,added_by
+ ,date_created
+ ,booking_confirmed_by_type_id
+ ,confirmed_by
+ ,date_confirmed
+ ,deleted_by
+ ,date_deleted
+ ,is_patient_missed_appt
+ ,is_provider_missed_appt
+ ,is_emergency
+ ,need_to_generate_first_letter
+ ,need_to_generate_last_letter
+ ,has_generated_system_letters
+ ,arrival_time
+ ,is_recurring
+ ,recurring_weekday_id
+ ,recurring_start_time
+ ,recurring_end_time
+)
+SELECT 
+  booking_id
+ ,entity_id
+ ,date_start
+ ,date_end
+ ,organisation_id
+ ,provider
+ ,patient_id
+ ,offering_id
+ ,booking_type_id
+ ,booking_status_id
+ ,booking_unavailability_reason_id
+ ,added_by
+ ,date_created
+ ,booking_confirmed_by_type_id
+ ,confirmed_by
+ ,date_confirmed
+ ,deleted_by
+ ,date_deleted
+ ,is_patient_missed_appt
+ ,is_provider_missed_appt
+ ,is_emergency
+ ,need_to_generate_first_letter
+ ,need_to_generate_last_letter
+ ,has_generated_system_letters
+ ,arrival_time
+ ,is_recurring
+ ,recurring_weekday_id
+ ,recurring_start_time
+ ,recurring_end_time
+FROM   Mediclinic_Holloway_TestDB.dbo.Booking
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Booking OFF
+
+----------------------------------------------------------
+
+-- BookingChangeHistory
+-----------------------
+
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 5000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(booking_change_history_id) FROM Mediclinic_Holloway_TestDB.dbo.BookingChangeHistory)
+set @B = (SELECT MAX(booking_change_history_id) FROM Mediclinic_Balwyn_TestDB.dbo.BookingChangeHistory)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT BookingChangeHistory ON
+
+INSERT INTO BookingChangeHistory ( 
+  booking_change_history_id
+ ,booking_id
+ ,moved_by
+ ,date_moved
+ ,booking_change_history_reason_id
+ ,previous_datetime
+)
+ 
+SELECT 
+  booking_change_history_id + @NewID
+ ,booking_id
+ ,moved_by
+ ,date_moved
+ ,booking_change_history_reason_id
+ ,previous_datetime
+FROM   BookingChangeHistory
+WHERE  booking_change_history_id < @NewID AND booking_change_history_id > 0
+
+SET IDENTITY_INSERT BookingChangeHistory OFF
+
+
+DELETE BookingChangeHistory WHERE booking_change_history_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.BookingChangeHistory ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.BookingChangeHistory ( 
+  booking_change_history_id
+ ,booking_id
+ ,moved_by
+ ,date_moved
+ ,booking_change_history_reason_id
+ ,previous_datetime
+)
+SELECT 
+  booking_change_history_id
+ ,booking_id
+ ,moved_by
+ ,date_moved
+ ,booking_change_history_reason_id
+ ,previous_datetime
+FROM   Mediclinic_Holloway_TestDB.dbo.BookingChangeHistory
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.BookingChangeHistory OFF
+
+----------------------------------------------------------
+
+-- BookingPatient
+-----------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 500
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(booking_patient_id) FROM Mediclinic_Holloway_TestDB.dbo.BookingPatient)
+set @B = (SELECT MAX(booking_patient_id) FROM Mediclinic_Balwyn_TestDB.dbo.BookingPatient)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT BookingPatient ON
+
+INSERT INTO BookingPatient ( 
+  booking_patient_id
+ ,booking_id
+ ,patient_id
+ ,added_by
+ ,added_date
+ ,is_deleted
+ ,deleted_by
+ ,deleted_date
+ ,need_to_generate_first_letter
+ ,need_to_generate_last_letter
+ ,has_generated_system_letters
+)
+ 
+SELECT 
+  booking_patient_id + @NewID
+ ,booking_id
+ ,patient_id
+ ,added_by
+ ,added_date
+ ,is_deleted
+ ,deleted_by
+ ,deleted_date
+ ,need_to_generate_first_letter
+ ,need_to_generate_last_letter
+ ,has_generated_system_letters
+FROM   BookingPatient
+WHERE  booking_patient_id < @NewID AND booking_patient_id > 0
+
+SET IDENTITY_INSERT BookingPatient OFF
+
+
+update BookingPatientOffering     set booking_patient_id = booking_patient_id + @NewID WHERE booking_patient_id < @NewID;
+
+
+DELETE BookingPatient WHERE booking_patient_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.BookingPatient ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.BookingPatient ( 
+  booking_patient_id
+ ,booking_id
+ ,patient_id
+ ,added_by
+ ,added_date
+ ,is_deleted
+ ,deleted_by
+ ,deleted_date
+ ,need_to_generate_first_letter
+ ,need_to_generate_last_letter
+ ,has_generated_system_letters
+)
+SELECT 
+  booking_patient_id
+ ,booking_id
+ ,patient_id
+ ,added_by
+ ,added_date
+ ,is_deleted
+ ,deleted_by
+ ,deleted_date
+ ,need_to_generate_first_letter
+ ,need_to_generate_last_letter
+ ,has_generated_system_letters
+FROM   Mediclinic_Holloway_TestDB.dbo.BookingPatient
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.BookingPatient OFF
+
+----------------------------------------------------------
+
+-- BookingPatientOffering
+----------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 500
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(booking_patient_offering_id) FROM Mediclinic_Holloway_TestDB.dbo.BookingPatientOffering)
+set @B = (SELECT MAX(booking_patient_offering_id) FROM Mediclinic_Balwyn_TestDB.dbo.BookingPatientOffering)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT BookingPatientOffering ON
+
+INSERT INTO BookingPatientOffering ( 
+  booking_patient_offering_id
+ ,booking_patient_id
+ ,offering_id
+ ,quantity
+ ,added_by
+ ,added_date
+ ,is_deleted
+ ,deleted_by
+ ,deleted_date
+ ,area_treated
+)
+ 
+SELECT 
+  booking_patient_offering_id + @NewID
+ ,booking_patient_id
+ ,offering_id
+ ,quantity
+ ,added_by
+ ,added_date
+ ,is_deleted
+ ,deleted_by
+ ,deleted_date
+ ,area_treated
+FROM   BookingPatientOffering
+WHERE  booking_patient_offering_id < @NewID AND booking_patient_offering_id > 0
+
+SET IDENTITY_INSERT BookingPatientOffering OFF
+
+
+DELETE BookingPatientOffering WHERE booking_patient_offering_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.BookingPatientOffering ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.BookingPatientOffering ( 
+  booking_patient_offering_id
+ ,booking_patient_id
+ ,offering_id
+ ,quantity
+ ,added_by
+ ,added_date
+ ,is_deleted
+ ,deleted_by
+ ,deleted_date
+ ,area_treated
+)
+SELECT 
+  booking_patient_offering_id
+ ,booking_patient_id
+ ,offering_id
+ ,quantity
+ ,added_by
+ ,added_date
+ ,is_deleted
+ ,deleted_by
+ ,deleted_date
+ ,area_treated
+FROM   Mediclinic_Holloway_TestDB.dbo.BookingPatientOffering
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.BookingPatientOffering OFF
+
+----------------------------------------------------------
+
+-- Note
+-------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 5000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(note_id) FROM Mediclinic_Holloway_TestDB.dbo.Note)
+set @B = (SELECT MAX(note_id) FROM Mediclinic_Balwyn_TestDB.dbo.Note)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT Note ON
+
+INSERT INTO Note ( 
+  note_id
+ ,entity_id
+ ,note_type_id
+ ,text
+ ,date_added
+ ,date_modified
+ ,added_by
+ ,modified_by
+ ,site_id
+)
+ 
+SELECT 
+  note_id + @NewID
+ ,entity_id
+ ,note_type_id
+ ,text
+ ,date_added
+ ,date_modified
+ ,added_by
+ ,modified_by
+ ,site_id
+FROM   Note
+WHERE  note_id < @NewID AND note_id > 0
+
+SET IDENTITY_INSERT Note OFF
+
+
+DELETE Note WHERE note_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Note ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.Note ( 
+  note_id
+ ,entity_id
+ ,note_type_id
+ ,text
+ ,date_added
+ ,date_modified
+ ,added_by
+ ,modified_by
+ ,site_id
+)
+SELECT 
+  note_id
+ ,entity_id
+ ,note_type_id
+ ,text
+ ,date_added
+ ,date_modified
+ ,added_by
+ ,modified_by
+ ,site_id
+FROM   Mediclinic_Holloway_TestDB.dbo.Note
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Note OFF
+
+----------------------------------------------------------
+
+-- Invoice
+----------
+
+-- DELETE ALL AGED CARE INVOICES FROM HOLLOWAY!
+--DELETE x FROM Mediclinic_Holloway_TestDB.dbo.Invoiceline x INNER JOIN Invoice i ON i.invoice_id = x.invoice_id   Where i.site_id = 1;
+--DELETE x FROM Mediclinic_Holloway_TestDB.dbo.Receipt     x INNER JOIN Invoice i ON i.invoice_id = x.invoice_id   Where i.site_id = 1;
+--DELETE x FROM Mediclinic_Holloway_TestDB.dbo.CreditNote  x INNER JOIN Invoice i ON i.invoice_id = x.invoice_id   Where i.site_id = 1;
+--DELETE x FROM Mediclinic_Holloway_TestDB.dbo.Refund      x INNER JOIN Invoice i ON i.invoice_id = x.invoice_id   Where i.site_id = 1;
+--DELETE x FROM Mediclinic_Holloway_TestDB.dbo.Invoice                                                             Where   site_id = 1;
+
+
+
+ALTER TABLE Invoice DROP CONSTRAINT UQ__Invoice__AF9F95A6178D7CA5;
+
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 10000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(invoice_id) FROM Mediclinic_Holloway_TestDB.dbo.Invoice)
+set @B = (SELECT MAX(invoice_id) FROM Mediclinic_Balwyn_TestDB.dbo.Invoice)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT Invoice ON
+
+INSERT INTO Invoice ( 
+  invoice_id
+ ,entity_id
+ ,invoice_type_id
+ ,booking_id
+ ,payer_organisation_id
+ ,payer_patient_id
+ ,non_booking_invoice_organisation_id
+ ,healthcare_claim_number
+ ,reject_letter_id
+ ,message
+ ,staff_id
+ ,site_id
+ ,invoice_date_added
+ ,total
+ ,gst
+ ,is_paid
+ ,is_refund
+ ,is_batched
+ ,reversed_by
+ ,reversed_date
+)
+ 
+SELECT 
+  invoice_id + @NewID
+ ,entity_id
+ ,invoice_type_id
+ ,booking_id
+ ,payer_organisation_id
+ ,payer_patient_id
+ ,non_booking_invoice_organisation_id
+ ,healthcare_claim_number
+ ,reject_letter_id
+ ,message
+ ,staff_id
+ ,site_id
+ ,invoice_date_added
+ ,total
+ ,gst
+ ,is_paid
+ ,is_refund
+ ,is_batched
+ ,reversed_by
+ ,reversed_date
+FROM   Invoice
+WHERE  invoice_id < @NewID AND invoice_id > 0
+
+SET IDENTITY_INSERT Invoice OFF
+
+
+update CreditNote  set invoice_id = invoice_id + @NewID WHERE invoice_id < @NewID;
+update InvoiceLine set invoice_id = invoice_id + @NewID WHERE invoice_id < @NewID;
+update Receipt     set invoice_id = invoice_id + @NewID WHERE invoice_id < @NewID;
+update Refund      set invoice_id = invoice_id + @NewID WHERE invoice_id < @NewID;
+
+
+DELETE Invoice WHERE invoice_id < @NewID;
+
+ALTER TABLE Invoice ADD UNIQUE (entity_id);
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Invoice ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.Invoice ( 
+  invoice_id
+ ,entity_id
+ ,invoice_type_id
+ ,booking_id
+ ,payer_organisation_id
+ ,payer_patient_id
+ ,non_booking_invoice_organisation_id
+ ,healthcare_claim_number
+ ,reject_letter_id
+ ,message
+ ,staff_id
+ ,site_id
+ ,invoice_date_added
+ ,total
+ ,gst
+ ,is_paid
+ ,is_refund
+ ,is_batched
+ ,reversed_by
+ ,reversed_date
+)
+SELECT 
+  invoice_id
+ ,entity_id
+ ,invoice_type_id
+ ,booking_id
+ ,payer_organisation_id
+ ,payer_patient_id
+ ,non_booking_invoice_organisation_id
+ ,healthcare_claim_number
+ ,reject_letter_id
+ ,message
+ ,staff_id
+ ,site_id
+ ,invoice_date_added
+ ,total
+ ,gst
+ ,is_paid
+ ,is_refund
+ ,is_batched
+ ,reversed_by
+ ,reversed_date
+FROM   Mediclinic_Holloway_TestDB.dbo.Invoice
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Invoice OFF
+
+----------------------------------------------------------
+
+-- InvoiceLine
+--------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 10000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(invoice_line_id) FROM Mediclinic_Holloway_TestDB.dbo.InvoiceLine)
+set @B = (SELECT MAX(invoice_line_id) FROM Mediclinic_Balwyn_TestDB.dbo.InvoiceLine)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT InvoiceLine ON
+
+INSERT INTO InvoiceLine ( 
+  invoice_line_id
+ ,invoice_id
+ ,patient_id
+ ,offering_id
+ ,quantity
+ ,price
+ ,tax
+ ,area_treated
+)
+ 
+SELECT 
+  invoice_line_id + @NewID
+ ,invoice_id
+ ,patient_id
+ ,offering_id
+ ,quantity
+ ,price
+ ,tax
+ ,area_treated
+
+FROM   InvoiceLine
+WHERE  invoice_line_id < @NewID AND invoice_line_id > 0
+
+SET IDENTITY_INSERT InvoiceLine OFF
+
+
+DELETE InvoiceLine WHERE invoice_line_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.InvoiceLine ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.InvoiceLine ( 
+  invoice_line_id
+ ,invoice_id
+ ,patient_id
+ ,offering_id
+ ,quantity
+ ,price
+ ,tax
+ ,area_treated
+)
+SELECT 
+  invoice_line_id
+ ,invoice_id
+ ,patient_id
+ ,offering_id
+ ,quantity
+ ,price
+ ,tax
+ ,area_treated
+FROM   Mediclinic_Holloway_TestDB.dbo.InvoiceLine
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.InvoiceLine OFF
+
+----------------------------------------------------------
+
+-- POSMachine
+--------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 1000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(pos_machine_id) FROM Mediclinic_Holloway_TestDB.dbo.POSMachine)
+set @B = (SELECT MAX(pos_machine_id) FROM Mediclinic_Balwyn_TestDB.dbo.POSMachine)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT POSMachine ON
+
+INSERT INTO POSMachine ( 
+  pos_machine_id
+ ,entity_id
+ ,pos_id
+ ,date_added
+)
+ 
+SELECT 
+  pos_machine_id + @NewID
+ ,entity_id
+ ,pos_id
+ ,date_added
+
+FROM   POSMachine
+WHERE  pos_machine_id < @NewID AND pos_machine_id > 0
+
+SET IDENTITY_INSERT POSMachine OFF
+
+
+update Receipt  set pos_machine_id = pos_machine_id + @NewID WHERE pos_machine_id < @NewID;
+	
+
+DELETE POSMachine WHERE pos_machine_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.POSMachine ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.POSMachine ( 
+  pos_machine_id
+ ,entity_id
+ ,pos_id
+ ,date_added
+)
+SELECT 
+  pos_machine_id
+ ,entity_id
+ ,pos_id
+ ,date_added
+FROM   Mediclinic_Holloway_TestDB.dbo.POSMachine
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.POSMachine OFF
+
+----------------------------------------------------------
+
+-- Receipt
+----------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 10000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(receipt_id) FROM Mediclinic_Holloway_TestDB.dbo.Receipt)
+set @B = (SELECT MAX(receipt_id) FROM Mediclinic_Balwyn_TestDB.dbo.Receipt)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT Receipt ON
+
+INSERT INTO Receipt ( 
+  receipt_id
+ ,receipt_payment_type_id
+ ,invoice_id
+ ,pos_machine_id
+ ,total
+ ,amount_reconciled
+ ,is_failed_to_clear
+ ,is_overpaid
+ ,receipt_date_added
+ ,reconciliation_date
+ ,staff_id
+ ,reversed_by
+ ,reversed_date
+ ,pre_reversed_amount
+)
+ 
+SELECT 
+  receipt_id + @NewID
+ ,receipt_payment_type_id
+ ,invoice_id
+ ,pos_machine_id
+ ,total
+ ,amount_reconciled
+ ,is_failed_to_clear
+ ,is_overpaid
+ ,receipt_date_added
+ ,reconciliation_date
+ ,staff_id
+ ,reversed_by
+ ,reversed_date
+ ,pre_reversed_amount
+
+FROM   Receipt
+WHERE  receipt_id < @NewID AND receipt_id > 0
+
+SET IDENTITY_INSERT Receipt OFF
+
+
+update Overpayment  set receipt_id = receipt_id + @NewID WHERE receipt_id < @NewID;
+		
+
+DELETE Receipt WHERE receipt_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Receipt ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.Receipt ( 
+  receipt_id
+ ,receipt_payment_type_id
+ ,invoice_id
+ ,pos_machine_id
+ ,total
+ ,amount_reconciled
+ ,is_failed_to_clear
+ ,is_overpaid
+ ,receipt_date_added
+ ,reconciliation_date
+ ,staff_id
+ ,reversed_by
+ ,reversed_date
+ ,pre_reversed_amount
+)
+SELECT 
+  receipt_id
+ ,receipt_payment_type_id
+ ,invoice_id
+ ,pos_machine_id
+ ,total
+ ,amount_reconciled
+ ,is_failed_to_clear
+ ,is_overpaid
+ ,receipt_date_added
+ ,reconciliation_date
+ ,staff_id
+ ,reversed_by
+ ,reversed_date
+ ,pre_reversed_amount
+FROM   Mediclinic_Holloway_TestDB.dbo.Receipt
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Receipt OFF
+
+----------------------------------------------------------
+
+-- Overpayment
+--------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 10000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(overpayment_id) FROM Mediclinic_Holloway_TestDB.dbo.Overpayment)
+set @B = (SELECT MAX(overpayment_id) FROM Mediclinic_Balwyn_TestDB.dbo.Overpayment)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT Overpayment ON
+
+INSERT INTO Overpayment ( 
+  overpayment_id
+ ,receipt_id
+ ,total
+ ,overpayment_date_added
+ ,staff_id
+)
+ 
+SELECT 
+  overpayment_id + @NewID
+ ,receipt_id
+ ,total
+ ,overpayment_date_added
+ ,staff_id
+
+FROM   Overpayment
+WHERE  overpayment_id < @NewID AND overpayment_id > 0
+
+SET IDENTITY_INSERT Overpayment OFF
+
+
+DELETE Overpayment WHERE overpayment_id < @NewID;
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Overpayment ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.Overpayment ( 
+  overpayment_id
+ ,receipt_id
+ ,total
+ ,overpayment_date_added
+ ,staff_id
+)
+SELECT 
+  overpayment_id
+ ,receipt_id
+ ,total
+ ,overpayment_date_added
+ ,staff_id
+FROM   Mediclinic_Holloway_TestDB.dbo.Overpayment
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Overpayment OFF
+
+----------------------------------------------------------
+
+-- CreditNote
+-------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 10000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(creditnote_id) FROM Mediclinic_Holloway_TestDB.dbo.CreditNote)
+set @B = (SELECT MAX(creditnote_id) FROM Mediclinic_Balwyn_TestDB.dbo.CreditNote)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT CreditNote ON
+
+INSERT INTO CreditNote ( 
+  creditnote_id
+ ,invoice_id
+ ,total
+ ,reason
+ ,credit_note_date_added
+ ,staff_id
+ ,reversed_by
+ ,reversed_date
+ ,pre_reversed_amount
+)
+ 
+SELECT 
+  creditnote_id + @NewID
+ ,invoice_id
+ ,total
+ ,reason
+ ,credit_note_date_added
+ ,staff_id
+ ,reversed_by
+ ,reversed_date
+ ,pre_reversed_amount
+
+FROM   CreditNote
+WHERE  creditnote_id < @NewID AND creditnote_id > 0
+
+SET IDENTITY_INSERT CreditNote OFF
+
+
+DELETE CreditNote WHERE creditnote_id < @NewID;
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.CreditNote ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.CreditNote ( 
+  creditnote_id
+ ,invoice_id
+ ,total
+ ,reason
+ ,credit_note_date_added
+ ,staff_id
+ ,reversed_by
+ ,reversed_date
+ ,pre_reversed_amount
+)
+SELECT 
+  creditnote_id
+ ,invoice_id
+ ,total
+ ,reason
+ ,credit_note_date_added
+ ,staff_id
+ ,reversed_by
+ ,reversed_date
+ ,pre_reversed_amount
+FROM   Mediclinic_Holloway_TestDB.dbo.CreditNote
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.CreditNote OFF
+
+----------------------------------------------------------
+
+-- Refund
+---------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 1000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(refund_id) FROM Mediclinic_Holloway_TestDB.dbo.Refund)
+set @B = (SELECT MAX(refund_id) FROM Mediclinic_Balwyn_TestDB.dbo.Refund)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT Refund ON
+
+INSERT INTO Refund ( 
+  refund_id
+ ,invoice_id
+ ,total
+ ,refund_reason_id
+ ,comment
+ ,refund_date_added
+ ,staff_id
+)
+ 
+SELECT 
+  refund_id + @NewID
+ ,invoice_id
+ ,total
+ ,refund_reason_id
+ ,comment
+ ,refund_date_added
+ ,staff_id
+
+FROM   Refund
+WHERE  refund_id < @NewID AND refund_id > 0
+
+SET IDENTITY_INSERT Refund OFF
+
+
+DELETE Refund WHERE refund_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Refund ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.Refund ( 
+  refund_id
+ ,invoice_id
+ ,total
+ ,refund_reason_id
+ ,comment
+ ,refund_date_added
+ ,staff_id
+)
+SELECT 
+  refund_id
+ ,invoice_id
+ ,total
+ ,refund_reason_id
+ ,comment
+ ,refund_date_added
+ ,staff_id
+FROM   Mediclinic_Holloway_TestDB.dbo.Refund
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Refund OFF
+
+----------------------------------------------------------
+
+-- Letter
+----------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 50
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(letter_id) FROM Mediclinic_Holloway_TestDB.dbo.Letter)
+set @B = (SELECT MAX(letter_id) FROM Mediclinic_Balwyn_TestDB.dbo.Letter)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT Letter ON
+
+INSERT INTO Letter ( 
+  letter_id
+ ,organisation_id
+ ,letter_type_id
+ ,site_id
+ ,code
+ ,reject_message
+ ,docname
+ ,is_send_to_medico
+ ,is_allowed_reclaim
+ ,is_manual_override
+ ,num_copies_to_print
+)
+ 
+SELECT 
+  letter_id + @NewID
+ ,organisation_id
+ ,letter_type_id
+ ,site_id
+ ,code
+ ,reject_message
+ ,docname
+ ,is_send_to_medico
+ ,is_allowed_reclaim
+ ,is_manual_override
+ ,num_copies_to_print
+FROM   Letter
+WHERE  letter_id < @NewID AND letter_id > 0
+
+SET IDENTITY_INSERT Letter OFF
+
+
+update Invoice                 set reject_letter_id                  = reject_letter_id                  + @NewID WHERE reject_letter_id                  < @NewID;
+update LetterPrintHistory      set letter_id                         = letter_id                         + @NewID WHERE letter_id                         < @NewID;
+update LetterTreatmentTemplate set first_letter_id                   = first_letter_id                   + @NewID WHERE first_letter_id                   < @NewID;
+update LetterTreatmentTemplate set last_letter_id                    = last_letter_id                    + @NewID WHERE last_letter_id                    < @NewID;
+update LetterTreatmentTemplate set last_letter_when_replacing_epc_id = last_letter_when_replacing_epc_id + @NewID WHERE last_letter_when_replacing_epc_id < @NewID;
+update LetterTreatmentTemplate set treatment_notes_letter_id         = treatment_notes_letter_id         + @NewID WHERE treatment_notes_letter_id         < @NewID;
+update Offering                set reminder_letter_id                = reminder_letter_id                + @NewID WHERE reminder_letter_id                < @NewID;
+		
+
+DELETE Letter WHERE letter_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Letter ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.Letter ( 
+  letter_id
+ ,organisation_id
+ ,letter_type_id
+ ,site_id
+ ,code
+ ,reject_message
+ ,docname
+ ,is_send_to_medico
+ ,is_allowed_reclaim
+ ,is_manual_override
+ ,num_copies_to_print
+)
+SELECT 
+  letter_id
+ ,organisation_id
+ ,letter_type_id
+ ,site_id
+ ,code
+ ,reject_message
+ ,docname
+ ,is_send_to_medico
+ ,is_allowed_reclaim
+ ,is_manual_override
+ ,num_copies_to_print
+FROM   Mediclinic_Holloway_TestDB.dbo.Letter
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.Letter OFF
+
+----------------------------------------------------------
+
+-- LetterPrintHistory
+---------------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 1000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(letter_print_history_id) FROM Mediclinic_Holloway_TestDB.dbo.LetterPrintHistory)
+set @B = (SELECT MAX(letter_print_history_id) FROM Mediclinic_Balwyn_TestDB.dbo.LetterPrintHistory)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT LetterPrintHistory ON
+
+INSERT INTO LetterPrintHistory ( 
+  letter_print_history_id
+ ,letter_id
+ ,letter_print_history_send_method_id
+ ,booking_id
+ ,patient_id
+ ,organisation_id
+ ,register_referrer_id
+ ,staff_id
+ ,health_card_action_id
+ ,doc_name
+ ,doc_contents
+ ,from_best
+ ,date
+)
+ 
+SELECT 
+  letter_print_history_id + @NewID
+ ,letter_id
+ ,letter_print_history_send_method_id
+ ,booking_id
+ ,patient_id
+ ,organisation_id
+ ,register_referrer_id
+ ,staff_id
+ ,health_card_action_id
+ ,doc_name
+ ,doc_contents
+ ,from_best
+ ,date
+
+FROM   LetterPrintHistory
+WHERE  letter_print_history_id < @NewID AND letter_print_history_id > 0
+
+SET IDENTITY_INSERT LetterPrintHistory OFF
+
+
+DELETE LetterPrintHistory WHERE letter_print_history_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.LetterPrintHistory ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.LetterPrintHistory ( 
+  letter_print_history_id
+ ,letter_id
+ ,letter_print_history_send_method_id
+ ,booking_id
+ ,patient_id
+ ,organisation_id
+ ,register_referrer_id
+ ,staff_id
+ ,health_card_action_id
+ ,doc_name
+ ,doc_contents
+ ,from_best
+ ,date
+)
+SELECT 
+  letter_print_history_id
+ ,letter_id
+ ,letter_print_history_send_method_id
+ ,booking_id
+ ,patient_id
+ ,organisation_id
+ ,register_referrer_id
+ ,staff_id
+ ,health_card_action_id
+ ,doc_name
+ ,doc_contents
+ ,from_best
+ ,date
+FROM   Mediclinic_Holloway_TestDB.dbo.LetterPrintHistory
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.LetterPrintHistory OFF
+
+
+
+*********************  NEED TO ALSO UDPATE ALL FUCKING LETTERS IN THE SYSTEM ... THEN COPY THEM ACCROSS SOMEHOW!
+                       WRITE A PROGRAM .. TO TRAVERSE ALL DIRECTORIES ... AND
+					   - CHANGE NUMBER TO BE NBR + X  (INPUT INTO GUI BEOFRE RUNNING IT)
+					   THEN GO THROUGH AND CHANGE DRECTORY IDS 
+					   THEN COPY THE WHOLE FUCKING THING TO BALWYN
+
+
+----------------------------------------------------------
+
+-- LetterBest
+-------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 100
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(letter_id) FROM Mediclinic_Holloway_TestDB.dbo.LetterBest)
+set @B = (SELECT MAX(letter_id) FROM Mediclinic_Balwyn_TestDB.dbo.LetterBest)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT LetterBest ON
+
+INSERT INTO LetterBest ( 
+  letter_id
+ ,letter_type_id
+ ,code
+ ,docname
+ ,is_send_to_medico
+ ,is_allowed_reclaim
+ ,is_manual_override
+ ,num_copies_to_print
+)
+ 
+SELECT 
+  letter_id + @NewID
+ ,letter_type_id
+ ,code
+ ,docname
+ ,is_send_to_medico
+ ,is_allowed_reclaim
+ ,is_manual_override
+ ,num_copies_to_print
+
+
+FROM   LetterBest
+WHERE  letter_id < @NewID AND letter_id > 0
+
+SET IDENTITY_INSERT LetterBest OFF
+
+
+update LetterBestPrintHistory  set letter_id = letter_id + @NewID WHERE letter_id < @NewID;
+
+DELETE LetterBest WHERE letter_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.LetterBest ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.LetterBest ( 
+  letter_id
+ ,letter_type_id
+ ,code
+ ,docname
+ ,is_send_to_medico
+ ,is_allowed_reclaim
+ ,is_manual_override
+ ,num_copies_to_print
+)
+SELECT 
+  letter_id
+ ,letter_type_id
+ ,code
+ ,docname
+ ,is_send_to_medico
+ ,is_allowed_reclaim
+ ,is_manual_override
+ ,num_copies_to_print
+FROM   Mediclinic_Holloway_TestDB.dbo.LetterBest
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.LetterBest OFF
+
+----------------------------------------------------------
+
+-- LetterBestPrintHistory
+-------------------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 1000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(letter_print_history_id) FROM Mediclinic_Holloway_TestDB.dbo.LetterBestPrintHistory)
+set @B = (SELECT MAX(letter_print_history_id) FROM Mediclinic_Balwyn_TestDB.dbo.LetterBestPrintHistory)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT LetterBestPrintHistory ON
+
+INSERT INTO LetterBestPrintHistory ( 
+  letter_print_history_id
+ ,letter_id
+ ,patient_id
+ ,date  
+)
+ 
+SELECT 
+  letter_print_history_id + @NewID
+ ,letter_id
+ ,patient_id
+ ,date  
+
+
+FROM   LetterBestPrintHistory
+WHERE  letter_print_history_id < @NewID AND letter_print_history_id > 0
+
+SET IDENTITY_INSERT LetterBestPrintHistory OFF
+
+
+DELETE LetterBestPrintHistory WHERE letter_print_history_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.LetterBestPrintHistory ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.LetterBestPrintHistory ( 
+  letter_print_history_id
+ ,letter_id
+ ,patient_id
+ ,date 
+)
+SELECT 
+  letter_print_history_id
+ ,letter_id
+ ,patient_id
+ ,date 
+FROM   Mediclinic_Holloway_TestDB.dbo.LetterBestPrintHistory
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.LetterBestPrintHistory OFF
+
+----------------------------------------------------------
+
+-- SMSHistory
+-------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 1000
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(sms_history_id) FROM Mediclinic_Holloway_TestDB.dbo.SMSHistory)
+set @B = (SELECT MAX(sms_history_id) FROM Mediclinic_Balwyn_TestDB.dbo.SMSHistory)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT SMSHistory ON
+
+INSERT INTO SMSHistory ( 
+  sms_history_id
+ ,sms_and_email_type_id
+ ,patient_id
+ ,booking_id
+ ,phone_number
+ ,message
+ ,cost
+ ,datetime_sent
+ ,smstech_message_id
+ ,smstech_status
+ ,smstech_datetime
+)
+ 
+SELECT 
+  sms_history_id + @NewID
+ ,sms_and_email_type_id
+ ,patient_id
+ ,booking_id
+ ,phone_number
+ ,message
+ ,cost
+ ,datetime_sent
+ ,smstech_message_id
+ ,smstech_status
+ ,smstech_datetime
+
+
+FROM   SMSHistory
+WHERE  sms_history_id < @NewID AND sms_history_id > 0
+
+SET IDENTITY_INSERT SMSHistory OFF
+
+
+DELETE SMSHistory WHERE sms_history_id < @NewID;
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.SMSHistory ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.SMSHistory ( 
+  sms_history_id
+ ,sms_and_email_type_id
+ ,patient_id
+ ,booking_id
+ ,phone_number
+ ,message
+ ,cost
+ ,datetime_sent
+ ,smstech_message_id
+ ,smstech_status
+ ,smstech_datetime
+)
+SELECT 
+  sms_history_id
+ ,sms_and_email_type_id
+ ,patient_id
+ ,booking_id
+ ,phone_number
+ ,message
+ ,cost
+ ,datetime_sent
+ ,smstech_message_id
+ ,smstech_status
+ ,smstech_datetime
+FROM   Mediclinic_Holloway_TestDB.dbo.SMSHistory
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.SMSHistory OFF
+
+----------------------------------------------------------
+
+-- EmailHistory
+---------------
+
+DECLARE @RoundingAmount int
+set @RoundingAmount = 500
+
+DECLARE @H int
+DECLARE @B int
+DECLARE @Max int
+set @H = (SELECT MAX(email_history_id) FROM Mediclinic_Holloway_TestDB.dbo.EmailHistory)
+set @B = (SELECT MAX(email_history_id) FROM Mediclinic_Balwyn_TestDB.dbo.EmailHistory)
+set @Max = (SELECT CASE WHEN @H > @B THEN @H ELSE @B END)
+
+DECLARE @NewID int
+set @NewID = (Select floor((@Max + @RoundingAmount) / @RoundingAmount) * @RoundingAmount)
+
+
+SET IDENTITY_INSERT EmailHistory ON
+
+INSERT INTO EmailHistory ( 
+  email_history_id
+ ,sms_and_email_type_id
+ ,patient_id
+ ,booking_id
+ ,email
+ ,message
+ ,datetime_sent
+)
+ 
+SELECT 
+  email_history_id + @NewID
+ ,sms_and_email_type_id
+ ,patient_id
+ ,booking_id
+ ,email
+ ,message
+ ,datetime_sent
+
+
+FROM   EmailHistory
+WHERE  email_history_id < @NewID AND email_history_id > 0
+
+SET IDENTITY_INSERT EmailHistory OFF
+
+
+DELETE EmailHistory WHERE email_history_id < @NewID;
+
+
+
+------
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.EmailHistory ON
+
+INSERT INTO Mediclinic_Balwyn_TestDB.dbo.EmailHistory ( 
+  email_history_id
+ ,sms_and_email_type_id
+ ,patient_id
+ ,booking_id
+ ,email
+ ,message
+ ,datetime_sent
+)
+SELECT 
+  email_history_id
+ ,sms_and_email_type_id
+ ,patient_id
+ ,booking_id
+ ,email
+ ,message
+ ,datetime_sent
+FROM   Mediclinic_Holloway_TestDB.dbo.EmailHistory
+
+SET IDENTITY_INSERT Mediclinic_Balwyn_TestDB.dbo.EmailHistory OFF
+
+----------------------------------------------------------

@@ -1,0 +1,789 @@
+﻿
+
+****** change FROM db 0027 !!!!!!!!!!
+
+-------------------------------------------------------------------------------------------
+-- 1. Fixing Up Title
+
+/*
+SET IDENTITY_INSERT Mediclinic_0027.dbo.Title ON
+INSERT INTO Mediclinic_0027.dbo.Title (title_id,descr,display_order) VALUES (268,'Sister',0)
+SET IDENTITY_INSERT Mediclinic_0027.dbo.Title OFF
+
+--ALTER TABLE FrontDesk.dbo.CLIENT ALTER COLUMN Title datatype.... VARCHAR(10)
+update FrontDesk.dbo.CLIENT set Title = 'Master' where Title = 'Mast';
+update FrontDesk.dbo.CLIENT set Title = 'Master' where Title = 'Mas';
+update FrontDesk.dbo.CLIENT set Title = 'Master' where Title = 'Maste';
+update FrontDesk.dbo.CLIENT set Title = 'Master' where Title = 'Mstr';
+update FrontDesk.dbo.CLIENT set Title = 'Ms' where Title = ' Ms';
+update FrontDesk.dbo.CLIENT set Title = 'Mrs' where Title = ' Mrs';
+update FrontDesk.dbo.CLIENT set Title = 'Sister' where Title = 'Siste';
+update FrontDesk.dbo.CLIENT set Title = 'Sister' where Title = 'Sis';
+update FrontDesk.dbo.CLIENT set Title = 'Miss' where Title = 'Mis';
+update FrontDesk.dbo.CLIENT set Title = 'None' where Title = '';
+update FrontDesk.dbo.CLIENT set Title = 'None' where Title IS NULL;
+*/
+
+select 
+
+(
+ SELECT title_id FROM Mediclinic_0027.dbo.Title 
+ WHERE descr COLLATE DATABASE_DEFAULT = client.Title COLLATE DATABASE_DEFAULT
+) title_id,* 
+FROM FrontDesk.dbo.CLIENT client
+
+where (
+ SELECT title_id FROM Mediclinic_0027.dbo.Title 
+ WHERE descr COLLATE DATABASE_DEFAULT = client.Title COLLATE DATABASE_DEFAULT
+) is null
+
+order by clientid
+
+-------------------------------------------------------------------------------------------
+
+	DECLARE @patient_id int
+	DECLARE @title_id int
+	DECLARE @firstname varchar(200)
+	DECLARE @middlename varchar(200)
+	DECLARE @surname varchar(200)
+	DECLARE @nickname varchar(200)
+	DECLARE @Gender int
+	DECLARE @gender_updated varchar(3)
+	DECLARE @dob datetime
+	DECLARE @note varchar (500)
+	DECLARE @flashing_Text varchar(500)
+	DECLARE @date_added datetime
+	DECLARE @Active varchar(2)
+	DECLARE @is_deleted bit
+	
+	DECLARE @addr1 varchar(200)
+	DECLARE @addr2 varchar(200)
+	DECLARE @addr3 varchar(200)
+	DECLARE @addr3_State varchar(200)
+	DECLARE @addr3_PCode varchar(200)
+	DECLARE @suburb_id int
+	DECLARE @addr_line2 varchar(200)
+	
+	DECLARE @WorkPhone varchar(200)
+	DECLARE @HomePhone varchar(200)
+	DECLARE @Mobile    varchar(200)
+	DECLARE @Fax       varchar(200)
+	DECLARE @Email     varchar(200)
+
+	DECLARE @MedicareNum varchar(20)
+	DECLARE @MedicareAdd varchar(20)
+	DECLARE @MedicareExp datetime
+	DECLARE @VetNum varchar(20)
+	DECLARE @MedicareCardActive bit
+	
+	DECLARE @HealthFundID int
+	DECLARE @MemberNum varchar(100)
+	DECLARE @HealthfundName varchar(200)
+	DECLARE @healthfund varchar(200)
+
+	DECLARE @RefGPID int
+
+	Declare @entity_id int
+	Declare @person_id int
+
+	DECLARE DatabaseCursor CURSOR FOR 
+	SELECT 
+		ClientID, 
+		(SELECT title_id FROM Mediclinic_0027.dbo.Title WHERE descr COLLATE DATABASE_DEFAULT = client.Title COLLATE DATABASE_DEFAULT ) title_id, 
+		Name, 
+		MiddleName,
+		Surname,
+		PreferredName,
+		Gender,
+		DateOfBirth,
+		Notes,
+		Warning,
+		DateCreated,
+		Active,
+		Address1,
+		Address2,
+		Address3,
+		WorkPhone,
+		HomePhone,
+		Mobile,
+		Fax,
+		Email,
+		MedicareNum,
+		MedicareAdd,
+		MedicareExp,
+		VetNum,
+		FrontDesk.dbo.CLIENT.HealthFundID,
+		MemberNum,
+		FrontDesk.dbo.HealthF.Description,
+		RefGPID
+		
+	FROM FrontDesk.dbo.CLIENT
+	LEFT OUTER JOIN FrontDesk.dbo.HealthF ON FrontDesk.dbo.CLIENT.HealthFundID = FrontDesk.dbo.HealthF.HealthFundID
+	ORDER BY ClientID
+
+
+	OPEN DatabaseCursor  
+	FETCH NEXT FROM DatabaseCursor INTO @patient_id, @title_id, @firstname, @middlename, @surname, @nickname, @Gender, @dob, @note, @flashing_Text, @date_added, @Active, @addr1, @addr2, @addr3, @WorkPhone, @HomePhone, @Mobile, @Fax, @Email, @MedicareNum, @MedicareAdd, @MedicareExp, @VetNum, @HealthFundID, @MemberNum, @HealthfundName, @RefGPID
+
+
+	WHILE @@FETCH_STATUS = 0 
+	BEGIN 
+
+		--if (@patient_id > 11100)
+		--	return
+
+		IF @title_id IS NULL BEGIN SET @title_id = 0 END
+		SET @gender_updated = ''
+		IF @Gender     = 1     BEGIN SET @gender_updated = 'M' END
+		IF @Gender     = 2     BEGIN SET @gender_updated = 'F' END
+		IF @firstname  IS NULL BEGIN SET @firstname      = ''  END
+		IF @surname    IS NULL BEGIN SET @surname        = ''  END
+		IF @middlename IS NULL BEGIN SET @middlename     = ''  END
+		IF @nickname   IS NULL BEGIN SET @nickname       = ''  END
+		SET @is_deleted = 0
+		IF  @Active = 'F'      BEGIN SET @is_deleted     = 1   END
+		IF @date_added IS NULL BEGIN SET @date_added     = GETDATE() END
+		IF @addr1      IS NULL BEGIN SET @addr1          = ''  END
+		IF @addr2      IS NULL BEGIN SET @addr2          = ''  END
+		IF @addr3      IS NULL BEGIN SET @addr3          = ''  END
+
+
+		SET @healthfund = ''
+		IF (@HealthfundName IS NOT NULL AND @MemberNum IS NOT NULL AND LEN(@MemberNum) > 0)
+		BEGIN
+			SET @healthfund = @HealthfundName + ' [ID: ' + @MemberNum + ']'
+		END
+		IF (@HealthfundName IS NOT NULL AND (@MemberNum IS NULL OR LEN(@MemberNum) = 0))
+		BEGIN
+			SET @healthfund = @HealthfundName
+		END
+
+
+	    -- add entity
+        INSERT INTO Mediclinic_0027.dbo.Entity DEFAULT VALUES;
+        SET @entity_id = SCOPE_IDENTITY()
+
+
+		-- add person
+        INSERT INTO Mediclinic_0027.dbo.Person (added_by,entity_id, title_id, firstname, middlename, surname, nickname, gender, dob, person_date_added, person_date_modified) 
+        VALUES
+        (
+         NULL
+        ,@entity_id
+        ,@title_id
+        ,@firstname
+        ,@middlename
+        ,@surname
+        ,@nickname
+        ,@gender_updated
+        ,@dob
+        ,@date_added
+        ,NULL
+        )
+        SET @person_id = SCOPE_IDENTITY()
+
+
+		-- add patient
+		IF (@flashing_Text IS NULL) BEGIN SET @flashing_Text = '' END
+		
+		SET IDENTITY_INSERT Mediclinic_0027.dbo.Patient ON
+
+		INSERT INTO Mediclinic_0027.dbo.Patient (patient_id,person_id, patient_date_added, is_clinic_patient, is_deleted, is_deceased, flashing_text, flashing_text_added_by, flashing_text_last_modified_date, private_health_fund, concession_card_number,concession_card_expiry_date,is_diabetic,is_member_diabetes_australia,diabetic_assessment_review_date,
+							 ac_inv_offering_id, ac_pat_offering_id, login, pwd, is_gp_patient) 
+		VALUES
+		(
+		 @patient_id
+		,@person_id
+		,@date_added
+		,1
+		,@is_deleted
+		,0
+		,@flashing_Text
+		,NULL
+		,NULL
+		,@healthfund
+		,''
+		,null
+		,0
+		,0
+		,NULL
+
+		,NULL
+		,NULL
+		,''
+		,''
+		,0
+		)
+	 
+		SET IDENTITY_INSERT Mediclinic_0027.dbo.Patient OFF
+		
+		
+		-- add address/phone nbr/etc
+		SET @addr1 = LTRIM(RTRIM(@addr1))
+		SET @addr2 = LTRIM(RTRIM(@addr2))
+		SET @addr3 = LTRIM(RTRIM(@addr3))
+		SET @addr2 = REPLACE(REPLACE(REPLACE(@addr2,' ','<>'),'><',''),'<>',' ')  -- remove duplicate spaces
+		SET @addr3 = REPLACE(REPLACE(REPLACE(@addr3,' ','<>'),'><',''),'<>',' ')  -- remove duplicate spaces
+		SET @suburb_id = NULL
+
+
+		IF @addr2 LIKE '%MT DRUITT%'
+		BEGIN
+			SET @addr2 = REPLACE(@addr2, 'MT DRUITT', 'MOUNT DRUITT')
+		END
+		IF @addr3 LIKE '%MT DRUITT%'
+		BEGIN
+			SET @addr3 = REPLACE(@addr3, 'MT DRUITT', 'MOUNT DRUITT')
+		END
+
+
+		IF ((@addr3 IS NULL OR @addr3 = '') AND @addr2 LIKE '% [a-z][a-z][a-z] [0-9][0-9][0-9][0-9]')
+		BEGIN
+			SET @addr3 = SUBSTRING(@addr2, LEN(@addr2) - 7, 8)
+			SET @addr2 = SUBSTRING(@addr2, 1, LEN(@addr2) - 9)
+			--SELECT @addr2, @addr3
+		END
+
+		IF (@addr3 IS NOT NULL AND @addr3 like '[a-z][a-z][a-z] [0-9][0-9][0-9][0-9]')
+		BEGIN
+			SET @addr3_State = SUBSTRING(@addr3, 1, 3)
+			SET @addr3_PCode = SUBSTRING(@addr3, 5, 4)
+			SET @suburb_id = (SELECT suburb_id FROM Mediclinic_0027.dbo.Suburb WHERE name = @addr2 AND postcode = @addr3_PCode AND state = @addr3_State)
+			--SELECT @addr2, @addr3_State, @addr3_PCode, @suburb_id
+		END
+
+		IF (@addr1 <> '' OR @suburb_id IS NOT NULL)
+		BEGIN
+
+			SET @addr_line2 = ''
+			IF @suburb_id IS NULL AND @addr2 IS NOT NULL AND LEN(@addr2) > 0 BEGIN SET @addr_line2 = @addr2 END
+
+			INSERT INTO Mediclinic_0027.dbo.ContactAus ( 
+				 entity_id,
+				 contact_type_id,
+				 free_text,
+				 addr_line1,
+				 addr_line2,
+				 street_name,
+				 address_channel_type_id,
+				 suburb_id,
+				 country_id,
+				 site_id,
+				 is_billing_addr,
+				 is_shipping_addr,
+				 is_inc_on_docs,
+				 contact_date_added,
+				 contact_date_modified,
+				 contact_date_deleted
+			)
+			VALUES 
+			(
+				 @entity_id,
+				 35,  -- home address
+				 '',  -- free text
+				 LTRIM(RTRIM(@addr1)),
+				 LTRIM(RTRIM(@addr_line2)), -- addr_line2
+				 '',  -- street_name
+				 NULL, -- address_channel_type_id
+				 @suburb_id,
+				 NULL, -- country_id,
+				 1,  -- site_id
+				 0,  -- is_billing_addr
+				 0,  -- is_shipping_addr,
+				 0,  -- is_inc_on_docs,
+				 GETDATE(),
+				 NULL,
+				 NULL
+			)
+
+		END
+
+		SET @WorkPhone = LTRIM(RTRIM(@WorkPhone))
+		SET @HomePhone = LTRIM(RTRIM(@HomePhone))
+		SET @Mobile    = LTRIM(RTRIM(@Mobile))
+		SET @Fax       = LTRIM(RTRIM(@Fax))
+		SET @Email     = LTRIM(RTRIM(@Email))
+
+
+		IF (@Mobile <> '' AND LEN(@Mobile) > 0)
+		BEGIN
+
+			INSERT INTO Mediclinic_0027.dbo.ContactAus ( 
+				 entity_id,
+				 contact_type_id,
+				 free_text,
+				 addr_line1,
+				 addr_line2,
+				 street_name,
+				 address_channel_type_id,
+				 suburb_id,
+				 country_id,
+				 site_id,
+				 is_billing_addr,
+				 is_shipping_addr,
+				 is_inc_on_docs,
+				 contact_date_added,
+				 contact_date_modified,
+				 contact_date_deleted
+			)
+			VALUES 
+			(
+				 @entity_id,
+				 30,  -- mobile
+				 '',  -- free text
+				 LTRIM(RTRIM(@Mobile)),
+				 '', -- addr_line2
+				 '',  -- street_name
+				 NULL, -- address_channel_type_id
+				 NULL,
+				 NULL, -- country_id,
+				 1,  -- site_id
+				 0,  -- is_billing_addr
+				 0,  -- is_shipping_addr,
+				 0,  -- is_inc_on_docs,
+				 GETDATE(),
+				 NULL,
+				 NULL
+			)
+
+		END
+
+		IF (@HomePhone <> '' AND LEN(@HomePhone) > 0)
+		BEGIN
+
+			INSERT INTO Mediclinic_0027.dbo.ContactAus ( 
+				 entity_id,
+				 contact_type_id,
+				 free_text,
+				 addr_line1,
+				 addr_line2,
+				 street_name,
+				 address_channel_type_id,
+				 suburb_id,
+				 country_id,
+				 site_id,
+				 is_billing_addr,
+				 is_shipping_addr,
+				 is_inc_on_docs,
+				 contact_date_added,
+				 contact_date_modified,
+				 contact_date_deleted
+			)
+			VALUES 
+			(
+				 @entity_id,
+				 33,  -- home phone
+				 '',  -- free text
+				 LTRIM(RTRIM(@HomePhone)),
+				 '', -- addr_line2
+				 '',  -- street_name
+				 NULL, -- address_channel_type_id
+				 NULL,
+				 NULL, -- country_id,
+				 1,  -- site_id
+				 0,  -- is_billing_addr
+				 0,  -- is_shipping_addr,
+				 0,  -- is_inc_on_docs,
+				 GETDATE(),
+				 NULL,
+				 NULL
+			)
+
+		END
+
+		IF (@WorkPhone <> '' AND LEN(@WorkPhone) > 0)
+		BEGIN
+
+			INSERT INTO Mediclinic_0027.dbo.ContactAus ( 
+				 entity_id,
+				 contact_type_id,
+				 free_text,
+				 addr_line1,
+				 addr_line2,
+				 street_name,
+				 address_channel_type_id,
+				 suburb_id,
+				 country_id,
+				 site_id,
+				 is_billing_addr,
+				 is_shipping_addr,
+				 is_inc_on_docs,
+				 contact_date_added,
+				 contact_date_modified,
+				 contact_date_deleted
+			)
+			VALUES 
+			(
+				 @entity_id,
+				 34,  -- office phone
+				 '',  -- free text
+				 LTRIM(RTRIM(@WorkPhone)),
+				 '', -- addr_line2
+				 '',  -- street_name
+				 NULL, -- address_channel_type_id
+				 NULL,
+				 NULL, -- country_id,
+				 1,  -- site_id
+				 0,  -- is_billing_addr
+				 0,  -- is_shipping_addr,
+				 0,  -- is_inc_on_docs,
+				 GETDATE(),
+				 NULL,
+				 NULL
+			)
+
+		END
+
+		IF (@Fax <> '' AND LEN(@Fax) > 0)
+		BEGIN
+
+			INSERT INTO Mediclinic_0027.dbo.ContactAus ( 
+				 entity_id,
+				 contact_type_id,
+				 free_text,
+				 addr_line1,
+				 addr_line2,
+				 street_name,
+				 address_channel_type_id,
+				 suburb_id,
+				 country_id,
+				 site_id,
+				 is_billing_addr,
+				 is_shipping_addr,
+				 is_inc_on_docs,
+				 contact_date_added,
+				 contact_date_modified,
+				 contact_date_deleted
+			)
+			VALUES 
+			(
+				 @entity_id,
+				 29,  -- fax
+				 '',  -- free text
+				 LTRIM(RTRIM(@Fax)),
+				 '', -- addr_line2
+				 '',  -- street_name
+				 NULL, -- address_channel_type_id
+				 NULL,
+				 NULL, -- country_id,
+				 1,  -- site_id
+				 0,  -- is_billing_addr
+				 0,  -- is_shipping_addr,
+				 0,  -- is_inc_on_docs,
+				 GETDATE(),
+				 NULL,
+				 NULL
+			)
+
+		END
+
+		IF (@Email <> '' AND LEN(@Email) > 0)
+		BEGIN
+
+			INSERT INTO Mediclinic_0027.dbo.ContactAus ( 
+				 entity_id,
+				 contact_type_id,
+				 free_text,
+				 addr_line1,
+				 addr_line2,
+				 street_name,
+				 address_channel_type_id,
+				 suburb_id,
+				 country_id,
+				 site_id,
+				 is_billing_addr,
+				 is_shipping_addr,
+				 is_inc_on_docs,
+				 contact_date_added,
+				 contact_date_modified,
+				 contact_date_deleted
+			)
+			VALUES 
+			(
+				 @entity_id,
+				 27,  -- email
+				 '',  -- free text
+				 LTRIM(RTRIM(@Email)),
+				 '', -- addr_line2
+				 '',  -- street_name
+				 NULL, -- address_channel_type_id
+				 NULL,
+				 NULL, -- country_id,
+				 1,  -- site_id
+				 0,  -- is_billing_addr
+				 0,  -- is_shipping_addr,
+				 0,  -- is_inc_on_docs,
+				 GETDATE(),
+				 NULL,
+				 NULL
+			)
+
+		END
+		
+		
+		SET @note = RTRIM(LTRIM(@note))
+		IF (@note IS NOT NULL AND @note <> '')
+		BEGIN
+
+			INSERT INTO Mediclinic_0027.dbo.Note( 
+				entity_id,
+				date_added,
+				added_by,
+				note_type_id,
+				body_part_id,
+				text,
+				site_id
+			)
+			VALUES 
+			(
+				 @entity_id,
+				 GETDATE(),
+				 Null,
+				 51, -- admin notes
+				 NULL,
+				 @note,
+				 1
+			)
+
+		END
+
+
+		-- @MedicareNum, @MedicareAdd, @MedicareExp, @VetNum
+		
+		SET @MedicareNum = RTRIM(LTRIM(@MedicareNum))
+		SET @MedicareAdd = RTRIM(LTRIM(@MedicareAdd))
+		--SET @VetNum = RTRIM(LTRIM(@VetNum))
+		IF (@MedicareNum IS NOT NULL)
+		BEGIN
+
+			SET @MedicareNum = Mediclinic_0027.dbo.ufnFilterNonDigit(@MedicareNum)
+			IF @MedicareAdd IS NULL BEGIN SET @MedicareAdd = '' END
+
+			SET @MedicareCardActive = 1
+			IF @VetNum IS NOT NULL BEGIN SET @MedicareCardActive = 0 END
+
+			INSERT INTO Mediclinic_0027.dbo.HealthCard ( 
+				patient_id
+				,organisation_id
+				,card_name
+				,card_nbr
+				,card_family_member_nbr
+				,expiry_date
+				,date_referral_signed
+				,date_referral_received_in_office
+				,is_active
+				,added_or_last_modified_by
+				,added_or_last_modified_date
+			)
+			VALUES 
+			(
+				 @patient_id,
+				 -1,
+				 '',
+				 @MedicareNum,
+				 @MedicareAdd,
+				 @MedicareExp,
+				 NULL,
+				 NULL,
+				 @MedicareCardActive,
+				 NULL,
+				 NULL
+			)
+		END
+
+		IF (@VetNum IS NOT NULL)
+		BEGIN
+
+			SET @VetNum = Mediclinic_0027.dbo.[ufnFilterNonAlphaNumeric](@VetNum)
+
+			INSERT INTO Mediclinic_0027.dbo.HealthCard ( 
+				patient_id
+				,organisation_id
+				,card_name
+				,card_nbr
+				,card_family_member_nbr
+				,expiry_date
+				,date_referral_signed
+				,date_referral_received_in_office
+				,is_active
+				,added_or_last_modified_by
+				,added_or_last_modified_date
+			)
+			VALUES 
+			(
+				 @patient_id,
+				 -2,
+				 '',
+				 @VetNum,
+				 '',
+				 NULL,
+				 NULL,
+				 NULL,
+				 1,
+				 NULL,
+				 NULL
+			)
+
+		END
+
+
+		-- add patient_referrer
+		IF (@RefGPID IS NOT NULL)
+		BEGIN
+		
+			IF (SELECT COUNT(*) FROM Mediclinic_0027.dbo.RegisterReferrer WHERE register_referrer_id = @RefGPID) > 0
+			BEGIN
+		
+				INSERT INTO Mediclinic_0027.dbo.PatientReferrer ( 
+					 patient_id
+					,register_referrer_id
+					,organisation_id
+					,patient_referrer_date_added
+					,is_debtor
+					,is_active
+				)
+				VALUES 
+				(
+					 @patient_id,
+					 @RefGPID,
+					 NULL,
+					 GETDATE(),
+					 0,
+					 1
+				)
+			END
+
+		END
+
+
+		FETCH NEXT FROM DatabaseCursor INTO @patient_id, @title_id, @firstname, @middlename, @surname, @nickname, @Gender, @dob, @note, @flashing_Text, @date_added, @Active, @addr1, @addr2, @addr3, @WorkPhone, @HomePhone, @Mobile, @Fax, @Email, @MedicareNum, @MedicareAdd, @MedicareExp, @VetNum, @HealthFundID, @MemberNum, @HealthfundName, @RefGPID
+	
+	END 
+	CLOSE DatabaseCursor  
+	DEALLOCATE DatabaseCursor
+
+-------------------------------------------------------------------------------------------
+
+SELECT 
+	RefGPID,
+	* 
+FROM     FrontDesk.dbo.CLIENT
+WHERE RefGPID is not null
+ORDER BY FrontDesk.dbo.CLIENT.ClientID
+
+
+SELECT * FROM FrontDesk.dbo.Referrer
+
+-------------------------------------------------------------------------------------------
+
+ClientID		--
+Title			--
+Name			--
+Surname			--
+WorkPhone		--
+HomePhone		--
+DateOfBirth		--
+PractitionerID
+ChargeType
+Address1		--
+Address2		--
+Address3		--
+RecallDate
+RecallPatient
+Notes
+NextAppointmentDateTime
+PrintNextAppointmentDate
+Warning
+MailTo
+ChequeDrawer
+ChequeBank
+ChequeBranch
+RecallPeriod
+FileNo
+ReferredByID
+DateCreated
+IsCompany
+Mobile			--
+Fax				--
+UseRecallDate
+Active	
+ReferDr
+Occupation
+Email			--
+IsAGroup
+Reminders
+ChequeDrawer2
+ChequeBank2
+ChequeBranch2
+ChequeDrawer3
+ChequeBank3
+ChequeBranch3
+ChequeDrawer4
+ChequeBank4
+ChequeBranch4
+AlwaysRemind
+ReferredByID2
+DateCreated2
+ProfRefer1
+ProfRefer2
+DefaultApp
+DefaultAcc
+MedicareNum		--
+MedicareAdd		--
+MedicareExp		--
+HealthFundID	--
+MemberNum		--
+RefGPID
+PensionNum
+VetNum			--
+VetType
+HICAPSPatientID
+SMSReminder
+EmailReminder
+LastPaymentType
+Photo
+MiddleName		--
+PreferredName	--
+PreferredPhone
+Gender			--
+MedicareClaimant
+ClaimantMedicareNum
+ClaimantMedicareRef
+ClaimantSurname
+ClaimantFirstName
+ClaimantDateOfBirth
+ClaimantAddress1
+ClaimantAddress2
+ClaimantSuburb
+ClaimantPostcode
+LastPatientIsClaimant
+LastUseMedicareDetails
+LastUseAlternatePostalAddress
+LastAccName
+LastBSB
+LastAccNo
+AutoSubmitMedicare
+AutoBulkBill
+AutoDVAClaim
+PensionExpiry
+WorkSafeClaimNo
+FileCreated
+FileArchived
+BGEmail
+BGPassword
+BGAccess
+BGVerified
+
+
+11002	Mr	Dick	Abbott	NULL	9833 7932	1926-03-19 00:00:00.000	50003	2	5/22 Australia Street	St Marys	NSW  2760	NULL	NULL	RefDoc: Dr Richardson  	NULL	0	NULL	0				NULL	NULL	NULL	NULL	0	NULL	NULL	F	F	NULL	NULL	NULL	0	NULL										0	NULL	NULL	0	0	NULL	0	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	0	0	0	NULL	Conrad		NULL	1	0	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	NULL	1	1	0	NULL	NULL	NULL	0	0	0	NULL	NULL	NULL	NULL	NULL	NULL	0	0
+
+
+-------------------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------------------

@@ -1,0 +1,98 @@
+﻿#modalPage
+{
+    display: none;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0px; left: 0px;
+}
+.modalBackground
+{
+    filter: Alpha(Opacity=40); -moz-opacity:0.4; opacity: 0.4;
+    width: 100%; height: 100%; background-color: #999999;
+    position: fixed;
+    z-index: 500;
+    top: 0px; left: 0px;
+}
+.modalContainer
+{
+    position: absolute;
+    width: 300px;
+    left: 50%;
+    top: 50%;
+    z-index: 750;
+}
+.modalPopup
+{
+    background-color: white;
+    border: solid 4px black; position: relative;
+    top: -150px;
+    left: -230px;
+    z-index: 1000;
+    width: 425px;
+    height: 350px;
+    padding: 0px;
+}
+.modal_Big
+{
+    background-color: white;
+    border: solid 4px black; position: relative;
+    top: -150px;
+    left: -230px;
+    z-index: 1000;
+    width: 425px;
+    height: 430px;
+    padding: 0px;
+}
+.modalFullDays
+{
+    background-color: white;
+    border: solid 4px black; position: relative;
+    top: -150px;
+    left: -230px;
+    z-index: 1000;
+    width: 300px;
+    height: 230px;
+    padding: 0px;
+}
+
+.modalPopupUnavailableRecurring
+{
+    background-color: white;
+    border: solid 4px black; position: relative;
+    top: -300px;
+    left: -180px;
+    z-index: 1000;
+    width: 360px;
+    height: 600px;
+    padding: 0px;
+}
+.modalPopupUnavailableRecurring_Big
+{
+    background-color: white;
+    border: solid 4px black; position: relative;
+    top: -300px;
+    left: -185px;
+    z-index: 1000;
+    width: 370px;
+    height: 680px;
+    padding: 0px;
+}
+
+/*
+.modalCreateInvoice
+{
+    background-color: white;
+    border: solid 4px black; position: relative;
+    top: -50px;
+    left: -330px;
+    z-index: 1000;
+    width: 600px;
+    height: 350px;
+    padding: 0px;
+}
+*/
+.modalBody
+{
+    padding: 10px;
+}

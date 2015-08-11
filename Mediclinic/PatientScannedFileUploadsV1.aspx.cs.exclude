@@ -1,0 +1,414 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Configuration;
+using System.Text.RegularExpressions;
+using System.Collections;
+using System.IO;
+
+public partial class PatientScannedFileUploadsV1 : System.Web.UI.Page
+{
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        try
+        {
+
+            if (!IsPostBack)
+                Utilities.SetNoCache(Response);
+            HideErrorMessage();
+            Utilities.UpdatePageHeaderV2(Page.Master, true);
+            lblUploadMessage.Text = string.Empty;
+
+
+            if (!IsPostBack)
+            {
+                Session.Remove("letter_sortexpression");
+                Session.Remove("letter_data");
+
+                Patient patient = GetFormPatient();
+                if (patient == null)
+                    throw new CustomMessageException("Invalid patient ID");
+                lblHeading.Text = "Scanned Files For: " + patient.Person.FullnameWithoutMiddlename;
+
+                bool refresh_on_close = Request.QueryString["refresh_on_close"] != null && Request.QueryString["refresh_on_close"] == "1";
+                if (refresh_on_close)
+                {
+                    btnClose.OnClientClick = "window.opener.location.href = window.opener.location.href;self.close();";
+
+                    // make sure if user clicks "x" to close the window, this value is passed on so the other page gets this value passed on too
+                    if (refresh_on_close) // refresh parent when parent opened this as tab
+                        Page.ClientScript.RegisterStartupScript(this.GetType(), "on_close_window", "<script language=javascript>window.onbeforeunload = function(){ window.opener.location.href = window.opener.location.href; }</script>");
+                }
+
+                FillCurrentFilesList();
+            }
+
+        }
+        catch (CustomMessageException ex)
+        {
+            if (IsPostBack) SetErrorMessage(ex.Message);
+            else HideTableAndSetErrorMessage(ex.Message);
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            if (IsPostBack) SetErrorMessage("Connection to network files currently unavailable.");
+            else HideTableAndSetErrorMessage("Connection to network files currently unavailable.");
+
+        }
+        catch (Exception ex)
+        {
+            if (IsPostBack) SetErrorMessage("", ex.ToString());
+            else HideTableAndSetErrorMessage("", ex.ToString());
+        }
+    }
+
+    #region GetUrlParams
+
+    private Patient GetFormPatient()
+    {
+        try
+        {
+            string patientID = Request.QueryString["patient"];
+            if (patientID == null || !Regex.IsMatch(patientID, @"^\d+$"))
+                throw new CustomMessageException("Invalid patient id");
+            return PatientDB.GetByID(Convert.ToInt32(Request.QueryString["patient"]));
+        }
+        catch (CustomMessageException ex)
+        {
+            HideTableAndSetErrorMessage(Utilities.IsDev() ? ex.Message : "");
+            return null;
+        }
+    }
+
+    #endregion
+
+    #region FillCurrentFilesList, btnUpload_Click, btnDownload_Click, btnDeleteFie_Click
+
+    public void FillCurrentFilesList()
+    {
+        bool allowDeletions = true; // Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["Letters_AllowDeletions"]);
+
+        Patient patient = GetFormPatient();
+        spn_manage_files.Visible = patient != null;
+        if (patient == null)
+            throw new CustomMessageException("Invalid patient ID");
+
+
+        DataTable dt = new DataTable();
+        dt.Columns.AddRange(new DataColumn[] { new DataColumn("filename"), new DataColumn("filepath"), new DataColumn("text") });
+        string text = allowDeletions ? "x" : "";  // no deletions means link has no text
+        string scannedDocsDir = patient.GetScannedDocsDirectory();
+
+        Hashtable medicalServiceTypeHash = MedicalServiceTypeDB.GetMedicareServiceTypeHash();
+        foreach (FileInfo fi in patient.GetScannedDocs())
+            dt.Rows.Add(MedicalServiceType.ReplaceMedicareServiceTypeFolders(fi.FullName.Substring(scannedDocsDir.Length), medicalServiceTypeHash, true), fi.FullName, text);
+        lstCurrentFiles.DataSource = dt;
+        lstCurrentFiles.DataBind();
+    }
+
+    protected void btnDeleteFie_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            LinkButton lnkbtn = (LinkButton)sender;
+
+            string fileToDelete = lnkbtn.CommandArgument;
+            System.IO.File.Delete(fileToDelete);
+
+            FillCurrentFilesList();
+        }
+        catch (CustomMessageException cmEx)
+        {
+            SetErrorMessage(cmEx.Message);
+            return;
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            SetErrorMessage("Connection to network files currently unavailable.");
+            return;
+        }
+
+    }
+
+    protected void btnUpload_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            Patient patient = GetFormPatient();
+            if (patient == null)
+                throw new CustomMessageException("Invalid patient ID");
+
+            SaveFiles(patient.GetScannedDocsDirectory(), chkAllowOverwrite.Checked);
+        }
+        catch (CustomMessageException cmEx)
+        {
+            SetErrorMessage(cmEx.Message);
+            return;
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            SetErrorMessage("Connection to network files currently unavailable.");
+            return;
+        }
+    }
+
+    protected void btnDownload_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            LinkButton lnkbtn = (LinkButton)sender;
+
+            string fileToDownload = lnkbtn.CommandArgument;
+            FileInfo fi = new FileInfo(fileToDownload);
+
+            string fileNameToDownload = fi.Name.Substring(Utilities.IndexOfNth(fi.Name, '_', 2) + 1);
+            DownloadDocument(fileToDownload, fileNameToDownload, false);
+        }
+        catch (CustomMessageException cmEx)
+        {
+            SetErrorMessage(cmEx.Message);
+            return;
+        }
+    }
+
+    #region SaveFiles()
+
+    private bool SaveFiles(string dir, bool allowOverwrite)
+    {
+        string allowedFileTypes = "bmp|dcs|doc|docm|docx|dot|dotm|dotx|gz|gif|htm|html|ipg|jpe|jpeg|jpg|pdf|png|ppa|ppam|pps|ppsm|ppt|pptm|tar|tgz|tif|tiff|txt|xla|xlam|xlc|xld|xlk|xll|xlm|xls|xlsx|xlt|xltm|xltx|xlw|xml|z|zip|7z";
+
+        dir = dir.EndsWith(@"\") ? dir : dir + @"\";
+
+        System.Text.StringBuilder _messageToUser = new System.Text.StringBuilder("Files Uploaded:<br>");
+
+        try
+        {
+
+            HttpFileCollection _files = Request.Files;
+
+            if (_files.Count == 0 || (_files.Count == 1 && System.IO.Path.GetFileName(_files[0].FileName) == string.Empty))
+            {
+                lblUploadMessage.Text = " <font color=\"red\">No Files Selected</font> <BR>";
+                return true;
+            }
+
+
+            for (int i = 0; i < _files.Count; i++)
+            {
+                HttpPostedFile _postedFile = _files[i];
+                string _fileName = System.IO.Path.GetFileName(_postedFile.FileName);
+                if (_fileName.Length == 0)
+                    continue;
+
+                if (_postedFile.ContentLength > 20971520)
+                    throw new Exception(_fileName + " <font color=\"red\">Failed!! Over allowable file size limit!</font> <BR>");
+                if (!ExtIn(System.IO.Path.GetExtension(_fileName), allowedFileTypes))
+                    throw new Exception(_fileName + " <font color=\"red\">Failed!! Only " + ExtToDisplay(allowedFileTypes) + " files allowed!</font> <BR>");
+
+                if (!allowOverwrite && File.Exists(dir + "\\" + _fileName))
+                    throw new Exception(_fileName + " <font color=\"red\">Failed!! File already exists. To allow overwrite, check the \"Allowed File Overwrite\" box</font> <BR>");
+            }
+
+            int countZeroFileLength = 0;
+            for (int i = 0; i < _files.Count; i++)
+            {
+                HttpPostedFile _postedFile = _files[i];
+                string _fileName = System.IO.Path.GetFileName(_postedFile.FileName);
+                if (_fileName.Length == 0)
+                    continue;
+
+                if (_postedFile.ContentLength > 0)
+                {
+                    string dbName = System.Web.HttpContext.Current.Session["DB"].ToString().Replace("_TestDB", "");
+                    bool useLocalFolder = Convert.ToBoolean(
+                        System.Configuration.ConfigurationManager.AppSettings["PatientScannedDocsFolderUseLocal" + "_" + dbName] != null ?
+                        System.Configuration.ConfigurationManager.AppSettings["PatientScannedDocsFolderUseLocal" + "_" + dbName] :
+                        System.Configuration.ConfigurationManager.AppSettings["PatientScannedDocsFolderUseLocal"]
+                        );
+
+                    if (useLocalFolder)
+                    {
+                        if (!Directory.Exists(dir))
+                            Directory.CreateDirectory(dir);
+
+                        _postedFile.SaveAs(dir + _fileName);
+                        _messageToUser.Append(_fileName + "<BR>");
+                    }
+                    else  // use network folder
+                    {
+                        string username    = System.Configuration.ConfigurationManager.AppSettings["PatientScannedDocsNetworkFolderUsername"];
+                        string password    = System.Configuration.ConfigurationManager.AppSettings["PatientScannedDocsNetworkFolderPassword"];
+
+                        string networkName =
+                            System.Configuration.ConfigurationManager.AppSettings["PatientScannedDocsNetworkFolder" + "_" + dbName] != null ?
+                            System.Configuration.ConfigurationManager.AppSettings["PatientScannedDocsNetworkFolder" + "_" + dbName] :
+                            System.Configuration.ConfigurationManager.AppSettings["PatientScannedDocsNetworkFolder"];
+
+                        if (networkName.EndsWith(@"\"))
+                            networkName = networkName.Substring(0, networkName.Length - 1);
+
+                        using (new NetworkConnection(networkName, new System.Net.NetworkCredential(username, password)))
+                        {
+                            if (!Directory.Exists(dir))
+                                Directory.CreateDirectory(dir);
+
+                            _postedFile.SaveAs(dir + _fileName);
+                            _messageToUser.Append(_fileName + "<BR>");
+                        }
+                    }
+
+
+                    /*
+                    if (!Directory.Exists(dir))
+                        Directory.CreateDirectory(dir);
+
+                    //_postedFile.SaveAs(Server.MapPath("MyFiles") + "\\" + System.IO.Path.GetFileName(_postedFile.FileName));
+                    _postedFile.SaveAs(dir + _fileName);
+                    _messageToUser.Append(_fileName + "<BR>");
+                    */
+
+                }
+                else
+                {
+                    countZeroFileLength++;
+                }
+            }
+
+            if (_files.Count > 0 && countZeroFileLength == _files.Count)
+                throw new Exception("<font color=\"red\">File" + (_files.Count > 1 ? "s are" : " is") + " 0 kb.</font>");
+            else if (_files.Count > 0 && countZeroFileLength > 0)
+                throw new Exception("<font color=\"red\">File(s) of 0 kb were not uploaded.</font>");
+
+            lblUploadMessage.Text = _messageToUser.ToString();
+            return true;
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            lblUploadMessage.Text = "Connection to network files currently unavailable.";
+            return false;
+        }
+        catch (System.Exception ex)
+        {
+            lblUploadMessage.Text = ex.Message;
+            return false;
+        }
+        finally
+        {
+            try
+            {
+                FillCurrentFilesList();
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                SetErrorMessage("Connection to network files currently unavailable.");
+            }
+
+        }
+    }
+
+    protected bool ExtIn(string ext, string allowedExtns)
+    {
+        string[] allowedExtnsList = allowedExtns.Split('|');
+        foreach (string curExt in allowedExtnsList)
+            if (ext == "." + curExt)
+                return true;
+
+        return false;
+    }
+
+    protected string ExtToDisplay(string allowedExtns)
+    {
+        string ret = string.Empty;
+        foreach (string curExt in allowedExtns.Split('|'))
+        {
+            if (ret.Length > 0)
+                ret += ",";
+
+            ret += ("." + curExt);
+        }
+
+        return ret;
+    }
+
+    #endregion
+
+    #region DownloadFile
+
+    protected void DownloadDocument(string filepath, string downloadFileName, bool deleteDocAfterDownload)
+    {
+        System.IO.FileInfo file = new System.IO.FileInfo(filepath);
+        if (!file.Exists)
+            throw new CustomMessageException("Failed doesn't exist");
+
+        try
+        {
+            string contentType = "application/octet-stream";
+            try { contentType = Utilities.GetMimeType(System.IO.Path.GetExtension(downloadFileName)); }
+            catch (Exception) { }
+
+            Response.Clear();
+            Response.ContentType = contentType;
+            Response.AddHeader("Content-Disposition", "attachment; filename=\"" + downloadFileName + "\"" );
+            Response.AddHeader("Content-Length", file.Length.ToString());
+            Response.WriteFile(filepath, true);
+            if (deleteDocAfterDownload)
+                File.Delete(filepath);
+            Response.End();
+        }
+        catch (System.Web.HttpException ex) 
+        {
+            // ignore exception where user closed the download box
+            if (!ex.Message.StartsWith("The remote host closed the connection. The error code is"))
+                throw;
+        }
+    }
+
+    #endregion
+
+    protected void lstCurrentFiles_ItemDataBound(object sender, RepeaterItemEventArgs e)
+    {
+        Repeater myRepeater = (Repeater)sender;
+        if (e.Item.ItemType == ListItemType.Footer)
+        {
+            Label lblNoScannedDocsText = e.Item.FindControl("lblNoScannedDocsText") as Label;
+            lblNoScannedDocsText.Visible = myRepeater.Items.Count == 0;
+        }
+    }
+
+    #endregion
+
+    #region SetErrorMessage, HideErrorMessage
+
+    private void HideTableAndSetErrorMessage(string errMsg = "", string details = "")
+    {
+        spn_manage_files.Visible = false;
+        SetErrorMessage(errMsg, details);
+    }
+    private void SetErrorMessage(string errMsg = "", string details = "")
+    {
+        if (errMsg.Contains(Environment.NewLine))
+            errMsg = errMsg.Replace(Environment.NewLine, "<br />");
+
+        // double escape so shows up literally on webpage for 'alert' message
+        string detailsToDisplay = (details.Length == 0 ? "" : " <a href=\"#\" onclick=\"alert('" + details.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("'", "\\'").Replace("\"", "\\'") + "'); return false;\">Details</a>");
+
+        lblErrorMessage.Visible = true;
+        if (errMsg != null && errMsg.Length > 0)
+            lblErrorMessage.Text = errMsg + detailsToDisplay + "<br />";
+        else
+            lblErrorMessage.Text = "An error has occurred. Plase contact the system administrator. " + detailsToDisplay + "<br />";
+    }
+    private void HideErrorMessage()
+    {
+        lblErrorMessage.Visible = false;
+        lblErrorMessage.Text = "";
+    }
+
+    #endregion
+
+}
